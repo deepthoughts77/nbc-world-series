@@ -6,6 +6,7 @@ import { pool } from "./db.js";
 import recordsRoutes from "./routes/records.js";
 import path from "path";
 import { fileURLToPath } from "url";
+import adminRoutes from "./routes/admin.js";
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use(
 
 app.use(express.json());
 app.use(morgan("dev"));
+app.use("/api/admin", adminRoutes);
 
 console.log(" Starting to register routes...");
 

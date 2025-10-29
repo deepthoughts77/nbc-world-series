@@ -1,8 +1,15 @@
 // src/routes/admin.js
-const express = require("express");
+import express from "express";
+import { pool } from "../config/database.js";
+import { authenticateToken, requireAdmin } from "../middleware/auth.js";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const router = express.Router();
-const pool = require("../config/database");
-const { authenticateToken, requireAdmin } = require("../middleware/auth");
 
 // Create team
 router.post(
@@ -112,4 +119,22 @@ router.post(
   }
 );
 
-module.exports = router;
+// Setup database schema
+router.post("/setup-database", async (req, res) => {
+  try {
+    const schemaPath = path.join(__dirname, "../db/schema.sql");
+    const schema = fs.readFileSync(schemaPath, "utf8");
+
+    await pool.query(schema);
+
+    res.json({
+      success: true,
+      message: "Database schema created successfully",
+    });
+  } catch (error) {
+    console.error("Setup error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+export default router;
