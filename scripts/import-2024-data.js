@@ -15,11 +15,11 @@ async function import2024Data() {
     await client.query(`SET search_path TO public, "$user"`);
 
     console.log("\n═══════════════════════════════════════════════════════");
-    console.log("🏆  2024 NBC WORLD SERIES - DATA IMPORT");
+    console.log("  2024 NBC WORLD SERIES - DATA IMPORT");
     console.log("═══════════════════════════════════════════════════════\n");
 
     // 1) Teams
-    console.log("📌 Step 1/9: Upserting teams...");
+    console.log(" Step 1/9: Upserting teams...");
     const teams = [
       {
         name: "Hutchinson Monarchs",
@@ -138,12 +138,10 @@ async function import2024Data() {
     };
     const hutchinsonId = await getTeamId("Hutchinson Monarchs");
     const krakenId = await getTeamId("Lonestar Kraken TX");
-    console.log(
-      `   ✅ Hutchinson ID ${hutchinsonId} | Kraken ID ${krakenId}\n`
-    );
+    console.log(`    Hutchinson ID ${hutchinsonId} | Kraken ID ${krakenId}\n`);
 
     // 3) Tournament (no attendance column in your table)
-    console.log("📌 Step 3/9: Upserting 2024 tournament...");
+    console.log(" Step 3/9: Upserting 2024 tournament...");
     const tRes = await client.query(
       `INSERT INTO tournaments (year, start_date, end_date, location)
        VALUES ($1,$2,$3,$4)
@@ -155,10 +153,10 @@ async function import2024Data() {
       [2024, "2024-07-25", "2024-08-03", "Wichita, KS"]
     );
     const tournamentId = tRes.rows[0].id;
-    console.log(`   ✅ 2024 tournament id: ${tournamentId}\n`);
+    console.log(`    2024 tournament id: ${tournamentId}\n`);
 
     // 4) Link teams
-    console.log("📌 Step 4/9: Linking teams to 2024 tournament...");
+    console.log(" Step 4/9: Linking teams to 2024 tournament...");
     for (const team of teams) {
       const teamId = await getTeamId(team.name);
       await client.query(
@@ -170,7 +168,7 @@ async function import2024Data() {
 
     // 5) Players (subset)
     console.log(
-      "📌 Step 5/9: Upserting players and mapping to Hutchinson 2024..."
+      " Step 5/9: Upserting players and mapping to Hutchinson 2024..."
     );
     const players = [
       { firstName: "Jake", lastName: "Gutierrez", position: "OF" },
@@ -214,7 +212,7 @@ async function import2024Data() {
     }
 
     // 6) Batting stats
-    console.log("📌 Step 6/9: Upserting batting stats...");
+    console.log(" Step 6/9: Upserting batting stats...");
     const battingStats = [
       {
         name: "Jake Gutierrez",
@@ -374,7 +372,7 @@ async function import2024Data() {
     }
 
     // 7) Pitching stats
-    console.log("📌 Step 7/9: Upserting pitching stats...");
+    console.log(" Step 7/9: Upserting pitching stats...");
     const pitchingStats = [
       {
         name: "Bradyn McClure",
@@ -487,7 +485,7 @@ async function import2024Data() {
     }
 
     // 8) Championship
-    console.log("📌 Step 8/9: Upserting championship...");
+    console.log(" Step 8/9: Upserting championship...");
     const mvpId = playerIds["Jake Gutierrez"];
     const leadPId = playerIds["Bradyn McClure"];
     await client.query(
@@ -504,7 +502,7 @@ async function import2024Data() {
 
     // 9) Hall of Fame
     // 9) Hall of Fame
-    console.log("📌 Step 9/9: Upserting Hall of Fame nominees...");
+    console.log(" Step 9/9: Upserting Hall of Fame nominees...");
     const hof = [
       { name: "Kevin Hooper", year: 2024, category: "Player" },
       { name: "Mike Blue", year: 2024, category: "Player" },
@@ -543,10 +541,10 @@ async function import2024Data() {
       ).rows[0].count
     );
 
-    console.log("\n✅ Done\n");
+    console.log("\n Done\n");
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error("❌ ERROR:", err.message);
+    console.error(" ERROR:", err.message);
     throw err;
   } finally {
     client.release();

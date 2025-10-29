@@ -1,60 +1,128 @@
-// backend/src/routes/records.js
-const express = require("express");
+import express from "express";
+import { pool } from "../db.js";
+
 const router = express.Router();
-const pool = require("../config/database");
 
-/**
- * GET /api/records/summary
- * Returns a few headline records computed from your current tables.
- * (Most championships by team, most appearances by team, most MVP awards by player)
- */
-router.get("/summary", async (_req, res) => {
+// GET /api/records - Get all records
+router.get("/", async (req, res) => {
   try {
-    // Most championships (by champion_team_id in championships)
-    const { rows: mostChamps } = await pool.query(`
-      SELECT t.id, t.name, COUNT(c.id)::int AS championships
-      FROM teams t
-      JOIN championships c ON c.champion_team_id = t.id
-      GROUP BY t.id, t.name
-      ORDER BY championships DESC, t.name ASC
-      LIMIT 1
-    `);
-
-    // Most appearances (where a team participated in tournament_teams)
-    const { rows: mostAppearances } = await pool.query(`
-      SELECT t.id, t.name, COUNT(tt.tournament_id)::int AS appearances
-      FROM teams t
-      JOIN tournament_teams tt ON tt.team_id = t.id
-      GROUP BY t.id, t.name
-      ORDER BY appearances DESC, t.name ASC
-      LIMIT 1
-    `);
-
-    // Most MVP awards (championships.mvp_player_id)
-    const { rows: mostMvp } = await pool.query(`
-      SELECT p.id, (p.first_name || ' ' || p.last_name) AS player_name,
-             COUNT(c.id)::int AS mvp_awards
-      FROM players p
-      JOIN championships c ON c.mvp_player_id = p.id
-      GROUP BY p.id, player_name
-      ORDER BY mvp_awards DESC, player_name ASC
-      LIMIT 1
+    const result = await pool.query(`
+      SELECT * FROM alltime_records
+      WHERE era = 'modern_wood'
+      ORDER BY category, subcategory
     `);
 
     res.json({
       success: true,
-      data: {
-        most_championships_team: mostChamps[0] || null,
-        most_appearances_team: mostAppearances[0] || null,
-        most_mvp_player: mostMvp[0] || null,
-      },
+      count: result.rows.length,
+      records: result.rows,
     });
-  } catch (err) {
-    console.error("Records summary error:", err);
-    res
-      .status(500)
-      .json({ success: false, error: "Failed to compute records" });
+  } catch (error) {
+    console.error("Error fetching records:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch records",
+    });
   }
 });
 
-module.exports = router;
+// GET /api/records/modern-wood-era
+router.get("/modern-wood-era", async (req, res) => {
+  try {
+    const records = {
+      team_batting: {
+        highest_avg: {
+          team: "San Diego Stars",
+          value: ".379",
+          year: 2010,
+          games: 6,
+        },
+        most_runs_game: {
+          team: "Great Bend KS Bat Cats",
+          value: 24,
+          opponent: "Hutchinson KS",
+          year: 2019,
+        },
+        most_hits_tournament: {
+          team: "Liberal KS",
+          value: 122,
+          games: 11,
+          year: 2015,
+        },
+      },
+      team_pitching: {
+        lowest_era: {
+          team: "San Diego Force",
+          value: "0.96",
+          games: 4,
+          year: 2012,
+        },
+        most_strikeouts_game: { value: 24, games: 1, year: 2004 },
+      },
+      individual_batting: {
+        highest_avg: {
+          player: "Grant Nottlemann",
+          team: "Great Bend KS Bat Cats",
+          value: ".750",
+          year: 2023,
+        },
+        most_hits_tournament: {
+          player: "Gavin Wehby",
+          team: "Liberal KS",
+          value: 19,
+          year: 2015,
+        },
+        most_rbis_tournament: {
+          player: "Gunnar Glad",
+          team: "Anchorage AK Glacier Pilots",
+          value: 17,
+          year: 2009,
+        },
+      },
+      individual_pitching: {
+        most_strikeouts_tournament: {
+          player: "Tommy Hanson",
+          team: "Aloha OR Knights",
+          value: 27,
+          year: 2005,
+        },
+      },
+    };
+
+    res.json(records);
+  } catch (error) {
+    console.error("Error fetching modern wood era records:", error);
+    res.status(500).json({ error: "Failed to fetch records" });
+  }
+});
+
+// GET /api/records/category/:category
+router.get("/category/:category", async (req, res) => {
+  try {
+    const { category } = req.params;
+
+    const result = await pool.query(
+      `
+      SELECT * FROM alltime_records
+      WHERE category = $1 AND era = 'modern_wood'
+      ORDER BY subcategory
+    `,
+      [category]
+    );
+
+    res.json({
+      success: true,
+      category,
+      count: result.rows.length,
+      records: result.rows,
+    });
+  } catch (error) {
+    console.error("Error fetching records by category:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch records",
+    });
+  }
+});
+
+export default router;

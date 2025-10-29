@@ -1,20 +1,16 @@
 {
   "name": "nbc-world-series",
+  "private": true,
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "directories": {
-    "doc": "docs"
-  },
+  "description": "NBC World Series full-stack application",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "install:all": "npm install --prefix backend && npm install --prefix frontend",
+    "build": "npm run build --prefix frontend",
+    "start": "npm run start --prefix backend",
+    "dev": "npm run dev --prefix backend",
+    "deploy:local": "npm run build --prefix frontend && npm run start --prefix backend"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "bcrypt": "^6.0.0",
-    "dotenv": "^17.2.2",
-    "pg": "^8.16.3"
-  }
+  "license": "ISC"
 }

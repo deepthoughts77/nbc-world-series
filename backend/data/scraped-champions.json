@@ -1,0 +1,922 @@
+[
+  {
+    "year": "2025",
+    "champion": "Bradyn McClure 12.2 IP .71 ER",
+    "runnerUp": "Hutchinson Monarchs (KS)"
+  },
+  {
+    "year": "2024",
+    "champion": "Garrett Hicks 6.25 IP, 0 ER",
+    "runnerUp": "Hays Larks (KS)"
+  },
+  {
+    "year": "2023",
+    "champion": "Zane Petty, 13 IP, 0 ER",
+    "runnerUp": "Santa Barbara Foresters (CA)"
+  },
+  {
+    "year": "2022",
+    "champion": "Will Maynard, 12.1 IP 0 ER",
+    "runnerUp": "Hutchinson Monarchs (KS)"
+  },
+  {
+    "year": "2021",
+    "champion": "Nathan Medrano, 15 IP, 0 ER",
+    "runnerUp": "Austin (TX) Lonestar"
+  },
+  {
+    "year": "2020",
+    "champion": "Sean Johnson, 6 IP, 0 ER",
+    "runnerUp": "Santa Barbara Foresters (CA)"
+  },
+  {
+    "year": "2025",
+    "champion": "Jake Gutierrez",
+    "runnerUp": "Hutchinson Monarchs (KS)"
+  },
+  {
+    "year": "2024",
+    "champion": "Garrett Gruell",
+    "runnerUp": "Hays Larks (KS)"
+  },
+  {
+    "year": "2023",
+    "champion": "Max Buettenback",
+    "runnerUp": "Hutchinson Monarchs (KS)"
+  },
+  {
+    "year": "2022",
+    "champion": "Gavin Kash",
+    "runnerUp": "Santa Barbara Foresters (CA)"
+  },
+  {
+    "year": "2021",
+    "champion": "Justin Eckhardt",
+    "runnerUp": "Santa Barbara Foresters (CA)"
+  },
+  {
+    "year": "2020",
+    "champion": "Sean Johnson",
+    "runnerUp": "Santa Barbara Foresters (CA)"
+  },
+  {
+    "year": "2019",
+    "champion": "Jonathan Sinte, 18 IP, 2 ER",
+    "runnerUp": "San Diego Stars"
+  },
+  {
+    "year": "2018",
+    "champion": "Ryan Jennings, 12 IP, 1 ER",
+    "runnerUp": "San Antonio Angels"
+  },
+  {
+    "year": "2017",
+    "champion": "Ryan Erickson, 21 IP, 17 SO",
+    "runnerUp": "Mulvane, KS"
+  },
+  {
+    "year": "2016",
+    "champion": "Keegan Curtis, 11 IP, 20 SO",
+    "runnerUp": "Hays, KS"
+  },
+  {
+    "year": "2015",
+    "champion": "Will Olds, 9.1 IP, 0 ER",
+    "runnerUp": "Liberal, KS"
+  },
+  {
+    "year": "2015",
+    "champion": "Lucas Schauer, 9 IP, 0 ER",
+    "runnerUp": "Valley Center, KS"
+  },
+  {
+    "year": "2014",
+    "champion": "Jake Fromson, 12 IP, 0 ER",
+    "runnerUp": "Hays, KS"
+  },
+  {
+    "year": "2013",
+    "champion": "Connor Little, 17.2 IP, 0 ER",
+    "runnerUp": "San Diego Force"
+  },
+  {
+    "year": "2012",
+    "champion": "Josh Stone, 18 IP, 1 ER",
+    "runnerUp": "El Dorado, KS"
+  },
+  {
+    "year": "2011",
+    "champion": "Josh Malin, 23.1 IP, 4 ER",
+    "runnerUp": "Nevada, MO"
+  },
+  {
+    "year": "2010",
+    "champion": "Paul Gonzalez, 22 IP, 4 ER",
+    "runnerUp": "Liberal, KS"
+  },
+  {
+    "year": "2019",
+    "champion": "Henry Cheney",
+    "runnerUp": "Seattle Studs (WA)"
+  },
+  {
+    "year": "2018",
+    "champion": "Patrick Mathis",
+    "runnerUp": "Santa Barbara Foresters (CA)"
+  },
+  {
+    "year": "2017",
+    "champion": "Ryan Langerhans",
+    "runnerUp": "Kansas Stars"
+  },
+  {
+    "year": "2016",
+    "champion": "Jacob Patterson",
+    "runnerUp": "Santa Barbara Foresters (CA)"
+  },
+  {
+    "year": "2015",
+    "champion": "Connor Savage",
+    "runnerUp": "Seattle Studs (WA)"
+  },
+  {
+    "year": "2014",
+    "champion": "Jon Duplantier",
+    "runnerUp": "Santa Barbara Foresters (CA)"
+  },
+  {
+    "year": "2013",
+    "champion": "David Benson",
+    "runnerUp": "Seattle Studs (WA)"
+  },
+  {
+    "year": "2012",
+    "champion": "Zach Fish",
+    "runnerUp": "Santa Barbara Foresters (CA)"
+  },
+  {
+    "year": "2011",
+    "champion": "Mitch Mormann",
+    "runnerUp": "Santa Barbara Foresters (CA)"
+  },
+  {
+    "year": "2010",
+    "champion": "Paul Gonzalez",
+    "runnerUp": "Liberal Bee Jays (KS)"
+  },
+  {
+    "year": "2009",
+    "champion": "Jake Sabol, 17.2 IP, 1 ER",
+    "runnerUp": "El Dorado, KS"
+  },
+  {
+    "year": "2008",
+    "champion": "Shane Minks, 12 IP, 0 ER",
+    "runnerUp": "Beatrice, NE"
+  },
+  {
+    "year": "2007",
+    "champion": "Brad Hutt, 17 IP, 0 ER",
+    "runnerUp": "Hays, KS"
+  },
+  {
+    "year": "2006",
+    "champion": "Jon Qualls, 3 GS, 3 W",
+    "runnerUp": "Derby, KS"
+  },
+  {
+    "year": "2005",
+    "champion": "Matt Whitaker, 3 GS, 3 W",
+    "runnerUp": "Derby, KS"
+  },
+  {
+    "year": "2004",
+    "champion": "Garrett Olson, 16 IP, 0 ER",
+    "runnerUp": "Anchorage, AK"
+  },
+  {
+    "year": "2003",
+    "champion": "Chan Wei Tu, 16 IP, 0 ER",
+    "runnerUp": "Chinese Taipei"
+  },
+  {
+    "year": "2002",
+    "champion": "Jaime Rodrique, 10 IP, 0 ER",
+    "runnerUp": "Nevada, MO"
+  },
+  {
+    "year": "2001",
+    "champion": "Kyle Edens, 16 IP 0 ER",
+    "runnerUp": "Hays/ Wichita, KS"
+  },
+  {
+    "year": "2000",
+    "champion": "Keith Perez",
+    "runnerUp": "Lake Erie, MI"
+  },
+  {
+    "year": "2009",
+    "champion": "Jake Sabol",
+    "runnerUp": "El Dorado Broncos (KS)"
+  },
+  {
+    "year": "2008",
+    "champion": "Kevin Keyes",
+    "runnerUp": "Santa Barbara Foresters (CA)"
+  },
+  {
+    "year": "2007",
+    "champion": "Brad Arnett",
+    "runnerUp": "Havasu Heat (AZ)"
+  },
+  {
+    "year": "2006",
+    "champion": "Jon Qualls",
+    "runnerUp": "Derby Twins (KS)"
+  },
+  {
+    "year": "2005",
+    "champion": "Matt Whitaker",
+    "runnerUp": "Derby Twins (KS)"
+  },
+  {
+    "year": "2004",
+    "champion": "Ryan Annetsberger",
+    "runnerUp": "Prairie Gravel (IL)"
+  },
+  {
+    "year": "2004",
+    "champion": "Scott Simon",
+    "runnerUp": "Mat-Su Miners (AK)"
+  },
+  {
+    "year": "2003",
+    "champion": "Chang-Wei Tu",
+    "runnerUp": "Chinese Taipei"
+  },
+  {
+    "year": "2002",
+    "champion": "Blake Gill",
+    "runnerUp": "Fairbanks Goldpanners (AK)"
+  },
+  {
+    "year": "2001",
+    "champion": "Jeff Francis",
+    "runnerUp": "Anchorage Glacier Pilots (AK)"
+  },
+  {
+    "year": "2000",
+    "champion": "Cory Metzler",
+    "runnerUp": "Liberal Bee Jays (KS)"
+  },
+  {
+    "year": "1999",
+    "champion": "Brandon Sloan, 11 IP, 1 ER",
+    "runnerUp": "El Dorado, KS"
+  },
+  {
+    "year": "1998",
+    "champion": "Mike Terry, 17 IP, 0 ER",
+    "runnerUp": "Clarinda, IA"
+  },
+  {
+    "year": "1997",
+    "champion": "Mario Ramos, 14 IP, 1ER",
+    "runnerUp": "Kenai, AK"
+  },
+  {
+    "year": "1996",
+    "champion": "Andy Kimball, 13 IP, 1 ER",
+    "runnerUp": "Kenai, AK"
+  },
+  {
+    "year": "1995",
+    "champion": "Kaleb Schroeder",
+    "runnerUp": "Edmond, OK"
+  },
+  {
+    "year": "1994",
+    "champion": "Mike Drumright",
+    "runnerUp": "Anchorage, AK"
+  },
+  {
+    "year": "1993",
+    "champion": "Brain Fassbender",
+    "runnerUp": "Elkhart, KS"
+  },
+  {
+    "year": "1992",
+    "champion": "Dan Driskill",
+    "runnerUp": "Wichita, KS (Broncos)"
+  },
+  {
+    "year": "1991",
+    "champion": "B.J. Wallace",
+    "runnerUp": "Anchorage, AK"
+  },
+  {
+    "year": "1990",
+    "champion": "Jim Yanko",
+    "runnerUp": "Anchorage, AK"
+  },
+  {
+    "year": "1999",
+    "champion": "Marco Cunningham",
+    "runnerUp": "Dallas Phillies (TX)"
+  },
+  {
+    "year": "1998",
+    "champion": "Jason Aspito",
+    "runnerUp": "El Dorado Broncos (KS)"
+  },
+  {
+    "year": "1997",
+    "champion": "Jeff Juarez",
+    "runnerUp": "Nevada Griffons (MO)"
+  },
+  {
+    "year": "1996",
+    "champion": "Kevin Frederick",
+    "runnerUp": "El Dorado Broncos (KS)"
+  },
+  {
+    "year": "1995",
+    "champion": "Lance Berkman",
+    "runnerUp": "Hays Larks (KS)"
+  },
+  {
+    "year": "1994",
+    "champion": "Jesse Zepeda",
+    "runnerUp": "Kenai Peninsula Oilers (AK)"
+  },
+  {
+    "year": "1993",
+    "champion": "Jeff Poor",
+    "runnerUp": "Kenai Peninsula Oilers (AK)"
+  },
+  {
+    "year": "1992",
+    "champion": "Mike Kane",
+    "runnerUp": "Milothian White Sox (IL)"
+  },
+  {
+    "year": "1991",
+    "champion": "Chris Hmielewski",
+    "runnerUp": "Kenai Peninsula Oilers (AK)"
+  },
+  {
+    "year": "1990",
+    "champion": "Chris Hmielewski",
+    "runnerUp": "Milothian White Sox (IL)"
+  },
+  {
+    "year": "1989",
+    "champion": "Curtis Lekanic",
+    "runnerUp": "Liberal, KS"
+  },
+  {
+    "year": "1988",
+    "champion": "Dave Wong",
+    "runnerUp": "Everett, WA"
+  },
+  {
+    "year": "1987",
+    "champion": "Larry Lindeen",
+    "runnerUp": "Red Oaks, IA"
+  },
+  {
+    "year": "1986",
+    "champion": "Derek Stroud",
+    "runnerUp": "Anchorage, AK"
+  },
+  {
+    "year": "1985",
+    "champion": "Mike Harvey",
+    "runnerUp": "Eureka, CA"
+  },
+  {
+    "year": "1984",
+    "champion": "Steve Peters",
+    "runnerUp": "Liberal, KS"
+  },
+  {
+    "year": "1983",
+    "champion": "John Radtke",
+    "runnerUp": "Santa Maria, CA"
+  },
+  {
+    "year": "1982",
+    "champion": "John Hoover",
+    "runnerUp": "Anchorage, AK"
+  },
+  {
+    "year": "1981",
+    "champion": "Chuck Mathews",
+    "runnerUp": "Clarinda, IA"
+  },
+  {
+    "year": "1980",
+    "champion": "Mike Moore",
+    "runnerUp": "Liberal, KS"
+  },
+  {
+    "year": "1989",
+    "champion": "Jim Huslig",
+    "runnerUp": "El Dorado Broncos (KS)"
+  },
+  {
+    "year": "1988",
+    "champion": "Dave Wong",
+    "runnerUp": "Everett Merchants (WA)"
+  },
+  {
+    "year": "1987",
+    "champion": "Ken Kremer",
+    "runnerUp": "Mat-Su Miners (AK)"
+  },
+  {
+    "year": "1986",
+    "champion": "Steve Bales",
+    "runnerUp": "Anchorage Glacier Pilots (AK)"
+  },
+  {
+    "year": "1985",
+    "champion": "Kerry Richardson",
+    "runnerUp": "Liberal Bee Jays (KS)"
+  },
+  {
+    "year": "1984",
+    "champion": "Bill Bates",
+    "runnerUp": "Grand Rapids Sullivans (MI)"
+  },
+  {
+    "year": "1983",
+    "champion": "Curtis Morgan",
+    "runnerUp": "Grand Rapids Sullivans (MI)"
+  },
+  {
+    "year": "1982",
+    "champion": "Dave Hengle",
+    "runnerUp": "Santa Maria Indians (CA)"
+  },
+  {
+    "year": "1981",
+    "champion": "Keith Mucha",
+    "runnerUp": "Clarinda, IA"
+  },
+  {
+    "year": "1980",
+    "champion": "Kevin McReynolds",
+    "runnerUp": "Fairbanks Goldpanners (AK)"
+  },
+  {
+    "year": "1979",
+    "champion": "Mike Moore",
+    "runnerUp": "Liberal, KS"
+  },
+  {
+    "year": "1978",
+    "champion": "Steve Ward",
+    "runnerUp": "Hutchinson, KS"
+  },
+  {
+    "year": "1977",
+    "champion": "Tug McGraw",
+    "runnerUp": "Hays, KS"
+  },
+  {
+    "year": "1976",
+    "champion": "Greg Harris",
+    "runnerUp": "Fairbanks, AK"
+  },
+  {
+    "year": "1975",
+    "champion": "Don Hanna",
+    "runnerUp": "Boulder, CO"
+  },
+  {
+    "year": "1974",
+    "champion": "George Milke",
+    "runnerUp": "Fairbanks, AK"
+  },
+  {
+    "year": "1973",
+    "champion": "Ryan Kurosaki",
+    "runnerUp": "Liberal, KS"
+  },
+  {
+    "year": "1972",
+    "champion": "Ron Roznovsky",
+    "runnerUp": "Boulder, CO"
+  },
+  {
+    "year": "1971",
+    "champion": "Randy Jones",
+    "runnerUp": "Anchorage, AK"
+  },
+  {
+    "year": "1970",
+    "champion": "Al Gerhardt",
+    "runnerUp": "Grand Rapids, MI"
+  },
+  {
+    "year": "1979",
+    "champion": "Gary D’Onofrio",
+    "runnerUp": "Liberal Bee Jays (KS)"
+  },
+  {
+    "year": "1978",
+    "champion": "Bob Ferris",
+    "runnerUp": "Boulder Collegians (CO)"
+  },
+  {
+    "year": "1977",
+    "champion": "Bob Skube",
+    "runnerUp": "Kenai Peninsula Oilers (AK)"
+  },
+  {
+    "year": "1976",
+    "champion": "Greg Harris",
+    "runnerUp": "Fairbanks Goldpanners (AK)"
+  },
+  {
+    "year": "1975",
+    "champion": "Mike Colbern",
+    "runnerUp": "Boulder Collegians (CO)"
+  },
+  {
+    "year": "1974",
+    "champion": "Steve Kemp",
+    "runnerUp": "Fairbanks Goldpanners (AK)"
+  },
+  {
+    "year": "1973",
+    "champion": "Lee Iorg",
+    "runnerUp": "Fairbanks Goldpanners (AK)"
+  },
+  {
+    "year": "1972",
+    "champion": "Kerry Dineen",
+    "runnerUp": "Fairbanks Goldpanners (AK)"
+  },
+  {
+    "year": "1971",
+    "champion": "Bruce Bochte",
+    "runnerUp": "Anchorage Glacier Pilots (AK)"
+  },
+  {
+    "year": "1970",
+    "champion": "Al Gerhardt",
+    "runnerUp": "Grand Rapids Sullivans (MI)"
+  },
+  {
+    "year": "1969",
+    "champion": "Jim Crawford",
+    "runnerUp": "Anchorage, AK"
+  },
+  {
+    "year": "1968",
+    "champion": "Larry Gura",
+    "runnerUp": "Boulder, CO"
+  },
+  {
+    "year": "1967",
+    "champion": "Terry Thompson",
+    "runnerUp": "Honolulu, HI"
+  },
+  {
+    "year": "1966",
+    "champion": "Sandy Vance",
+    "runnerUp": "Eureka, CA"
+  },
+  {
+    "year": "1965",
+    "champion": "Pat Gillick",
+    "runnerUp": "Wichita, KS (Rapid Transit)"
+  },
+  {
+    "year": "1964",
+    "champion": "Jan Dukes\n\n\nBellingham, WA",
+    "runnerUp": "Bellingham, WA"
+  },
+  {
+    "year": "1963",
+    "champion": "Dave Dowling",
+    "runnerUp": "Fairbanks, AK"
+  },
+  {
+    "year": "1962",
+    "champion": "Jim Hadley",
+    "runnerUp": "Wichita, KS (Rapid Transit)"
+  },
+  {
+    "year": "1961",
+    "champion": "Jerry Neal",
+    "runnerUp": "Grand Rapids, MI"
+  },
+  {
+    "year": "1960",
+    "champion": "C “Butch” Mixon",
+    "runnerUp": "Ponchatoula, LA"
+  },
+  {
+    "year": "1969",
+    "champion": "Chris Chambliss",
+    "runnerUp": "Anchorage Glacier Pilots (AK)"
+  },
+  {
+    "year": "1968",
+    "champion": "Joe Tanner",
+    "runnerUp": "Jackson Braves (MS)"
+  },
+  {
+    "year": "1967",
+    "champion": "Frank Duffy",
+    "runnerUp": "Boulder Collegians (CO)"
+  },
+  {
+    "year": "1966",
+    "champion": "Ray Henningsen",
+    "runnerUp": "Boulder Collegians (CO)"
+  },
+  {
+    "year": "1965",
+    "champion": "Bob Boyd",
+    "runnerUp": "Rapid Transit Dreamliners (KS)"
+  },
+  {
+    "year": "1964",
+    "champion": "Dick Sanders",
+    "runnerUp": "Wichita Service Auto Glass (KS)"
+  },
+  {
+    "year": "1963",
+    "champion": "Sam Suplizio",
+    "runnerUp": "Fairbanks Goldpanners (AK)"
+  },
+  {
+    "year": "1962",
+    "champion": "Rocky Krsnich",
+    "runnerUp": "Wichita Rapid Transit (KS)"
+  },
+  {
+    "year": "1961",
+    "champion": "Al Ware",
+    "runnerUp": "Grand Rapids Sullivans (MI)"
+  },
+  {
+    "year": "1960",
+    "champion": "Bob Seltzer",
+    "runnerUp": "Tampa Gibsonton (FL)"
+  },
+  {
+    "year": "1959",
+    "champion": "Pat Centelli",
+    "runnerUp": "Houston, TX"
+  },
+  {
+    "year": "1958",
+    "champion": "Elwood Hahn",
+    "runnerUp": "Drain, OR"
+  },
+  {
+    "year": "1957",
+    "champion": "Bob Giggie",
+    "runnerUp": "Sinton, TX"
+  },
+  {
+    "year": "1956",
+    "champion": "Walt Wherry",
+    "runnerUp": "Ft. Wayne, IN"
+  },
+  {
+    "year": "1955",
+    "champion": "Jim Morris",
+    "runnerUp": "Wichita, KS (Boeing)"
+  },
+  {
+    "year": "1954",
+    "champion": "Donnie Lee",
+    "runnerUp": "Casa Grande, AZ"
+  },
+  {
+    "year": "1953",
+    "champion": "William Black",
+    "runnerUp": "Leonard Wood, MO"
+  },
+  {
+    "year": "1952",
+    "champion": "Johnny Antonelli",
+    "runnerUp": "Ft. Myers, VA"
+  },
+  {
+    "year": "1951",
+    "champion": "Mike Blyzka",
+    "runnerUp": "Sinton, TX"
+  },
+  {
+    "year": "1950",
+    "champion": "Frank Wall",
+    "runnerUp": "Quantico, VA"
+  },
+  {
+    "year": "1959",
+    "champion": "Clyde Girrens",
+    "runnerUp": "Wichita Weller (KS)"
+  },
+  {
+    "year": "1958",
+    "champion": "Jim O’Rourke",
+    "runnerUp": "Drain Black Sox (OR)"
+  },
+  {
+    "year": "1957",
+    "champion": "Wilmer Fields",
+    "runnerUp": "Ft. Wayne Dairymen (IN)"
+  },
+  {
+    "year": "1956",
+    "champion": "Clyde McCullough",
+    "runnerUp": "Alpine Cowboys (TX)"
+  },
+  {
+    "year": "1955",
+    "champion": "Daryl Spencer",
+    "runnerUp": "Wichita Boeing Bombers (KS)"
+  },
+  {
+    "year": "1954",
+    "champion": "Donnie Lee",
+    "runnerUp": "Casa Grande Cotton Kings (AZ)"
+  },
+  {
+    "year": "1953",
+    "champion": "Robert McKee",
+    "runnerUp": "Ft. Leonard Wood Hilltoppers (MO)"
+  },
+  {
+    "year": "1952",
+    "champion": "Danny O’Connell",
+    "runnerUp": "Ft. Meyer Colonials (VA)"
+  },
+  {
+    "year": "1951",
+    "champion": "Steve Rapech",
+    "runnerUp": "Sinton Plymouth Oilers (TX)"
+  },
+  {
+    "year": "1950",
+    "champion": "Pat Scantlebury",
+    "runnerUp": "Ft. Wayne Capeharts (IN)"
+  },
+  {
+    "year": "1949",
+    "champion": "Al Cicotte",
+    "runnerUp": "Golden, CO"
+  },
+  {
+    "year": "1948",
+    "champion": "Ray Janikowski",
+    "runnerUp": "New Holstein, WI"
+  },
+  {
+    "year": "1947",
+    "champion": "Don Swartz",
+    "runnerUp": "Golden, CO"
+  },
+  {
+    "year": "1946",
+    "champion": "Roy Henshaw",
+    "runnerUp": "St. Joseph, MI"
+  },
+  {
+    "year": "1945",
+    "champion": "Lou Kretlow",
+    "runnerUp": "Enidairs, OK"
+  },
+  {
+    "year": "1944",
+    "champion": "Herman Besse",
+    "runnerUp": "Sherman Field, KS"
+  },
+  {
+    "year": "1943",
+    "champion": "Harry Jordan",
+    "runnerUp": "Camp Wheeler, GA"
+  },
+  {
+    "year": "1942",
+    "champion": "Winslow Johnson",
+    "runnerUp": "Wichita, KS (Boeing)"
+  },
+  {
+    "year": "1941",
+    "champion": "Jug Thesenga",
+    "runnerUp": "Enid, OK (Champlins)"
+  },
+  {
+    "year": "1940",
+    "champion": "Vance Cauble",
+    "runnerUp": "Enid, OK (Champlins)"
+  },
+  {
+    "year": "1949",
+    "champion": "Bill Ricks",
+    "runnerUp": "Ft. Wayne G-E Club (IN)"
+  },
+  {
+    "year": "1948",
+    "champion": "Veo Story",
+    "runnerUp": "Chatham Blanketeers (NC)"
+  },
+  {
+    "year": "1947",
+    "champion": "Bruno Konopka",
+    "runnerUp": "Golden Coors (CO)"
+  },
+  {
+    "year": "1946",
+    "champion": "Les Lollis",
+    "runnerUp": "Carmichael Firemen (CA)"
+  },
+  {
+    "year": "1945",
+    "champion": "Cot Deal",
+    "runnerUp": "Enid AFB Enidairs (OK)"
+  },
+  {
+    "year": "1944",
+    "champion": "Cot Deal",
+    "runnerUp": "Enid AFB Enidairs (OK)"
+  },
+  {
+    "year": "1943",
+    "champion": "George Archie",
+    "runnerUp": "Ft. Riley CRTC (KS)"
+  },
+  {
+    "year": "1942",
+    "champion": "Ed Borom",
+    "runnerUp": "Wichita Boeing Bombers (KS)"
+  },
+  {
+    "year": "1941",
+    "champion": "Red Barkley",
+    "runnerUp": "Enid Champlins (OK)"
+  },
+  {
+    "year": "1940",
+    "champion": "Vance Cauble",
+    "runnerUp": "Enid Champlins (OK)"
+  },
+  {
+    "year": "1939",
+    "champion": "Roy Helser",
+    "runnerUp": "Silverton, OR"
+  },
+  {
+    "year": "1938",
+    "champion": "Byron Speece",
+    "runnerUp": "Buford, GA"
+  },
+  {
+    "year": "1937",
+    "champion": "Gene Ledford",
+    "runnerUp": "Enid, OK (Eason)"
+  },
+  {
+    "year": "1936",
+    "champion": "Harry White",
+    "runnerUp": "Duncan, OK"
+  },
+  {
+    "year": "1935",
+    "champion": "Satchel Paige",
+    "runnerUp": "Bismark, ND"
+  },
+  {
+    "year": "1939",
+    "champion": "Roy Helser",
+    "runnerUp": "Silverton Red Sox (OR)"
+  },
+  {
+    "year": "1938",
+    "champion": "Andy Johnson",
+    "runnerUp": "Buford Bona Allens (GA)"
+  },
+  {
+    "year": "1937",
+    "champion": "Claude Gilchrist",
+    "runnerUp": "Enid Eason Oilers (OK)"
+  },
+  {
+    "year": "1936",
+    "champion": "Harry White",
+    "runnerUp": "Duncan Haliburtons (OK)"
+  },
+  {
+    "year": "1935",
+    "champion": "Satchel Paige",
+    "runnerUp": "Bismarck Corwin-Churchills (ND)"
+  }
+]
