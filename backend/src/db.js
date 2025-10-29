@@ -1,16 +1,17 @@
 // backend/src/db.js (ESM)
 import pg from "pg";
-import "dotenv/config";
-
 const { Pool } = pg;
 
-export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  // ssl: { rejectUnauthorized: false } // <- only if you later use a hosted DB that requires SSL
+const pool = new Pool({
+  host: process.env.PGHOST || process.env.DB_HOST || "localhost",
+  port: process.env.PGPORT || process.env.DB_PORT || 5432,
+  user: process.env.PGUSER || process.env.DB_USER || "postgres",
+  password: process.env.PGPASSWORD || process.env.DB_PASSWORD,
+  database: process.env.PGDATABASE || process.env.DB_NAME || "nbc_world_series",
+  ssl:
+    process.env.NODE_ENV === "production"
+      ? { rejectUnauthorized: false }
+      : false,
 });
 
-// Optional: simple health probe
-export async function probeDb() {
-  const { rows } = await pool.query("select 1 as ok");
-  return rows[0].ok === 1;
-}
+export { pool };
