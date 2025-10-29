@@ -3,13 +3,23 @@ import express from "express";
 import cors from "cors";
 import morgan from "morgan";
 import { pool } from "./db.js";
+import adminRoutes from "./routes/admin.js";
 import recordsRoutes from "./routes/records.js";
 import path from "path";
 import { fileURLToPath } from "url";
-import adminRoutes from "./routes/admin.js";
 
 const app = express();
 
+app.use((req, res, next) => {
+  console.log("➡️", req.method, req.url);
+  next();
+});
+
+// 🔎 API tracer: logs anything that begins with /api
+app.use("/api", (req, res, next) => {
+  console.log("API →", req.method, req.originalUrl);
+  next();
+});
 // __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,13 +42,41 @@ app.use(
 
 app.use(express.json());
 app.use(morgan("dev"));
-app.use("/api/admin", adminRoutes);
 
 console.log(" Starting to register routes...");
+
+// BEFORE: app.use("/api/admin", adminRoutes);
+app.use(
+  "/api/admin",
+  (req, res, next) => {
+    console.log("ADMIN PRE →", req.method, req.originalUrl);
+    next();
+  },
+  adminRoutes,
+  (req, res) => {
+    // If we land here, the admin router didn't match anything
+    console.log("ADMIN 404 →", req.method, req.originalUrl);
+    res
+      .status(404)
+      .json({ ok: false, where: "admin-post-router", path: req.originalUrl });
+  }
+);
+console.log(" Registered: /api/admin routes");
+app.get("/api/admin/_direct_ping", (req, res) => {
+  res.json({ ok: true, where: "index.js (direct)" });
+});
 
 // === RECORDS ROUTES (from external file) ===
 app.use("/api/records", recordsRoutes);
 console.log(" Registered: /api/records routes");
+
+// DIRECT route (bypasses admin.js). If this doesn't respond, routing/order/port is wrong.
+app.get("/api/admin/ping", (req, res) => {
+  res.json({ ok: true, where: "index.js (direct)" });
+});
+app.get("/api/admin/_rootping", (req, res) => {
+  res.json({ ok: true, where: "index" });
+});
 
 // === HEALTH CHECK ===
 app.get("/api/health", (req, res) => {
