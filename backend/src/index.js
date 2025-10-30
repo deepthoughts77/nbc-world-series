@@ -5,6 +5,7 @@ import morgan from "morgan";
 import { pool } from "./db.js";
 import adminRoutes from "./routes/admin.js";
 import recordsRoutes from "./routes/records.js";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -665,16 +666,30 @@ console.log("\n All routes registered successfully!\n");
 // ---- Serve React build (after API routes) ----
 const frontendBuild = path.resolve(__dirname, "..", "..", "frontend", "build");
 app.use(express.static(frontendBuild));
+const indexHtml = path.join(frontendBuild, "index.html");
 
 // Avoid hijacking API or static asset requests; send index.html for everything else
 // Serve React index.html for anything NOT starting with /api
-app.get(/^\/(?!api).*/, (req, res) => {
-  res.sendFile(path.join(frontendBuild, "index.html"));
-});
-
+if (fs.existsSync(indexHtml)) {
+  app.use(express.static(frontendBuild));
+  app.get(/^\/(?!api).*/, (req, res) => {
+    res.sendFile(path.join(frontendBuild, "index.html"));
+  });
+} else {
+  // helpful message in case the build isn't there
+  app.get("/", (req, res) => {
+    res.status(200).send("Frontend build not found yet. API is running.");
+  });
+}
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(` API running on http://localhost:${PORT}`);
-  console.log(` Health check: http://localhost:${PORT}/api/health\n`);
-});
+// For Vercel serverless - just export the app
+export default app;
+
+// Only start server if running locally (not on Vercel)
+if (process.env.NODE_ENV !== "production") {
+  app.listen(PORT, () => {
+    console.log(` API running on http://localhost:${PORT}`);
+    console.log(` Health check: http://localhost:${PORT}/api/health\n`);
+  });
+}
