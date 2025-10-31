@@ -2,16 +2,21 @@
 import pg from "pg";
 const { Pool } = pg;
 
-const pool = new Pool({
-  host: process.env.PGHOST || process.env.DB_HOST || "localhost",
-  port: process.env.PGPORT || process.env.DB_PORT || 5432,
-  user: process.env.PGUSER || process.env.DB_USER || "postgres",
-  password: process.env.PGPASSWORD || process.env.DB_PASSWORD,
-  database: process.env.PGDATABASE || process.env.DB_NAME || "nbc_world_series",
-  ssl:
-    process.env.NODE_ENV === "production"
-      ? { rejectUnauthorized: false }
-      : false,
-});
+const isProd = process.env.NODE_ENV === "production";
+
+const pool = isProd
+  ? new Pool({
+      connectionString: process.env.DATABASE_URL, // e.g. ...@<neon-host>/neondb?sslmode=require
+      ssl: { rejectUnauthorized: false },
+      keepAlive: true,
+      connectionTimeoutMillis: 10000,
+    })
+  : new Pool({
+      host: process.env.PGHOST || "localhost",
+      port: Number(process.env.PGPORT || 5432),
+      user: process.env.PGUSER || "postgres",
+      password: process.env.PGPASSWORD || "",
+      database: process.env.PGDATABASE || "nbc_world_series",
+    });
 
 export { pool };

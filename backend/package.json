@@ -1,14 +1,12 @@
 {
   "type": "module",
-  "name": "backend",
+  "name": "nbc-world-series-backend",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
-    "dev": "node src/index.js",
     "start": "node src/index.js",
-    "build:frontend": "cd ../frontend && npm install --no-audit --no-fund && npm run build",
-    "postinstall": "npm run build:frontend",
+    "dev": "nodemon src/index.js",
     "test": "echo \"no tests\" && exit 0"
   },
   "keywords": [],
@@ -19,6 +17,9 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "helmet": "^7.0.0",
+    "express-rate-limit": "^6.10.0",
+    "compression": "^1.7.4",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.1",
     "pdf-parse": "^1.1.1",

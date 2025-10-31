@@ -142,6 +142,17 @@ app.get("/api/statistics/overview", async (req, res) => {
 });
 console.log(" Registered: GET /api/statistics/overview");
 
+app.get("/api/dbcheck", async (_req, res) => {
+  try {
+    const { rows } = await pool.query(
+      "select count(*)::int as championships from public.championships"
+    );
+    res.json({ ok: true, championships: rows[0].championships });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 // === CHAMPIONSHIPS LIST ===
 app.get("/api/championships", async (req, res) => {
   try {
