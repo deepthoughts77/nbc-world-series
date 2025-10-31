@@ -687,7 +687,7 @@ const PORT = process.env.PORT || 5000;
 export default app;
 
 // Only start server if running locally (not on Vercel)
-if (process.env.NODE_ENV !== "production") {
+if (process.env.NODE_ENV !== "1") {
   app.listen(PORT, () => {
     console.log(` API running on http://localhost:${PORT}`);
     console.log(` Health check: http://localhost:${PORT}/api/health\n`);
