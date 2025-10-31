@@ -1,0 +1,39 @@
+name: Restore Neon DB
+
+on:
+  workflow_dispatch: {}   # run manually from the Actions tab
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install psql client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Show psql version
+        run: psql --version
+
+      - name: Restore dump into Neon
+        env:
+          PGHOST: ${{ secrets.NEON_HOST }}
+          PGUSER: ${{ secrets.NEON_USER }}
+          PGPASSWORD: ${{ secrets.NEON_PASSWORD }}
+          PGDATABASE: ${{ secrets.NEON_DB }}
+          PGPORT: "5432"
+          PGSSLMODE: "require"
+        run: |
+          # Quick connectivity check
+          psql -c "select current_database(), current_user, current_schema();"
+
+          # Restore your dump
+          psql -f backend/full_backup.sql
+
+          # Verify (won't fail the job if missing)
+          psql -c "select table_schema, table_name from information_schema.tables where table_schema='public' order by 1,2;" || true
+          psql -c "select count(*) as championships from public.championships;" || true
+          psql -c "select count(*) as teams from public.teams;" || true
