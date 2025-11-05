@@ -181,6 +181,11 @@ function Nav() {
                   Records
                 </NavLink>
               </li>
+              <li>
+                <NavLink to="/player-stats" className={activeClass}>
+                  Player Stats
+                </NavLink>
+              </li>
             </ul>
           </nav>
         </div>
@@ -256,6 +261,17 @@ function Nav() {
               >
                 Records
               </NavLink>
+              <NavLink
+                to="/player-stats"
+                className={({ isActive }) =>
+                  `px-3 py-2 rounded-lg ${
+                    isActive ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"
+                  }`
+                }
+                onClick={() => setOpen(false)}
+              >
+                Player Stats
+              </NavLink>
             </nav>
           </Container>
         </div>
@@ -323,33 +339,33 @@ function Home() {
     e.preventDefault();
     if (!searchQuery.trim()) return;
 
-    console.log("🔍 Step 1: Starting search for:", searchQuery);
-    console.log("🔍 Step 2: API baseURL:", API.defaults.baseURL);
+    console.log(" Step 1: Starting search for:", searchQuery);
+    console.log(" Step 2: API baseURL:", API.defaults.baseURL);
 
     setSearching(true);
     setSearchError("");
     setSearchResults(null);
 
     try {
-      console.log("🔍 Step 3: Making POST request to /search/ask");
+      console.log(" Step 3: Making POST request to /search/ask");
       const response = await API.post("/search/ask", { question: searchQuery });
 
-      console.log("✅ Step 4: Got response:", response);
-      console.log("✅ Step 5: Response status:", response.status);
+      console.log(" Step 4: Got response:", response);
+      console.log(" Step 5: Response status:", response.status);
       console.log(
-        "✅ Step 6: Response data:",
+        " Step 6: Response data:",
         JSON.stringify(response.data, null, 2)
       );
 
       const payload = response?.data ?? {};
 
       console.log(
-        "✅ Step 7: Extracted payload:",
+        " Step 7: Extracted payload:",
         JSON.stringify(payload, null, 2)
       );
-      console.log("✅ Step 8: Answer:", payload.answer);
-      console.log("✅ Step 9: Data:", payload.data);
-      console.log("✅ Step 10: Query Type:", payload.queryType);
+      console.log(" Step 8: Answer:", payload.answer);
+      console.log(" Step 9: Data:", payload.data);
+      console.log(" Step 10: Query Type:", payload.queryType);
 
       const newSearchResults = {
         answer: payload.answer || "",
@@ -358,24 +374,24 @@ function Home() {
       };
 
       console.log(
-        "✅ Step 11: Setting search results:",
+        " Step 11: Setting search results:",
         JSON.stringify(newSearchResults, null, 2)
       );
       setSearchResults(newSearchResults);
 
-      console.log("✅ Step 12: Search results state should now be updated");
+      console.log(" Step 12: Search results state should now be updated");
     } catch (error) {
-      console.error("❌ ERROR at step:", error);
-      console.error("❌ Error message:", error.message);
-      console.error("❌ Error response:", error.response);
-      console.error("❌ Error response data:", error.response?.data);
-      console.error("❌ Error response status:", error.response?.status);
+      console.error(" ERROR at step:", error);
+      console.error(" Error message:", error.message);
+      console.error(" Error response:", error.response);
+      console.error(" Error response data:", error.response?.data);
+      console.error(" Error response status:", error.response?.status);
       setSearchError("Search failed. Please try again.");
       setSearchResults(null);
     } finally {
       setSearching(false);
       console.log(
-        "🏁 Search complete. Final searchResults state:",
+        " Search complete. Final searchResults state:",
         searchResults
       );
     }
@@ -584,7 +600,7 @@ function Home() {
                             <Card>
                               <CardBody>
                                 <div className="text-center space-y-3">
-                                  <div className="text-4xl">🏟️</div>
+                                  <div className="text-4xl"></div>
                                   <div>
                                     <div className="text-2xl font-bold text-gray-900">
                                       {searchResults.data.city},{" "}
@@ -598,8 +614,8 @@ function Home() {
                                     {searchResults.data.venue}
                                   </div>
                                   <div className="text-sm text-gray-600 mt-2">
-                                    📅 The tournament typically runs in late
-                                    July through early August.
+                                    The tournament typically runs in late July
+                                    through early August.
                                   </div>
                                 </div>
                               </CardBody>
@@ -996,33 +1012,40 @@ function Teams() {
         </div>
       ) : filtered.length ? (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map((t, idx) => (
-            <Card
-              key={t.id ?? `${t.name}-${idx}`}
-              className="hover:shadow-md transition-shadow"
-            >
-              <CardBody>
-                <div className="text-lg font-semibold">{t.name}</div>
-                <div className="text-gray-600 mt-1">
-                  {t.city || "—"}, {t.state || "—"}
-                </div>
-                <div className="mt-4 flex justify-between text-sm text-gray-700">
-                  <div>
-                    <span className="font-semibold">
-                      {fmt(Number(t.championships_won) || 0)}
-                    </span>{" "}
-                    Championships
-                  </div>
-                  <div>
-                    <span className="font-semibold">
-                      {fmt(Number(t.appearances) || 0)}
-                    </span>{" "}
-                    Appearances
-                  </div>
-                </div>
-              </CardBody>
-            </Card>
-          ))}
+          {filtered.map((t, idx) => {
+            const slug = encodeURIComponent(t.name); // use name in URL
+
+            return (
+              <NavLink
+                key={t.id ?? `${t.name}-${idx}`}
+                to={`/teams/${slug}`}
+                className="block"
+              >
+                <Card className="hover:shadow-md transition-shadow">
+                  <CardBody>
+                    <div className="text-lg font-semibold">{t.name}</div>
+                    <div className="text-gray-600 mt-1">
+                      {t.city || "—"}, {t.state || "—"}
+                    </div>
+                    <div className="mt-4 flex justify-between text-sm text-gray-700">
+                      <div>
+                        <span className="font-semibold">
+                          {fmt(Number(t.championships_won) || 0)}
+                        </span>{" "}
+                        Championships
+                      </div>
+                      <div>
+                        <span className="font-semibold">
+                          {fmt(Number(t.appearances) || 0)}
+                        </span>{" "}
+                        Appearances
+                      </div>
+                    </div>
+                  </CardBody>
+                </Card>
+              </NavLink>
+            );
+          })}
         </div>
       ) : (
         <Card>
@@ -1033,6 +1056,280 @@ function Teams() {
           </CardBody>
         </Card>
       )}
+    </Container>
+  );
+}
+
+function TeamDetail() {
+  const { teamSlug } = useParams();
+  const teamName = decodeURIComponent(teamSlug || "");
+
+  const [team, setTeam] = useState(null);
+  const [championships, setChampionships] = useState([]);
+  const [playerStats, setPlayerStats] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+  const [activeTab, setActiveTab] = useState("batting");
+
+  useEffect(() => {
+    let stop = false;
+
+    async function load() {
+      setLoading(true);
+      setErr("");
+
+      try {
+        // 1) Load all teams + find this team
+        const [teamsRes, champsRes, statsRes] = await Promise.all([
+          API.get("/teams"),
+          API.get("/championships"),
+          API.get("/player-stats", { params: { year: 1966 } }), // for now only 1966
+        ]);
+
+        if (stop) return;
+
+        const teams = pickArray(teamsRes);
+        const allChamps = pickArray(champsRes);
+        const allStats = pickArray(statsRes);
+
+        const t = teams.find(
+          (x) => (x.name || "").toLowerCase() === teamName.toLowerCase()
+        );
+        setTeam(t || { name: teamName });
+
+        // filter championships where they were champion or runner-up
+        const relatedChamps = allChamps.filter((c) => {
+          const champ = (c.champion_name || c.champion || "").toLowerCase();
+          const runner = (c.runner_up_name || c.runner_up || "").toLowerCase();
+          const name = teamName.toLowerCase();
+          return champ.includes(name) || runner.includes(name);
+        });
+        setChampionships(relatedChamps);
+
+        // filter player stats for this team (1966 only right now)
+        const stats = allStats.filter(
+          (s) => (s.team_name || "").toLowerCase() === teamName.toLowerCase()
+        );
+        setPlayerStats(stats);
+      } catch (e) {
+        console.error("TeamDetail load error:", e);
+        setErr("Could not load team details.");
+      } finally {
+        if (!stop) setLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      stop = true;
+    };
+  }, [teamName]);
+
+  if (loading) {
+    return (
+      <Container className="py-12">
+        <Skeleton className="h-56" />
+      </Container>
+    );
+  }
+
+  if (err) {
+    return (
+      <Container className="py-12">
+        <BannerError message={err} />
+      </Container>
+    );
+  }
+
+  return (
+    <Container className="py-12 space-y-8">
+      <NavLink
+        to="/teams"
+        className="text-blue-600 hover:underline text-sm inline-flex items-center gap-1"
+      >
+        ← Back to Teams
+      </NavLink>
+
+      {/* Header card */}
+      <Card>
+        <CardBody className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold mb-3">
+              <Users size={14} />
+              Team Profile
+            </div>
+            <h1 className="text-3xl font-extrabold tracking-tight">
+              {team?.name || teamName}
+            </h1>
+            <p className="mt-1 text-gray-600">
+              {team?.city || "Unknown city"}, {team?.state || "Unknown state"}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="text-right">
+              <div className="text-xs text-gray-500 uppercase tracking-wide">
+                Championships
+              </div>
+              <div className="text-2xl font-bold text-blue-600">
+                {fmt(Number(team?.championships_won) || 0)}
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-xs text-gray-500 uppercase tracking-wide">
+                Appearances
+              </div>
+              <div className="text-2xl font-bold text-blue-600">
+                {fmt(Number(team?.appearances) || championships.length)}
+              </div>
+            </div>
+          </div>
+        </CardBody>
+      </Card>
+
+      {/* Championship history */}
+      <Card>
+        <CardBody>
+          <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
+            <Trophy className="text-yellow-600" size={18} />
+            Championship History
+          </h2>
+          {championships.length ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs md:text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-4 py-2 text-left font-semibold">Year</th>
+                    <th className="px-4 py-2 text-left font-semibold">
+                      Result
+                    </th>
+                    <th className="px-4 py-2 text-left font-semibold">
+                      Opponent
+                    </th>
+                    <th className="px-4 py-2 text-left font-semibold">Score</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {championships
+                    .sort((a, b) => (b.year || 0) - (a.year || 0))
+                    .map((c) => {
+                      const champName = c.champion_name || c.champion || "";
+                      const isChamp =
+                        champName.toLowerCase() === teamName.toLowerCase();
+
+                      return (
+                        <tr key={c.year}>
+                          <td className="px-4 py-2 font-semibold">{c.year}</td>
+                          <td className="px-4 py-2">
+                            {isChamp ? "Champion" : "Runner-up"}
+                          </td>
+                          <td className="px-4 py-2">
+                            {isChamp
+                              ? c.runner_up_name || c.runner_up || "—"
+                              : champName}
+                          </td>
+                          <td className="px-4 py-2">
+                            {c.championship_score || "—"}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-gray-600 text-sm">
+              No championship appearances found yet.
+            </p>
+          )}
+        </CardBody>
+      </Card>
+
+      {/* Simple 1966 stats snippet for this team */}
+      <Container className="py-12">
+        <SectionTitle
+          eyebrow="Statistics"
+          title={`1966 Player Stats`}
+          desc="Batting and pitching stats by team."
+        />
+
+        {/* Tabs for batting / pitching */}
+        <div className="mb-4 inline-flex rounded-lg border border-gray-200 bg-gray-50 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setActiveTab("batting")}
+            className={`px-4 py-2 text-sm font-medium ${
+              activeTab === "batting"
+                ? "bg-white text-blue-700"
+                : "text-gray-600 hover:bg-gray-100"
+            }`}
+          >
+            Batting
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("pitching")}
+            className={`px-4 py-2 text-sm font-medium border-l border-gray-200 ${
+              activeTab === "pitching"
+                ? "bg-white text-blue-700"
+                : "text-gray-600 hover:bg-gray-100"
+            }`}
+          >
+            Pitching
+          </button>
+        </div>
+
+        <Card>
+          <CardBody>
+            <h2 className="text-lg font-bold mb-3">1966 Player Stats</h2>
+            {playerStats.length ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs md:text-sm">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-4 py-2 text-left font-semibold">
+                        Player
+                      </th>
+                      <th className="px-2 py-2 text-right font-semibold">G</th>
+                      <th className="px-2 py-2 text-right font-semibold">AB</th>
+                      <th className="px-2 py-2 text-right font-semibold">H</th>
+                      <th className="px-2 py-2 text-right font-semibold">HR</th>
+                      <th className="px-3 py-2 text-right font-semibold">
+                        AVG
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {playerStats.map((p, idx) => (
+                      <tr key={p.id ?? `${p.player_name}-${idx}`}>
+                        <td className="px-4 py-2">
+                          <div className="font-medium text-gray-900">
+                            {p.player_name}
+                          </div>
+                          {p.position && (
+                            <div className="text-[11px] text-gray-500">
+                              {p.position}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-2 py-2 text-right">{p.g}</td>
+                        <td className="px-2 py-2 text-right">{p.ab}</td>
+                        <td className="px-2 py-2 text-right">{p.h}</td>
+                        <td className="px-2 py-2 text-right">{p.hr}</td>
+                        <td className="px-3 py-2 text-right">{p.pct || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-gray-600 text-sm">
+                No player stats available yet for 1966.
+              </p>
+            )}
+          </CardBody>
+        </Card>
+      </Container>
     </Container>
   );
 }
@@ -1593,6 +1890,603 @@ function ChampionshipDetail() {
   );
 }
 
+// ---------- Player Stats (1966 + future years) ----------
+function PlayerStatsPage() {
+  const [years, setYears] = useState([]);
+  const [year, setYear] = useState("1966");
+  const [rows, setRows] = useState([]); // batting
+  const [pitchingRows, setPitchingRows] = useState([]); // pitching
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+  const [teamFilter, setTeamFilter] = useState("");
+  const [search, setSearch] = useState("");
+  const [expandedTeam, setExpandedTeam] = useState(null);
+  const [activeTab, setActiveTab] = useState("batting"); // 'batting' | 'pitching'
+
+  // Load available years
+  useEffect(() => {
+    let stop = false;
+
+    async function loadYears() {
+      try {
+        const res = await API.get("/player-stats/years");
+        const d = res.data;
+        const ys = Array.isArray(d)
+          ? d
+          : Array.isArray(d?.years)
+          ? d.years
+          : [];
+
+        if (stop) return;
+
+        const yStrings = ys.map(String).sort((a, b) => b.localeCompare(a));
+        setYears(yStrings);
+
+        if (yStrings.length && !yStrings.includes(year)) {
+          setYear(yStrings[0]);
+        }
+      } catch (e) {
+        console.error("Error loading player-stats years:", e);
+        if (!stop) setErr("Could not load available years.");
+      }
+    }
+
+    loadYears();
+    return () => {
+      stop = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Load stats whenever year changes
+  useEffect(() => {
+    if (!year) return;
+    let stop = false;
+
+    async function loadStats() {
+      setLoading(true);
+      setErr("");
+      try {
+        // 1️⃣ Batting
+        const battingRes = await API.get("/player-stats", { params: { year } });
+        if (stop) return;
+        const battingArr = pickArray(battingRes);
+        setRows(battingArr);
+
+        // default expand first team (based on batting)
+        if (battingArr.length) {
+          const firstTeam = battingArr[0].team_name || "Unknown team";
+          setExpandedTeam(firstTeam);
+        }
+
+        // 2️⃣ Pitching
+        const pitchingRes = await API.get("/pitching-stats", {
+          params: { year },
+        });
+        if (stop) return;
+        const pitchingArr = pickArray(pitchingRes);
+        setPitchingRows(pitchingArr);
+      } catch (e) {
+        console.error("Error loading player stats:", e);
+        if (!stop) setErr("Could not load player stats for this year.");
+      } finally {
+        if (!stop) setLoading(false);
+      }
+    }
+
+    loadStats();
+    return () => {
+      stop = true;
+    };
+  }, [year]);
+
+  // Collect team list from batting data (for filter dropdown)
+  const allTeams = useMemo(() => {
+    const set = new Set();
+    rows.forEach((r) => {
+      if (r.team_name) set.add(r.team_name);
+    });
+    return Array.from(set).sort();
+  }, [rows]);
+
+  // Helpers for filtering
+  const normalize = (v) => (v ? String(v).toLowerCase() : "");
+
+  // Filter batting rows by team + search
+  const filteredBattingRows = useMemo(() => {
+    const team = normalize(teamFilter);
+    const q = normalize(search);
+
+    return rows.filter((r) => {
+      if (team && normalize(r.team_name) !== team) {
+        return false;
+      }
+      if (!q) return true;
+      const name = normalize(r.player_name);
+      const pos = normalize(r.position);
+      return name.includes(q) || pos.includes(q);
+    });
+  }, [rows, teamFilter, search]);
+
+  // Filter pitching rows by same filters
+  const filteredPitchingRows = useMemo(() => {
+    const team = normalize(teamFilter);
+    const q = normalize(search);
+
+    return pitchingRows.filter((r) => {
+      if (team && normalize(r.team_name) !== team) {
+        return false;
+      }
+      if (!q) return true;
+      const name = normalize(r.player_name);
+      const pos = normalize(r.position);
+      return name.includes(q) || pos.includes(q);
+    });
+  }, [pitchingRows, teamFilter, search]);
+
+  // Group into teams (batting)
+  const battingTeams = useMemo(() => {
+    const map = new Map();
+    filteredBattingRows.forEach((r) => {
+      const key = r.team_name || "Unknown team";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(r);
+    });
+    return Array.from(map.entries()); // [ [teamName, players[]], ... ]
+  }, [filteredBattingRows]);
+
+  // Group into teams (pitching)
+  const pitchingTeams = useMemo(() => {
+    const map = new Map();
+    filteredPitchingRows.forEach((r) => {
+      const key = r.team_name || "Unknown team";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(r);
+    });
+    return Array.from(map.entries());
+  }, [filteredPitchingRows]);
+
+  // Small helper to compute a simple summary line per team (batting)
+  function getTeamSummary(players) {
+    const totals = players.reduce(
+      (acc, p) => {
+        const toNum = (v) => (typeof v === "number" ? v : parseInt(v, 10) || 0);
+        acc.ab += toNum(p.ab);
+        acc.h += toNum(p.h);
+        acc.hr += toNum(p.hr);
+        acc.rbi += toNum(p.rbi);
+        return acc;
+      },
+      { ab: 0, h: 0, hr: 0, rbi: 0 }
+    );
+    const avg = totals.ab ? (totals.h / totals.ab).toFixed(3).slice(1) : "---";
+    return `Team totals – AB ${totals.ab}, H ${totals.h}, HR ${totals.hr}, RBI ${totals.rbi}, AVG .${avg}`;
+  }
+
+  const noData = !rows.length && !pitchingRows.length;
+
+  return (
+    <Container className="py-12">
+      <SectionTitle
+        eyebrow="Box Scores"
+        title="Player Statistics"
+        desc="Per-player tournament numbers loaded from NBC historical records."
+      />
+
+      {/* Controls bar */}
+      <Card className="mb-6">
+        <CardBody className="flex flex-wrap gap-4 items-end">
+          {/* Year selector */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">
+              Year
+            </label>
+            <select
+              value={year}
+              onChange={(e) => setYear(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {years.length ? (
+                years.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))
+              ) : (
+                <option value="1966">1966</option>
+              )}
+            </select>
+          </div>
+
+          {/* Team filter */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">
+              Team
+            </label>
+            <select
+              value={teamFilter}
+              onChange={(e) => setTeamFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm min-w-[180px] focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">All teams</option>
+              {allTeams.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Player search */}
+          <div className="flex-1 min-w-[180px]">
+            <label className="block text-xs font-semibold text-gray-600 mb-1">
+              Player search
+            </label>
+            <div className="relative">
+              <Search
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Search by player name or position"
+              />
+            </div>
+          </div>
+        </CardBody>
+      </Card>
+
+      {err && (
+        <div className="mb-4">
+          <BannerError message={err} />
+        </div>
+      )}
+
+      {loading ? (
+        <div className="grid gap-4">
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+        </div>
+      ) : noData ? (
+        <Card>
+          <CardBody>
+            <p className="text-gray-600">
+              No player stats found for {year}
+              {teamFilter ? ` (${teamFilter})` : ""}.
+            </p>
+          </CardBody>
+        </Card>
+      ) : (
+        <>
+          {/* Tabs for batting / pitching */}
+          <div className="mb-4 inline-flex rounded-lg border border-gray-200 bg-gray-50 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setActiveTab("batting")}
+              className={`px-4 py-2 text-sm font-medium ${
+                activeTab === "batting"
+                  ? "bg-white text-blue-700"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              Batting
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("pitching")}
+              className={`px-4 py-2 text-sm font-medium border-l border-gray-200 ${
+                activeTab === "pitching"
+                  ? "bg-white text-blue-700"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              Pitching
+            </button>
+          </div>
+
+          {activeTab === "batting" ? (
+            battingTeams.length ? (
+              <div className="space-y-6">
+                {battingTeams.map(([teamName, players]) => {
+                  const isOpen = expandedTeam === teamName;
+                  return (
+                    <Card key={teamName} className="overflow-hidden">
+                      {/* Team header / accordion toggle */}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedTeam(isOpen ? null : teamName)
+                        }
+                        className="w-full text-left px-6 py-4 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors border-b border-gray-200"
+                      >
+                        <div>
+                          <div className="text-sm font-semibold text-gray-900">
+                            {teamName}
+                          </div>
+                          <div className="text-[11px] text-gray-500 mt-1">
+                            {getTeamSummary(players)}
+                          </div>
+                        </div>
+                        <ChevronRight
+                          size={18}
+                          className={`text-gray-400 transform transition-transform ${
+                            isOpen ? "rotate-90" : ""
+                          }`}
+                        />
+                      </button>
+
+                      {/* Table body */}
+                      {isOpen && (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs md:text-sm">
+                            <thead className="bg-white sticky top-0 z-10">
+                              <tr className="border-b border-gray-200 text-gray-700">
+                                <th className="px-4 py-2 text-left font-semibold">
+                                  Player
+                                </th>
+                                <th className="px-2 py-2 text-right font-semibold">
+                                  G
+                                </th>
+                                <th className="px-2 py-2 text-right font-semibold">
+                                  AB
+                                </th>
+                                <th className="px-2 py-2 text-right font-semibold">
+                                  R
+                                </th>
+                                <th className="px-2 py-2 text-right font-semibold">
+                                  H
+                                </th>
+                                <th className="px-2 py-2 text-right font-semibold">
+                                  2B
+                                </th>
+                                <th className="px-2 py-2 text-right font-semibold">
+                                  3B
+                                </th>
+                                <th className="px-2 py-2 text-right font-semibold">
+                                  HR
+                                </th>
+                                <th className="px-2 py-2 text-right font-semibold">
+                                  SB
+                                </th>
+                                <th className="px-2 py-2 text-right font-semibold">
+                                  RBI
+                                </th>
+                                <th className="px-2 py-2 text-right font-semibold">
+                                  PO
+                                </th>
+                                <th className="px-2 py-2 text-right font-semibold">
+                                  A
+                                </th>
+                                <th className="px-2 py-2 text-right font-semibold">
+                                  E
+                                </th>
+                                <th className="px-3 py-2 text-right font-semibold">
+                                  AVG
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                              {players.map((p, idx) => (
+                                <tr
+                                  key={p.id ?? `${p.player_name}-${idx}`}
+                                  className={
+                                    idx % 2 === 0 ? "bg-white" : "bg-gray-50"
+                                  }
+                                >
+                                  <td className="px-4 py-1.5">
+                                    <div className="font-medium text-gray-900">
+                                      {p.player_name}
+                                    </div>
+                                    {p.position && (
+                                      <div className="text-[11px] text-gray-500">
+                                        {p.position}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td className="px-2 py-1.5 text-right">
+                                    {p.g}
+                                  </td>
+                                  <td className="px-2 py-1.5 text-right">
+                                    {p.ab}
+                                  </td>
+                                  <td className="px-2 py-1.5 text-right">
+                                    {p.r}
+                                  </td>
+                                  <td className="px-2 py-1.5 text-right">
+                                    {p.h}
+                                  </td>
+                                  <td className="px-2 py-1.5 text-right">
+                                    {p["2b"]}
+                                  </td>
+                                  <td className="px-2 py-1.5 text-right">
+                                    {p["3b"]}
+                                  </td>
+                                  <td className="px-2 py-1.5 text-right">
+                                    {p.hr}
+                                  </td>
+                                  <td className="px-2 py-1.5 text-right">
+                                    {p.sb}
+                                  </td>
+                                  <td className="px-2 py-1.5 text-right">
+                                    {p.rbi}
+                                  </td>
+                                  <td className="px-2 py-1.5 text-right">
+                                    {p.po}
+                                  </td>
+                                  <td className="px-2 py-1.5 text-right">
+                                    {p.a}
+                                  </td>
+                                  <td className="px-2 py-1.5 text-right">
+                                    {p.e}
+                                  </td>
+                                  <td className="px-3 py-1.5 text-right">
+                                    {p.pct || "—"}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : (
+              <Card>
+                <CardBody>
+                  <p className="text-gray-600">
+                    No batting stats found for {year}
+                    {teamFilter ? ` (${teamFilter})` : ""}.
+                  </p>
+                </CardBody>
+              </Card>
+            )
+          ) : pitchingTeams.length ? (
+            <div className="space-y-6">
+              {pitchingTeams.map(([teamName, pitchers]) => {
+                const isOpen = expandedTeam === teamName;
+                return (
+                  <Card key={teamName} className="overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedTeam(isOpen ? null : teamName)}
+                      className="w-full text-left px-6 py-4 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors border-b border-gray-200"
+                    >
+                      <div>
+                        <div className="text-sm font-semibold text-gray-900">
+                          {teamName}
+                        </div>
+                        <div className="text-[11px] text-gray-500 mt-1">
+                          {pitchers.length} pitcher
+                          {pitchers.length === 1 ? "" : "s"}
+                        </div>
+                      </div>
+                      <ChevronRight
+                        size={18}
+                        className={`text-gray-400 transform transition-transform ${
+                          isOpen ? "rotate-90" : ""
+                        }`}
+                      />
+                    </button>
+
+                    {isOpen && (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs md:text-sm">
+                          <thead className="bg-white sticky top-0 z-10">
+                            <tr className="border-b border-gray-200 text-gray-700">
+                              <th className="px-4 py-2 text-left font-semibold">
+                                Pitcher
+                              </th>
+                              <th className="px-2 py-2 text-right font-semibold">
+                                G
+                              </th>
+                              <th className="px-2 py-2 text-right font-semibold">
+                                IP
+                              </th>
+                              <th className="px-2 py-2 text-right font-semibold">
+                                H
+                              </th>
+                              <th className="px-2 py-2 text-right font-semibold">
+                                R
+                              </th>
+                              <th className="px-2 py-2 text-right font-semibold">
+                                ER
+                              </th>
+                              <th className="px-2 py-2 text-right font-semibold">
+                                BB
+                              </th>
+                              <th className="px-2 py-2 text-right font-semibold">
+                                SO
+                              </th>
+                              <th className="px-2 py-2 text-right font-semibold">
+                                W
+                              </th>
+                              <th className="px-2 py-2 text-right font-semibold">
+                                L
+                              </th>
+                              <th className="px-3 py-2 text-right font-semibold">
+                                ERA
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {pitchers.map((p, idx) => (
+                              <tr
+                                key={p.id ?? `${p.player_name}-${idx}`}
+                                className={
+                                  idx % 2 === 0 ? "bg-white" : "bg-gray-50"
+                                }
+                              >
+                                <td className="px-4 py-1.5">
+                                  <div className="font-medium text-gray-900">
+                                    {p.player_name}
+                                  </div>
+                                  {p.position && (
+                                    <div className="text-[11px] text-gray-500">
+                                      {p.position}
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="px-2 py-1.5 text-right">
+                                  {p.g}
+                                </td>
+                                <td className="px-2 py-1.5 text-right">
+                                  {p.ip}
+                                </td>
+                                <td className="px-2 py-1.5 text-right">
+                                  {p.h}
+                                </td>
+                                <td className="px-2 py-1.5 text-right">
+                                  {p.r}
+                                </td>
+                                <td className="px-2 py-1.5 text-right">
+                                  {p.er}
+                                </td>
+                                <td className="px-2 py-1.5 text-right">
+                                  {p.bb}
+                                </td>
+                                <td className="px-2 py-1.5 text-right">
+                                  {p.so}
+                                </td>
+                                <td className="px-2 py-1.5 text-right">
+                                  {p.w}
+                                </td>
+                                <td className="px-2 py-1.5 text-right">
+                                  {p.l}
+                                </td>
+                                <td className="px-3 py-1.5 text-right">
+                                  {p.era}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <Card>
+              <CardBody>
+                <p className="text-gray-600">
+                  No pitching stats found for {year}
+                  {teamFilter ? ` (${teamFilter})` : ""}.
+                </p>
+              </CardBody>
+            </Card>
+          )}
+        </>
+      )}
+    </Container>
+  );
+}
+
 // ---------- App ----------
 export default function App() {
   return (
@@ -1605,6 +2499,8 @@ export default function App() {
           <Route path="/hall-of-fame" element={<HallOfFame />} />
           <Route path="/records" element={<Records />} />
           <Route path="/championships/:year" element={<ChampionshipDetail />} />
+          <Route path="/player-stats" element={<PlayerStatsPage />} />
+          <Route path="/teams/:teamSlug" element={<TeamDetail />} />
           <Route
             path="*"
             element={

@@ -1,22 +1,15 @@
-// backend/src/db.js (ESM)
-import pg from "pg";
-const { Pool } = pg;
+// ESM file
+import { Pool, neonConfig } from "@neondatabase/serverless";
+import ws from "ws";
 
-const isProd = process.env.NODE_ENV === "production";
+neonConfig.webSocketConstructor = ws;
 
-const pool = isProd
-  ? new Pool({
-      connectionString: process.env.DATABASE_URL, // e.g. ...@<neon-host>/neondb?sslmode=require
-      ssl: { rejectUnauthorized: false },
-      keepAlive: true,
-      connectionTimeoutMillis: 10000,
-    })
-  : new Pool({
-      host: process.env.PGHOST || "localhost",
-      port: Number(process.env.PGPORT || 5432),
-      user: process.env.PGUSER || "postgres",
-      password: process.env.PGPASSWORD || "",
-      database: process.env.PGDATABASE || "nbc_world_series",
-    });
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  throw new Error("DATABASE_URL is not set");
+}
 
-export { pool };
+export const pool = new Pool({
+  connectionString,
+  ssl: true, // Neon requires SSL
+});
