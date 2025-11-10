@@ -1890,7 +1890,7 @@ function ChampionshipDetail() {
   );
 }
 
-// ---------- Player Stats (1966 + future years) ----------
+// ---------- Player Stats (1966 + future years) ----------//
 function PlayerStatsPage() {
   const [years, setYears] = useState([]);
   const [year, setYear] = useState("1966");
@@ -1901,7 +1901,6 @@ function PlayerStatsPage() {
   const [teamFilter, setTeamFilter] = useState("");
   const [search, setSearch] = useState("");
   const [expandedTeam, setExpandedTeam] = useState(null);
-  const [activeTab, setActiveTab] = useState("batting"); // 'batting' | 'pitching'
 
   // Load available years
   useEffect(() => {
@@ -1935,8 +1934,7 @@ function PlayerStatsPage() {
     return () => {
       stop = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [year]);
 
   // Load stats whenever year changes
   useEffect(() => {
@@ -1947,7 +1945,7 @@ function PlayerStatsPage() {
       setLoading(true);
       setErr("");
       try {
-        // 1️⃣ Batting
+        // Load batting
         const battingRes = await API.get("/player-stats", { params: { year } });
         if (stop) return;
         const battingArr = pickArray(battingRes);
@@ -1959,7 +1957,7 @@ function PlayerStatsPage() {
           setExpandedTeam(firstTeam);
         }
 
-        // 2️⃣ Pitching
+        // Load pitching
         const pitchingRes = await API.get("/pitching-stats", {
           params: { year },
         });
@@ -2019,8 +2017,7 @@ function PlayerStatsPage() {
       }
       if (!q) return true;
       const name = normalize(r.player_name);
-      const pos = normalize(r.position);
-      return name.includes(q) || pos.includes(q);
+      return name.includes(q);
     });
   }, [pitchingRows, teamFilter, search]);
 
@@ -2032,7 +2029,7 @@ function PlayerStatsPage() {
       if (!map.has(key)) map.set(key, []);
       map.get(key).push(r);
     });
-    return Array.from(map.entries()); // [ [teamName, players[]], ... ]
+    return Array.from(map.entries());
   }, [filteredBattingRows]);
 
   // Group into teams (pitching)
@@ -2046,22 +2043,10 @@ function PlayerStatsPage() {
     return Array.from(map.entries());
   }, [filteredPitchingRows]);
 
-  // Small helper to compute a simple summary line per team (batting)
-  function getTeamSummary(players) {
-    const totals = players.reduce(
-      (acc, p) => {
-        const toNum = (v) => (typeof v === "number" ? v : parseInt(v, 10) || 0);
-        acc.ab += toNum(p.ab);
-        acc.h += toNum(p.h);
-        acc.hr += toNum(p.hr);
-        acc.rbi += toNum(p.rbi);
-        return acc;
-      },
-      { ab: 0, h: 0, hr: 0, rbi: 0 }
-    );
-    const avg = totals.ab ? (totals.h / totals.ab).toFixed(3).slice(1) : "---";
-    return `Team totals – AB ${totals.ab}, H ${totals.h}, HR ${totals.hr}, RBI ${totals.rbi}, AVG .${avg}`;
-  }
+  // Helper to get pitchers for a specific team
+  const getPitchersForTeam = (teamName) => {
+    return pitchingTeams.find(([name]) => name === teamName)?.[1] || [];
+  };
 
   const noData = !rows.length && !pitchingRows.length;
 
@@ -2160,116 +2145,202 @@ function PlayerStatsPage() {
           </CardBody>
         </Card>
       ) : (
-        <>
-          {/* Tabs for batting / pitching */}
-          <div className="mb-4 inline-flex rounded-lg border border-gray-200 bg-gray-50 overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setActiveTab("batting")}
-              className={`px-4 py-2 text-sm font-medium ${
-                activeTab === "batting"
-                  ? "bg-white text-blue-700"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              Batting
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("pitching")}
-              className={`px-4 py-2 text-sm font-medium border-l border-gray-200 ${
-                activeTab === "pitching"
-                  ? "bg-white text-blue-700"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              Pitching
-            </button>
-          </div>
+        <div className="space-y-6">
+          {battingTeams.map(([teamName, players]) => {
+            const isOpen = expandedTeam === teamName;
+            const pitchers = getPitchersForTeam(teamName);
 
-          {activeTab === "batting" ? (
-            battingTeams.length ? (
-              <div className="space-y-6">
-                {battingTeams.map(([teamName, players]) => {
-                  const isOpen = expandedTeam === teamName;
-                  return (
-                    <Card key={teamName} className="overflow-hidden">
-                      {/* Team header / accordion toggle */}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setExpandedTeam(isOpen ? null : teamName)
-                        }
-                        className="w-full text-left px-6 py-4 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors border-b border-gray-200"
-                      >
-                        <div>
-                          <div className="text-sm font-semibold text-gray-900">
-                            {teamName}
-                          </div>
-                          <div className="text-[11px] text-gray-500 mt-1">
-                            {getTeamSummary(players)}
-                          </div>
+            // Calculate team batting totals
+            const battingTotals = players.reduce(
+              (acc, p) => {
+                const toNum = (v) =>
+                  typeof v === "number" ? v : parseInt(v, 10) || 0;
+                acc.ab += toNum(p.ab);
+                acc.h += toNum(p.h);
+                acc.hr += toNum(p.hr);
+                acc.rbi += toNum(p.rbi);
+                return acc;
+              },
+              { ab: 0, h: 0, hr: 0, rbi: 0 }
+            );
+            const avg = battingTotals.ab
+              ? (battingTotals.h / battingTotals.ab).toFixed(3).slice(1)
+              : "---";
+
+            return (
+              <Card key={teamName} className="overflow-hidden">
+                {/* Team header / accordion toggle */}
+                <button
+                  type="button"
+                  onClick={() => setExpandedTeam(isOpen ? null : teamName)}
+                  className="w-full text-left px-6 py-4 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors border-b border-gray-200"
+                >
+                  <div>
+                    <div className="text-sm font-semibold text-gray-900">
+                      {teamName}
+                    </div>
+                    <div className="text-[11px] text-gray-500 mt-1">
+                      Team totals – AB {battingTotals.ab}, H {battingTotals.h},
+                      HR {battingTotals.hr}, RBI {battingTotals.rbi}, AVG .{avg}
+                    </div>
+                  </div>
+                  <ChevronRight
+                    size={18}
+                    className={`text-gray-400 transform transition-transform ${
+                      isOpen ? "rotate-90" : ""
+                    }`}
+                  />
+                </button>
+
+                {/* Expanded content */}
+                {isOpen && (
+                  <div>
+                    {/* BATTING TABLE */}
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs md:text-sm">
+                        <thead className="bg-white sticky top-0 z-10">
+                          <tr className="border-b border-gray-200 text-gray-700">
+                            <th className="px-4 py-2 text-left font-semibold">
+                              Player
+                            </th>
+                            <th className="px-2 py-2 text-right font-semibold">
+                              G
+                            </th>
+                            <th className="px-2 py-2 text-right font-semibold">
+                              AB
+                            </th>
+                            <th className="px-2 py-2 text-right font-semibold">
+                              R
+                            </th>
+                            <th className="px-2 py-2 text-right font-semibold">
+                              H
+                            </th>
+                            <th className="px-2 py-2 text-right font-semibold">
+                              2B
+                            </th>
+                            <th className="px-2 py-2 text-right font-semibold">
+                              3B
+                            </th>
+                            <th className="px-2 py-2 text-right font-semibold">
+                              HR
+                            </th>
+                            <th className="px-2 py-2 text-right font-semibold">
+                              SB
+                            </th>
+                            <th className="px-2 py-2 text-right font-semibold">
+                              RBI
+                            </th>
+                            <th className="px-2 py-2 text-right font-semibold">
+                              PO
+                            </th>
+                            <th className="px-2 py-2 text-right font-semibold">
+                              A
+                            </th>
+                            <th className="px-2 py-2 text-right font-semibold">
+                              E
+                            </th>
+                            <th className="px-3 py-2 text-right font-semibold">
+                              AVG
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {players.map((p, idx) => (
+                            <tr
+                              key={p.id ?? `${p.player_name}-${idx}`}
+                              className={
+                                idx % 2 === 0 ? "bg-white" : "bg-gray-50"
+                              }
+                            >
+                              <td className="px-4 py-1.5">
+                                <div className="font-medium text-gray-900">
+                                  {p.player_name}
+                                </div>
+                                {p.position && (
+                                  <div className="text-[11px] text-gray-500">
+                                    {p.position}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-2 py-1.5 text-right">{p.g}</td>
+                              <td className="px-2 py-1.5 text-right">{p.ab}</td>
+                              <td className="px-2 py-1.5 text-right">{p.r}</td>
+                              <td className="px-2 py-1.5 text-right">{p.h}</td>
+                              <td className="px-2 py-1.5 text-right">
+                                {p["2b"]}
+                              </td>
+                              <td className="px-2 py-1.5 text-right">
+                                {p["3b"]}
+                              </td>
+                              <td className="px-2 py-1.5 text-right">{p.hr}</td>
+                              <td className="px-2 py-1.5 text-right">{p.sb}</td>
+                              <td className="px-2 py-1.5 text-right">
+                                {p.rbi}
+                              </td>
+                              <td className="px-2 py-1.5 text-right">{p.po}</td>
+                              <td className="px-2 py-1.5 text-right">{p.a}</td>
+                              <td className="px-2 py-1.5 text-right">{p.e}</td>
+                              <td className="px-3 py-1.5 text-right">
+                                {p.pct || "—"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* PITCHING TABLE (below batting) */}
+                    {pitchers.length > 0 && (
+                      <div className="mt-6 border-t border-gray-200 pt-4">
+                        <div className="px-6 mb-3">
+                          <h3 className="text-sm font-bold text-gray-700">
+                            Pitchers
+                          </h3>
                         </div>
-                        <ChevronRight
-                          size={18}
-                          className={`text-gray-400 transform transition-transform ${
-                            isOpen ? "rotate-90" : ""
-                          }`}
-                        />
-                      </button>
-
-                      {/* Table body */}
-                      {isOpen && (
                         <div className="overflow-x-auto">
                           <table className="w-full text-xs md:text-sm">
-                            <thead className="bg-white sticky top-0 z-10">
+                            <thead className="bg-gray-50">
                               <tr className="border-b border-gray-200 text-gray-700">
                                 <th className="px-4 py-2 text-left font-semibold">
-                                  Player
+                                  Pitcher
                                 </th>
                                 <th className="px-2 py-2 text-right font-semibold">
                                   G
                                 </th>
                                 <th className="px-2 py-2 text-right font-semibold">
-                                  AB
+                                  W
                                 </th>
                                 <th className="px-2 py-2 text-right font-semibold">
-                                  R
+                                  L
+                                </th>
+                                <th className="px-2 py-2 text-right font-semibold">
+                                  IP
                                 </th>
                                 <th className="px-2 py-2 text-right font-semibold">
                                   H
                                 </th>
                                 <th className="px-2 py-2 text-right font-semibold">
-                                  2B
+                                  R
                                 </th>
                                 <th className="px-2 py-2 text-right font-semibold">
-                                  3B
+                                  ER
                                 </th>
                                 <th className="px-2 py-2 text-right font-semibold">
-                                  HR
+                                  BB
                                 </th>
                                 <th className="px-2 py-2 text-right font-semibold">
-                                  SB
+                                  SO
                                 </th>
                                 <th className="px-2 py-2 text-right font-semibold">
-                                  RBI
-                                </th>
-                                <th className="px-2 py-2 text-right font-semibold">
-                                  PO
-                                </th>
-                                <th className="px-2 py-2 text-right font-semibold">
-                                  A
-                                </th>
-                                <th className="px-2 py-2 text-right font-semibold">
-                                  E
+                                  WP
                                 </th>
                                 <th className="px-3 py-2 text-right font-semibold">
-                                  AVG
+                                  HB
                                 </th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                              {players.map((p, idx) => (
+                              {pitchers.map((p, idx) => (
                                 <tr
                                   key={p.id ?? `${p.player_name}-${idx}`}
                                   className={
@@ -2280,208 +2351,53 @@ function PlayerStatsPage() {
                                     <div className="font-medium text-gray-900">
                                       {p.player_name}
                                     </div>
-                                    {p.position && (
-                                      <div className="text-[11px] text-gray-500">
-                                        {p.position}
-                                      </div>
-                                    )}
                                   </td>
                                   <td className="px-2 py-1.5 text-right">
                                     {p.g}
                                   </td>
                                   <td className="px-2 py-1.5 text-right">
-                                    {p.ab}
+                                    {p.w}
                                   </td>
                                   <td className="px-2 py-1.5 text-right">
-                                    {p.r}
+                                    {p.l}
+                                  </td>
+                                  <td className="px-2 py-1.5 text-right">
+                                    {p.ip}
                                   </td>
                                   <td className="px-2 py-1.5 text-right">
                                     {p.h}
                                   </td>
                                   <td className="px-2 py-1.5 text-right">
-                                    {p["2b"]}
+                                    {p.r}
                                   </td>
                                   <td className="px-2 py-1.5 text-right">
-                                    {p["3b"]}
+                                    {p.er}
                                   </td>
                                   <td className="px-2 py-1.5 text-right">
-                                    {p.hr}
+                                    {p.bb}
                                   </td>
                                   <td className="px-2 py-1.5 text-right">
-                                    {p.sb}
+                                    {p.so}
                                   </td>
                                   <td className="px-2 py-1.5 text-right">
-                                    {p.rbi}
-                                  </td>
-                                  <td className="px-2 py-1.5 text-right">
-                                    {p.po}
-                                  </td>
-                                  <td className="px-2 py-1.5 text-right">
-                                    {p.a}
-                                  </td>
-                                  <td className="px-2 py-1.5 text-right">
-                                    {p.e}
+                                    {p.wp}
                                   </td>
                                   <td className="px-3 py-1.5 text-right">
-                                    {p.pct || "—"}
+                                    {p.hb}
                                   </td>
                                 </tr>
                               ))}
                             </tbody>
                           </table>
                         </div>
-                      )}
-                    </Card>
-                  );
-                })}
-              </div>
-            ) : (
-              <Card>
-                <CardBody>
-                  <p className="text-gray-600">
-                    No batting stats found for {year}
-                    {teamFilter ? ` (${teamFilter})` : ""}.
-                  </p>
-                </CardBody>
-              </Card>
-            )
-          ) : pitchingTeams.length ? (
-            <div className="space-y-6">
-              {pitchingTeams.map(([teamName, pitchers]) => {
-                const isOpen = expandedTeam === teamName;
-                return (
-                  <Card key={teamName} className="overflow-hidden">
-                    <button
-                      type="button"
-                      onClick={() => setExpandedTeam(isOpen ? null : teamName)}
-                      className="w-full text-left px-6 py-4 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors border-b border-gray-200"
-                    >
-                      <div>
-                        <div className="text-sm font-semibold text-gray-900">
-                          {teamName}
-                        </div>
-                        <div className="text-[11px] text-gray-500 mt-1">
-                          {pitchers.length} pitcher
-                          {pitchers.length === 1 ? "" : "s"}
-                        </div>
-                      </div>
-                      <ChevronRight
-                        size={18}
-                        className={`text-gray-400 transform transition-transform ${
-                          isOpen ? "rotate-90" : ""
-                        }`}
-                      />
-                    </button>
-
-                    {isOpen && (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-xs md:text-sm">
-                          <thead className="bg-white sticky top-0 z-10">
-                            <tr className="border-b border-gray-200 text-gray-700">
-                              <th className="px-4 py-2 text-left font-semibold">
-                                Pitcher
-                              </th>
-                              <th className="px-2 py-2 text-right font-semibold">
-                                G
-                              </th>
-                              <th className="px-2 py-2 text-right font-semibold">
-                                IP
-                              </th>
-                              <th className="px-2 py-2 text-right font-semibold">
-                                H
-                              </th>
-                              <th className="px-2 py-2 text-right font-semibold">
-                                R
-                              </th>
-                              <th className="px-2 py-2 text-right font-semibold">
-                                ER
-                              </th>
-                              <th className="px-2 py-2 text-right font-semibold">
-                                BB
-                              </th>
-                              <th className="px-2 py-2 text-right font-semibold">
-                                SO
-                              </th>
-                              <th className="px-2 py-2 text-right font-semibold">
-                                W
-                              </th>
-                              <th className="px-2 py-2 text-right font-semibold">
-                                L
-                              </th>
-                              <th className="px-3 py-2 text-right font-semibold">
-                                ERA
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-100">
-                            {pitchers.map((p, idx) => (
-                              <tr
-                                key={p.id ?? `${p.player_name}-${idx}`}
-                                className={
-                                  idx % 2 === 0 ? "bg-white" : "bg-gray-50"
-                                }
-                              >
-                                <td className="px-4 py-1.5">
-                                  <div className="font-medium text-gray-900">
-                                    {p.player_name}
-                                  </div>
-                                  {p.position && (
-                                    <div className="text-[11px] text-gray-500">
-                                      {p.position}
-                                    </div>
-                                  )}
-                                </td>
-                                <td className="px-2 py-1.5 text-right">
-                                  {p.g}
-                                </td>
-                                <td className="px-2 py-1.5 text-right">
-                                  {p.ip}
-                                </td>
-                                <td className="px-2 py-1.5 text-right">
-                                  {p.h}
-                                </td>
-                                <td className="px-2 py-1.5 text-right">
-                                  {p.r}
-                                </td>
-                                <td className="px-2 py-1.5 text-right">
-                                  {p.er}
-                                </td>
-                                <td className="px-2 py-1.5 text-right">
-                                  {p.bb}
-                                </td>
-                                <td className="px-2 py-1.5 text-right">
-                                  {p.so}
-                                </td>
-                                <td className="px-2 py-1.5 text-right">
-                                  {p.w}
-                                </td>
-                                <td className="px-2 py-1.5 text-right">
-                                  {p.l}
-                                </td>
-                                <td className="px-3 py-1.5 text-right">
-                                  {p.era}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
                       </div>
                     )}
-                  </Card>
-                );
-              })}
-            </div>
-          ) : (
-            <Card>
-              <CardBody>
-                <p className="text-gray-600">
-                  No pitching stats found for {year}
-                  {teamFilter ? ` (${teamFilter})` : ""}.
-                </p>
-              </CardBody>
-            </Card>
-          )}
-        </>
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+        </div>
       )}
     </Container>
   );

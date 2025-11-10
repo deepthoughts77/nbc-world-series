@@ -383,18 +383,70 @@ console.log(" Registered: GET /api/teams/:id/pitching");
 // Pitching stats endpoint
 app.get("/api/pitching-stats", async (req, res) => {
   try {
-    const year = Number(req.query.year) || 1966;
-    const result = await db.query(
-      `SELECT * FROM pitching_stats WHERE year = $1 ORDER BY team_name, player_name`,
-      [year]
-    );
-    res.json(result.rows);
+    const { year, team } = req.query;
+
+    const conditions = [];
+    const params = [];
+
+    if (year) {
+      params.push(parseInt(year, 10));
+      conditions.push(`year = $${params.length}`);
+    }
+
+    if (team) {
+      // partial match on team name
+      params.push(`%${team.toLowerCase()}%`);
+      conditions.push(`LOWER(team_name) LIKE $${params.length}`);
+    }
+
+    const whereSql = conditions.length
+      ? `WHERE ${conditions.join(" AND ")}`
+      : "";
+
+    const sql = `
+      SELECT
+        id,
+        year,
+        team_name,
+        player_name,
+        g,
+        w,
+        l,
+        ip,
+        h,
+        r,
+        er,
+        bb,
+        so,
+        wp,
+        hb
+      FROM public.pitching_stats
+      ${whereSql}
+      ORDER BY year DESC, team_name, player_name
+    `;
+
+    const { rows } = await pool.query(sql, params); // ✅ Changed from 'db' to 'pool'
+    res.json(rows);
   } catch (err) {
-    console.error("Error loading pitching stats:", err);
-    res.status(500).json({ error: "Failed to load pitching stats" });
+    console.error("❌ /api/pitching-stats error:", err);
+    res.status(500).json({ error: "Failed to fetch pitching stats" });
   }
 });
-console.log(" Registered: GET /api/pitching-stats");
+console.log("✅ Registered: GET /api/pitching-stats");
+
+// Also add endpoint to get available years for pitching
+app.get("/api/pitching-stats/years", async (_req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT DISTINCT year FROM public.pitching_stats ORDER BY year DESC`
+    );
+    res.json(rows.map((r) => r.year));
+  } catch (err) {
+    console.error("❌ /api/pitching-stats/years error:", err);
+    res.status(500).json({ error: "Failed to fetch years" });
+  }
+});
+console.log("✅ Registered: GET /api/pitching-stats/years");
 // ------------------------
 // Hall of Fame
 // ------------------------
