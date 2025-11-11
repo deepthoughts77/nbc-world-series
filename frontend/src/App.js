@@ -1832,7 +1832,11 @@ function TeamDetail() {
 // ---------- Hall of Fame ----------
 function HallOfFame() {
   const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("year-desc");
 
   useEffect(() => {
     let stop = false;
@@ -1841,22 +1845,214 @@ function HallOfFame() {
       .catch((e) => {
         setErr("Unable to load Hall of Fame members.");
         console.error(e);
-      });
+      })
+      .finally(() => !stop && setLoading(false));
     return () => {
       stop = true;
     };
   }, []);
 
-  const count = Array.isArray(members) ? members.length : 0;
-  const recent = Array.isArray(members) ? members.slice(0, 5) : [];
+  // Filter and sort members
+  const filteredMembers = useMemo(() => {
+    let result = [...members];
+
+    // Category filter
+    if (categoryFilter !== "all") {
+      result = result.filter(
+        (m) => (m.category || "").toLowerCase() === categoryFilter.toLowerCase()
+      );
+    }
+
+    // Search filter
+    if (search.trim()) {
+      const term = search.toLowerCase();
+      result = result.filter((m) =>
+        (m.inductee_name || m.name || "").toLowerCase().includes(term)
+      );
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      const yearA = a.induction_year || 0;
+      const yearB = b.induction_year || 0;
+      const nameA = (a.inductee_name || a.name || "").toLowerCase();
+      const nameB = (b.inductee_name || b.name || "").toLowerCase();
+
+      switch (sortBy) {
+        case "year-desc":
+          return yearB - yearA || nameA.localeCompare(nameB);
+        case "year-asc":
+          return yearA - yearB || nameA.localeCompare(nameB);
+        case "name":
+          return nameA.localeCompare(nameB);
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }, [members, categoryFilter, search, sortBy]);
+
+  // Calculate stats by category
+  const stats = useMemo(() => {
+    const byCategory = {
+      Player: 0,
+      Coach: 0,
+      Contributor: 0,
+    };
+
+    members.forEach((m) => {
+      const cat = m.category || "Contributor";
+      if (byCategory[cat] !== undefined) {
+        byCategory[cat]++;
+      }
+    });
+
+    const recentYears = [...members]
+      .sort((a, b) => (b.induction_year || 0) - (a.induction_year || 0))
+      .slice(0, 5);
+
+    return {
+      total: members.length,
+      byCategory,
+      recent: recentYears,
+    };
+  }, [members]);
 
   return (
     <Container className="py-12">
       <SectionTitle
         eyebrow="Legacy"
         title="Hall of Fame"
-        desc="Celebrating the players, coaches, and contributors who shaped the tournament."
+        desc="Honoring the legends who shaped the NBC World Series through exceptional performance, leadership, and dedication."
       />
+
+      {/* Hero Stats Section */}
+      <div className="mb-10">
+        <Card className="bg-gradient-to-br from-gray-800 via-gray-900 to-black text-white overflow-hidden">
+          <CardBody className="p-8">
+            <div className="grid md:grid-cols-4 gap-6">
+              {/* Total Members */}
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                  <Star size={32} className="text-yellow-400" />
+                </div>
+                <div className="text-4xl font-black mb-1">{stats.total}</div>
+                <div className="text-sm text-gray-300">Total Inductees</div>
+              </div>
+
+              {/* Players */}
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-blue-500/20 flex items-center justify-center">
+                  <Users size={28} className="text-blue-400" />
+                </div>
+                <div className="text-4xl font-black mb-1">
+                  {stats.byCategory.Player}
+                </div>
+                <div className="text-sm text-gray-300">Players</div>
+              </div>
+
+              {/* Coaches */}
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-green-500/20 flex items-center justify-center">
+                  <Award size={28} className="text-green-400" />
+                </div>
+                <div className="text-4xl font-black mb-1">
+                  {stats.byCategory.Coach}
+                </div>
+                <div className="text-sm text-gray-300">Coaches</div>
+              </div>
+
+              {/* Contributors */}
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-purple-500/20 flex items-center justify-center">
+                  <Trophy size={28} className="text-purple-400" />
+                </div>
+                <div className="text-4xl font-black mb-1">
+                  {stats.byCategory.Contributor}
+                </div>
+                <div className="text-sm text-gray-300">Contributors</div>
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+      </div>
+
+      {/* Filters and Search */}
+      <Card className="mb-6">
+        <CardBody className="flex flex-wrap gap-4 items-end">
+          {/* Search */}
+          <div className="flex-1 min-w-[250px]">
+            <label className="block text-xs font-semibold text-gray-600 mb-2">
+              Search Inductees
+            </label>
+            <div className="relative">
+              <Search
+                size={18}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-3 py-2.5 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all"
+                placeholder="Search by name..."
+              />
+            </div>
+          </div>
+
+          {/* Category Filter */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-2">
+              Category
+            </label>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="px-4 py-2.5 border-2 border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 bg-white cursor-pointer transition-all"
+            >
+              <option value="all">All Categories</option>
+              <option value="player">Players</option>
+              <option value="coach">Coaches</option>
+              <option value="contributor">Contributors</option>
+            </select>
+          </div>
+
+          {/* Sort */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-2">
+              Sort By
+            </label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-4 py-2.5 border-2 border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 bg-white cursor-pointer transition-all"
+            >
+              <option value="year-desc">Newest First</option>
+              <option value="year-asc">Oldest First</option>
+              <option value="name">Name (A-Z)</option>
+            </select>
+          </div>
+
+          {/* Clear Filters */}
+          {(search || categoryFilter !== "all") && (
+            <button
+              onClick={() => {
+                setSearch("");
+                setCategoryFilter("all");
+              }}
+              className="px-4 py-2.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all font-medium"
+            >
+              Clear Filters
+            </button>
+          )}
+        </CardBody>
+      </Card>
+
+      {/* Results Count */}
+      <div className="mb-4 text-sm text-gray-600">
+        Showing <strong>{filteredMembers.length}</strong> of{" "}
+        <strong>{stats.total}</strong> inductees
+      </div>
 
       {err && (
         <div className="mb-4">
@@ -1864,60 +2060,175 @@ function HallOfFame() {
         </div>
       )}
 
-      <Card>
-        <CardBody>
-          <div className="text-center mb-8">
-            <div className="mx-auto h-16 w-16 rounded-full bg-yellow-100 grid place-content-center text-yellow-600">
-              <Star size={28} />
-            </div>
-            <div className="mt-3 text-gray-700">{count} Members Inducted</div>
-          </div>
+      {loading ? (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => (
+            <Skeleton key={i} className="h-56" />
+          ))}
+        </div>
+      ) : filteredMembers.length > 0 ? (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredMembers.map((member, idx) => {
+            const name = member.inductee_name || member.name || "Unknown";
+            const year = member.induction_year || "—";
+            const category = member.category || "Contributor";
+            const bio = member.bio || "";
 
-          <div className="grid md:grid-cols-2 gap-8">
-            <div>
-              <h3 className="font-semibold mb-3">Recent Inductees</h3>
-              <ul className="space-y-2">
-                {recent.length ? (
-                  recent.map((m, i) => (
-                    <li
-                      key={`${m.inductee_name}-${m.induction_year}-${i}`}
-                      className="flex items-center"
+            // Category color coding
+            const categoryStyles = {
+              Player: {
+                bg: "bg-blue-50",
+                border: "border-blue-200",
+                text: "text-blue-700",
+                iconBg: "bg-blue-100",
+                icon: "text-blue-600",
+              },
+              Coach: {
+                bg: "bg-green-50",
+                border: "border-green-200",
+                text: "text-green-700",
+                iconBg: "bg-green-100",
+                icon: "text-green-600",
+              },
+              Contributor: {
+                bg: "bg-purple-50",
+                border: "border-purple-200",
+                text: "text-purple-700",
+                iconBg: "bg-purple-100",
+                icon: "text-purple-600",
+              },
+            };
+
+            const style =
+              categoryStyles[category] || categoryStyles.Contributor;
+
+            return (
+              <Card
+                key={member.id ?? `${name}-${idx}`}
+                className="hover:shadow-xl transition-all hover:-translate-y-1 overflow-hidden group"
+              >
+                {/* Header with year badge */}
+                <div className="bg-gradient-to-br from-gray-700 via-gray-800 to-gray-900 p-5 text-white relative">
+                  {/* Year Badge */}
+                  <div className="absolute top-4 right-4 w-14 h-14 rounded-full bg-yellow-500 flex items-center justify-center shadow-lg">
+                    <span className="text-gray-900 font-black text-sm">
+                      {year}
+                    </span>
+                  </div>
+
+                  {/* Icon */}
+                  <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center mb-3">
+                    <Star size={24} className="text-yellow-400" />
+                  </div>
+
+                  {/* Name */}
+                  <h3 className="text-xl font-bold leading-tight pr-16">
+                    {name}
+                  </h3>
+                </div>
+
+                {/* Body */}
+                <CardBody>
+                  {/* Category Badge */}
+                  <div className="mb-4">
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${style.bg} ${style.border} ${style.text} border`}
                     >
-                      <ChevronRight size={18} className="text-blue-600 mr-2" />
-                      <span>
-                        {m.inductee_name} ({m.induction_year})
-                      </span>
-                    </li>
-                  ))
-                ) : (
-                  <li className="text-gray-600 text-sm">
-                    No recent inductees.
-                  </li>
-                )}
-              </ul>
+                      {category === "Player" && <Users size={12} />}
+                      {category === "Coach" && <Award size={12} />}
+                      {category === "Contributor" && <Trophy size={12} />}
+                      {category}
+                    </span>
+                  </div>
+
+                  {/* Bio */}
+                  {bio ? (
+                    <p className="text-sm text-gray-600 leading-relaxed line-clamp-3">
+                      {bio}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-gray-400 italic">
+                      Inducted into the NBC World Series Hall of Fame in {year}.
+                    </p>
+                  )}
+
+                  {/* Induction Year Footer */}
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-500">Inducted</span>
+                      <span className="text-gray-900 font-bold">{year}</span>
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+            );
+          })}
+        </div>
+      ) : (
+        <Card>
+          <CardBody className="text-center py-12">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Search className="w-8 h-8 text-gray-400" />
             </div>
-            <div>
-              <h3 className="font-semibold mb-3">Categories</h3>
-              <div className="grid sm:grid-cols-3 gap-3 text-sm">
-                <div className="bg-gray-50 rounded-lg p-3">
-                  Players:{" "}
-                  {members.filter((m) => m.category === "Player").length}{" "}
-                  members
-                </div>
-                <div className="bg-gray-50 rounded-lg p-3">
-                  Coaches:{" "}
-                  {members.filter((m) => m.category === "Coach").length} members
-                </div>
-                <div className="bg-gray-50 rounded-lg p-3">
-                  Contributors:{" "}
-                  {members.filter((m) => m.category === "Contributor").length}{" "}
-                  members
-                </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              No inductees found
+            </h3>
+            <p className="text-gray-600 mb-4">
+              {search
+                ? `No members match "${search}"`
+                : "No members in this category"}
+            </p>
+            <button
+              onClick={() => {
+                setSearch("");
+                setCategoryFilter("all");
+              }}
+              className="px-6 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg font-medium transition-colors"
+            >
+              Clear Filters
+            </button>
+          </CardBody>
+        </Card>
+      )}
+
+      {/* Recent Inductees Highlight */}
+      {!search && categoryFilter === "all" && stats.recent.length > 0 && (
+        <div className="mt-12">
+          <h3 className="text-2xl font-bold mb-6 flex items-center gap-2">
+            <Star className="text-yellow-500" size={24} />
+            Recent Inductees
+          </h3>
+          <Card>
+            <CardBody>
+              <div className="space-y-3">
+                {stats.recent.map((m, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center flex-shrink-0">
+                        <Star size={18} className="text-yellow-600" />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-gray-900">
+                          {m.inductee_name || m.name}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {m.category || "Contributor"}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-sm font-bold text-gray-600">
+                      {m.induction_year}
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-          </div>
-        </CardBody>
-      </Card>
+            </CardBody>
+          </Card>
+        </div>
+      )}
     </Container>
   );
 }
@@ -1947,290 +2258,504 @@ function Records() {
       <SectionTitle
         eyebrow="All-time"
         title="Records & Achievements"
-        desc="Notable achievements across NBC World Series history."
+        desc="Celebrating the greatest performances and milestones in NBC World Series history."
       />
 
       {err && (
-        <div className="mb-4">
+        <div className="mb-6">
           <BannerError message={err} />
         </div>
       )}
 
       {loading ? (
-        <div className="grid md:grid-cols-2 gap-6">
-          <Skeleton className="h-40" />
-          <Skeleton className="h-40" />
+        <div className="space-y-6">
+          <Skeleton className="h-48" />
+          <Skeleton className="h-96" />
+          <Skeleton className="h-64" />
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Most Championships */}
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardBody>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="h-12 w-12 rounded-full bg-yellow-100 grid place-content-center">
-                  <Trophy className="text-yellow-600" size={24} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg">Most Championships</h3>
-                  <p className="text-sm text-gray-600">All-time leader</p>
-                </div>
-              </div>
-              {records?.most_championships ? (
-                <div>
-                  <div className="text-3xl font-bold text-gray-900">
-                    {records.most_championships.championships}
-                  </div>
-                  <div className="text-lg font-semibold text-gray-700 mt-1">
-                    {records.most_championships.name}
-                  </div>
-                  <div className="text-sm text-gray-600 mt-1">
-                    {records.most_championships.city},{" "}
-                    {records.most_championships.state}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-gray-500">No data available</div>
-              )}
-            </CardBody>
-          </Card>
+        <>
+          {/* All-Time Records Section */}
+          <div className="mb-12">
+            <div className="mb-6">
+              <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <Trophy className="text-yellow-500" size={28} />
+                All-Time Records
+              </h3>
+              <p className="text-gray-600 mt-1">
+                The most successful teams in tournament history
+              </p>
+            </div>
 
-          {/* Most Appearances */}
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardBody>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="h-12 w-12 rounded-full bg-blue-100 grid place-content-center">
-                  <Calendar className="text-blue-600" size={24} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg">Most Appearances</h3>
-                  <p className="text-sm text-gray-600">
-                    Tournament participation
-                  </p>
-                </div>
-              </div>
-              {records?.most_appearances ? (
-                <div>
-                  <div className="text-3xl font-bold text-gray-900">
-                    {records.most_appearances.appearances}
-                  </div>
-                  <div className="text-lg font-semibold text-gray-700 mt-1">
-                    {records.most_appearances.name}
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Most Championships */}
+              <Card className="overflow-hidden border-2 border-yellow-200">
+                <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 p-6 border-b border-yellow-200">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-12 h-12 rounded-xl bg-yellow-500 flex items-center justify-center shadow-lg">
+                      <Trophy className="text-white" size={24} />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-lg text-gray-900">
+                        Most Championships
+                      </h4>
+                      <p className="text-sm text-gray-600">All-time leader</p>
+                    </div>
                   </div>
                 </div>
-              ) : (
-                <div className="text-gray-500">No data available</div>
-              )}
-            </CardBody>
-          </Card>
+                <CardBody>
+                  {records?.most_championships ? (
+                    <div className="space-y-4">
+                      <div className="flex items-baseline gap-3">
+                        <div className="text-5xl font-black text-yellow-600">
+                          {records.most_championships.championships}
+                        </div>
+                        <div className="text-xl text-gray-500">titles</div>
+                      </div>
+                      <div>
+                        <div className="text-xl font-bold text-gray-900">
+                          {records.most_championships.name}
+                        </div>
+                        <div className="text-sm text-gray-600 mt-1">
+                          {records.most_championships.city},{" "}
+                          {records.most_championships.state}
+                        </div>
+                      </div>
+                      <div className="pt-4 border-t border-gray-200">
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <div className="text-gray-500">Dominance</div>
+                            <div className="text-lg font-bold text-gray-900">
+                              Legendary
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-gray-500">Era</div>
+                            <div className="text-lg font-bold text-gray-900">
+                              1935-2025
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <Trophy className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <p className="text-gray-500">
+                        Championship data is being compiled
+                      </p>
+                    </div>
+                  )}
+                </CardBody>
+              </Card>
 
-          {/* Most MVP Awards */}
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardBody>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="h-12 w-12 rounded-full bg-purple-100 grid place-content-center">
-                  <Star className="text-purple-600" size={24} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg">Most MVP Awards</h3>
-                  <p className="text-sm text-gray-600">Tournament MVPs</p>
-                </div>
-              </div>
-              {records?.most_mvp_awards ? (
-                <div>
-                  <div className="text-3xl font-bold text-gray-900">
-                    {records.most_mvp_awards.mvp_awards}
-                  </div>
-                  <div className="text-lg font-semibold text-gray-700 mt-1">
-                    {records.most_mvp_awards.player_name}
+              {/* Most Appearances */}
+              <Card className="overflow-hidden border-2 border-blue-200">
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 border-b border-blue-200">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-12 h-12 rounded-xl bg-blue-500 flex items-center justify-center shadow-lg">
+                      <Calendar className="text-white" size={24} />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-lg text-gray-900">
+                        Most Appearances
+                      </h4>
+                      <p className="text-sm text-gray-600">
+                        Tournament participation
+                      </p>
+                    </div>
                   </div>
                 </div>
-              ) : (
-                <div className="text-gray-500">
-                  <div className="text-sm">Limited MVP data available</div>
-                  <div className="text-xs mt-1">
-                    Only recent tournaments have MVP records
-                  </div>
-                </div>
-              )}
-            </CardBody>
-          </Card>
+                <CardBody>
+                  {records?.most_appearances ? (
+                    <div className="space-y-4">
+                      <div className="flex items-baseline gap-3">
+                        <div className="text-5xl font-black text-blue-600">
+                          {records.most_appearances.appearances}
+                        </div>
+                        <div className="text-xl text-gray-500">times</div>
+                      </div>
+                      <div>
+                        <div className="text-xl font-bold text-gray-900">
+                          {records.most_appearances.name}
+                        </div>
+                        <div className="text-sm text-gray-600 mt-1">
+                          Consistent excellence across decades
+                        </div>
+                      </div>
+                      <div className="pt-4 border-t border-gray-200">
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <div className="text-gray-500">Consistency</div>
+                            <div className="text-lg font-bold text-gray-900">
+                              Elite
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-gray-500">Status</div>
+                            <div className="text-lg font-bold text-gray-900">
+                              Perennial
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <Calendar className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <p className="text-gray-500">
+                        Appearance data is being compiled
+                      </p>
+                    </div>
+                  )}
+                </CardBody>
+              </Card>
 
-          {/* Tournament History */}
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardBody>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="h-12 w-12 rounded-full bg-green-100 grid place-content-center">
-                  <Users className="text-green-600" size={24} />
+              {/* Most MVP Awards */}
+              <Card className="overflow-hidden border-2 border-purple-200">
+                <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 border-b border-purple-200">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-12 h-12 rounded-xl bg-purple-500 flex items-center justify-center shadow-lg">
+                      <Star className="text-white" size={24} />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-lg text-gray-900">
+                        Most MVP Awards
+                      </h4>
+                      <p className="text-sm text-gray-600">Tournament MVPs</p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-lg">Tournament History</h3>
-                  <p className="text-sm text-gray-600">Since 1935</p>
+                <CardBody>
+                  {records?.most_mvp_awards ? (
+                    <div className="space-y-4">
+                      <div className="flex items-baseline gap-3">
+                        <div className="text-5xl font-black text-purple-600">
+                          {records.most_mvp_awards.mvp_awards}
+                        </div>
+                        <div className="text-xl text-gray-500">MVPs</div>
+                      </div>
+                      <div>
+                        <div className="text-xl font-bold text-gray-900">
+                          {records.most_mvp_awards.player_name}
+                        </div>
+                        <div className="text-sm text-gray-600 mt-1">
+                          Outstanding individual performance
+                        </div>
+                      </div>
+                      <div className="pt-4 border-t border-gray-200">
+                        <div className="text-sm">
+                          <div className="text-gray-500">Achievement</div>
+                          <div className="text-lg font-bold text-gray-900">
+                            Elite Performer
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <Star className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <div className="text-sm text-gray-600 px-4">
+                        <p className="font-medium mb-1">Limited MVP data</p>
+                        <p className="text-xs">
+                          Only recent tournaments have MVP records
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </CardBody>
+              </Card>
+
+              {/* Tournament History */}
+              <Card className="overflow-hidden border-2 border-green-200">
+                <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 border-b border-green-200">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-12 h-12 rounded-xl bg-green-500 flex items-center justify-center shadow-lg">
+                      <Users className="text-white" size={24} />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-lg text-gray-900">
+                        Tournament History
+                      </h4>
+                      <p className="text-sm text-gray-600">Since 1935</p>
+                    </div>
+                  </div>
                 </div>
+                <CardBody>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                      <span className="text-gray-600 font-medium">
+                        Years Active:
+                      </span>
+                      <span className="font-bold text-gray-900 text-lg">
+                        90 years
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                      <span className="text-gray-600 font-medium">
+                        Total Tournaments:
+                      </span>
+                      <span className="font-bold text-gray-900 text-lg">
+                        {records?.total_tournaments || 89}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                      <span className="text-gray-600 font-medium">
+                        Location:
+                      </span>
+                      <span className="font-bold text-gray-900 text-lg">
+                        Wichita, KS
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-2">
+                      <span className="text-gray-600 font-medium">Status:</span>
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-bold">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        Active
+                      </span>
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+            </div>
+          </div>
+
+          {/* Modern Wood Era Records */}
+          <div className="mb-12">
+            <div className="mb-6">
+              <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold mb-3">
+                2000-2025
               </div>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Years Active:</span>
-                  <span className="font-bold text-gray-900">90 years</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Total Tournaments:</span>
-                  <span className="font-bold text-gray-900">
-                    {records?.total_tournaments || 89}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Location:</span>
-                  <span className="font-bold text-gray-900">Wichita, KS</span>
-                </div>
-              </div>
-            </CardBody>
-          </Card>
-        </div>
+              <h3 className="text-2xl font-bold text-gray-900">
+                Modern Wood Era Records
+              </h3>
+              <p className="text-gray-600 mt-1">
+                Outstanding achievements since the switch to wood bats
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Highest Batting Average */}
+              <Card className="hover:shadow-lg transition-shadow">
+                <CardBody>
+                  <div className="text-center mb-4">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 mb-3">
+                      <Award className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <h4 className="font-bold text-blue-700 text-sm uppercase tracking-wide">
+                      Highest Batting Average
+                    </h4>
+                  </div>
+                  <div className="text-center mb-4">
+                    <div className="text-4xl font-black text-gray-900">
+                      .750
+                    </div>
+                  </div>
+                  <div className="text-center space-y-1">
+                    <div className="font-bold text-gray-900">
+                      Grant Nottlemann
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      Great Bend KS Bat Cats
+                    </div>
+                    <div className="text-xs text-gray-500">(2023)</div>
+                    <div className="text-xs text-gray-400 mt-2">
+                      5 GP • 12 H • 16 AB
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+
+              {/* Most Hits */}
+              <Card className="hover:shadow-lg transition-shadow">
+                <CardBody>
+                  <div className="text-center mb-4">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-100 mb-3">
+                      <Star className="w-6 h-6 text-green-600" />
+                    </div>
+                    <h4 className="font-bold text-green-700 text-sm uppercase tracking-wide">
+                      Most Hits (Tournament)
+                    </h4>
+                  </div>
+                  <div className="text-center mb-4">
+                    <div className="text-4xl font-black text-gray-900">19</div>
+                  </div>
+                  <div className="text-center space-y-1">
+                    <div className="font-bold text-gray-900">Gavin Wehby</div>
+                    <div className="text-sm text-gray-600">Liberal KS</div>
+                    <div className="text-xs text-gray-500">(2015)</div>
+                    <div className="text-xs text-gray-400 mt-2">
+                      11 games played
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+
+              {/* Most RBIs */}
+              <Card className="hover:shadow-lg transition-shadow">
+                <CardBody>
+                  <div className="text-center mb-4">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-orange-100 mb-3">
+                      <Trophy className="w-6 h-6 text-orange-600" />
+                    </div>
+                    <h4 className="font-bold text-orange-700 text-sm uppercase tracking-wide">
+                      Most RBIs (Tournament)
+                    </h4>
+                  </div>
+                  <div className="text-center mb-4">
+                    <div className="text-4xl font-black text-gray-900">17</div>
+                  </div>
+                  <div className="text-center space-y-1">
+                    <div className="font-bold text-gray-900">Gunnar Glad</div>
+                    <div className="text-sm text-gray-600">
+                      Anchorage AK Glacier Pilots
+                    </div>
+                    <div className="text-xs text-gray-500">(2009)</div>
+                    <div className="text-xs text-gray-400 mt-2">
+                      9 games played
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+
+              {/* Most Home Runs */}
+              <Card className="hover:shadow-lg transition-shadow">
+                <CardBody>
+                  <div className="text-center mb-4">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mb-3">
+                      <Award className="w-6 h-6 text-red-600" />
+                    </div>
+                    <h4 className="font-bold text-red-700 text-sm uppercase tracking-wide">
+                      Most Home Runs
+                    </h4>
+                  </div>
+                  <div className="text-center mb-4">
+                    <div className="text-4xl font-black text-gray-900">4</div>
+                  </div>
+                  <div className="text-center space-y-1">
+                    <div className="font-bold text-gray-900">Nolan Reimold</div>
+                    <div className="text-sm text-gray-600">Hays KS Larks</div>
+                    <div className="text-xs text-gray-500">(2004)</div>
+                  </div>
+                </CardBody>
+              </Card>
+
+              {/* Most Strikeouts (Pitcher) */}
+              <Card className="hover:shadow-lg transition-shadow">
+                <CardBody>
+                  <div className="text-center mb-4">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-purple-100 mb-3">
+                      <Star className="w-6 h-6 text-purple-600" />
+                    </div>
+                    <h4 className="font-bold text-purple-700 text-sm uppercase tracking-wide">
+                      Most Strikeouts
+                    </h4>
+                  </div>
+                  <div className="text-center mb-4">
+                    <div className="text-4xl font-black text-gray-900">27</div>
+                  </div>
+                  <div className="text-center space-y-1">
+                    <div className="font-bold text-gray-900">Tommy Hanson</div>
+                    <div className="text-sm text-gray-600">
+                      Aloha OR Knights
+                    </div>
+                    <div className="text-xs text-gray-500">(2005)</div>
+                  </div>
+                </CardBody>
+              </Card>
+
+              {/* Team Batting Average */}
+              <Card className="hover:shadow-lg transition-shadow">
+                <CardBody>
+                  <div className="text-center mb-4">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-yellow-100 mb-3">
+                      <Users className="w-6 h-6 text-yellow-600" />
+                    </div>
+                    <h4 className="font-bold text-yellow-700 text-sm uppercase tracking-wide">
+                      Highest Team Batting Avg
+                    </h4>
+                  </div>
+                  <div className="text-center mb-4">
+                    <div className="text-4xl font-black text-gray-900">
+                      .379
+                    </div>
+                  </div>
+                  <div className="text-center space-y-1">
+                    <div className="font-bold text-gray-900">
+                      San Diego CA Stars
+                    </div>
+                    <div className="text-xs text-gray-500">(2010)</div>
+                    <div className="text-xs text-gray-400 mt-2">6 games</div>
+                  </div>
+                </CardBody>
+              </Card>
+            </div>
+          </div>
+
+          {/* Tournament Milestones */}
+          <div>
+            <div className="mb-6">
+              <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <Star className="text-yellow-500" size={24} />
+                Tournament Milestones
+              </h3>
+              <p className="text-gray-600 mt-1">
+                Celebrating 90 years of championship baseball
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6">
+              <Card className="text-center hover:shadow-lg transition-shadow border-2 border-gray-200">
+                <CardBody className="p-8">
+                  <div className="text-5xl font-black text-blue-600 mb-2">
+                    1935
+                  </div>
+                  <div className="text-sm font-semibold text-gray-700 mb-2">
+                    First Tournament
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Duncan Cementers won the inaugural championship
+                  </div>
+                </CardBody>
+              </Card>
+
+              <Card className="text-center hover:shadow-lg transition-shadow border-2 border-yellow-200 bg-yellow-50">
+                <CardBody className="p-8">
+                  <div className="text-5xl font-black text-yellow-600 mb-2">
+                    2025
+                  </div>
+                  <div className="text-sm font-semibold text-gray-700 mb-2">
+                    Latest Champion
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Hutchinson Monarchs
+                  </div>
+                </CardBody>
+              </Card>
+
+              <Card className="text-center hover:shadow-lg transition-shadow border-2 border-gray-200">
+                <CardBody className="p-8">
+                  <div className="text-5xl font-black text-green-600 mb-2">
+                    ~45K
+                  </div>
+                  <div className="text-sm font-semibold text-gray-700 mb-2">
+                    2024 Attendance
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Total fans across all games
+                  </div>
+                </CardBody>
+              </Card>
+            </div>
+          </div>
+        </>
       )}
-
-      {/* Modern Wood Era Records Section */}
-      <div className="mt-12">
-        <SectionTitle
-          eyebrow="2000-2025"
-          title="Modern Wood Era Records"
-          desc="Outstanding achievements since the switch to wood bats."
-        />
-
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Individual Batting - Highest Average */}
-          <Card>
-            <CardBody>
-              <h4 className="font-bold text-lg mb-2 text-blue-700">
-                Highest Batting Average
-              </h4>
-              <div className="text-3xl font-bold text-gray-900">.750</div>
-              <div className="text-sm text-gray-700 mt-1">
-                <strong>Grant Nottlemann</strong>
-              </div>
-              <div className="text-xs text-gray-600 mt-1">
-                Great Bend KS Bat Cats (2023)
-              </div>
-              <div className="text-xs text-gray-500 mt-2">
-                5 GP, 12 H, 16 AB
-              </div>
-            </CardBody>
-          </Card>
-
-          {/* Most Hits */}
-          <Card>
-            <CardBody>
-              <h4 className="font-bold text-lg mb-2 text-blue-700">
-                Most Hits (Tournament)
-              </h4>
-              <div className="text-3xl font-bold text-gray-900">19</div>
-              <div className="text-sm text-gray-700 mt-1">
-                <strong>Gavin Wehby</strong>
-              </div>
-              <div className="text-xs text-gray-600 mt-1">
-                Liberal KS (2015)
-              </div>
-              <div className="text-xs text-gray-500 mt-2">11 games played</div>
-            </CardBody>
-          </Card>
-
-          {/* Most RBIs */}
-          <Card>
-            <CardBody>
-              <h4 className="font-bold text-lg mb-2 text-blue-700">
-                Most RBIs (Tournament)
-              </h4>
-              <div className="text-3xl font-bold text-gray-900">17</div>
-              <div className="text-sm text-gray-700 mt-1">
-                <strong>Gunnar Glad</strong>
-              </div>
-              <div className="text-xs text-gray-600 mt-1">
-                Anchorage AK Glacier Pilots (2009)
-              </div>
-              <div className="text-xs text-gray-500 mt-2">9 games played</div>
-            </CardBody>
-          </Card>
-
-          {/* Most Home Runs */}
-          <Card>
-            <CardBody>
-              <h4 className="font-bold text-lg mb-2 text-blue-700">
-                Most Home Runs (Tournament)
-              </h4>
-              <div className="text-3xl font-bold text-gray-900">4</div>
-              <div className="text-sm text-gray-700 mt-1">
-                <strong>Nolan Reimold</strong>
-              </div>
-              <div className="text-xs text-gray-600 mt-1">
-                Hays KS Larks (2004)
-              </div>
-            </CardBody>
-          </Card>
-
-          {/* Most Strikeouts (Pitcher) */}
-          <Card>
-            <CardBody>
-              <h4 className="font-bold text-lg mb-2 text-blue-700">
-                Most Strikeouts (Tournament)
-              </h4>
-              <div className="text-3xl font-bold text-gray-900">27</div>
-              <div className="text-sm text-gray-700 mt-1">
-                <strong>Tommy Hanson</strong>
-              </div>
-              <div className="text-xs text-gray-600 mt-1">
-                Aloha OR Knights (2005)
-              </div>
-            </CardBody>
-          </Card>
-
-          {/* Team Batting Average */}
-          <Card>
-            <CardBody>
-              <h4 className="font-bold text-lg mb-2 text-blue-700">
-                Highest Team Batting Avg
-              </h4>
-              <div className="text-3xl font-bold text-gray-900">.379</div>
-              <div className="text-sm text-gray-700 mt-1">
-                <strong>San Diego CA Stars</strong>
-              </div>
-              <div className="text-xs text-gray-600 mt-1">2010 (6 games)</div>
-            </CardBody>
-          </Card>
-        </div>
-      </div>
-
-      {/* Fun Facts Section */}
-      <div className="mt-12">
-        <h3 className="text-2xl font-bold mb-6">Fun Facts</h3>
-        <div className="grid md:grid-cols-3 gap-4">
-          <Card>
-            <CardBody className="text-center">
-              <div className="text-2xl font-bold text-blue-600">1935</div>
-              <div className="text-sm text-gray-600 mt-1">First Tournament</div>
-              <div className="text-xs text-gray-500 mt-2">
-                Duncan Cementers won
-              </div>
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardBody className="text-center">
-              <div className="text-2xl font-bold text-blue-600">2024</div>
-              <div className="text-sm text-gray-600 mt-1">Latest Champion</div>
-              <div className="text-xs text-gray-500 mt-2">
-                Hutchinson Monarchs
-              </div>
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardBody className="text-center">
-              <div className="text-2xl font-bold text-blue-600">~45K</div>
-              <div className="text-sm text-gray-600 mt-1">2024 Attendance</div>
-              <div className="text-xs text-gray-500 mt-2">Total fans</div>
-            </CardBody>
-          </Card>
-        </div>
-      </div>
     </Container>
   );
 }
