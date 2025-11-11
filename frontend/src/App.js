@@ -14,6 +14,8 @@ import {
   Star,
   Calendar,
   Search,
+  Award,
+  Medal,
   ChevronRight,
   AlertCircle,
   Menu,
@@ -91,6 +93,7 @@ function CardBody({ children, className = "" }) {
   return <div className={`p-6 ${className}`}>{children}</div>;
 }
 
+// eslint-disable-next-line no-unused-vars
 function Stat({ icon: Icon, label, value, tone = "slate" }) {
   const toneMap = {
     blue: "text-blue-600",
@@ -154,7 +157,7 @@ function Nav() {
 
         {/* Desktop nav */}
         <div className="hidden md:block">
-          <nav className="bg-blue-800 rounded-xl px-1 py-1 shadow-sm">
+          <nav className="bg-gray-800 rounded-xl px-1 py-1 shadow-sm">
             <ul className="flex items-center gap-1">
               <li>
                 <NavLink to="/" className={activeClass} end>
@@ -297,14 +300,13 @@ function PageShell({ children }) {
   );
 }
 
-// ---------- Home ----------
+// ---------- Home Page ----------
+
 function Home() {
   const [stats, setStats] = useState(null);
   const [recent, setRecent] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
-
-  // SEARCH STATE
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState(null);
   const [searching, setSearching] = useState(false);
@@ -334,398 +336,202 @@ function Home() {
     };
   }, []);
 
-  // HANDLE SEARCH
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
-
-    console.log(" Step 1: Starting search for:", searchQuery);
-    console.log(" Step 2: API baseURL:", API.defaults.baseURL);
 
     setSearching(true);
     setSearchError("");
     setSearchResults(null);
 
     try {
-      console.log(" Step 3: Making POST request to /search/ask");
       const response = await API.post("/search/ask", { question: searchQuery });
-
-      console.log(" Step 4: Got response:", response);
-      console.log(" Step 5: Response status:", response.status);
-      console.log(
-        " Step 6: Response data:",
-        JSON.stringify(response.data, null, 2)
-      );
-
       const payload = response?.data ?? {};
 
-      console.log(
-        " Step 7: Extracted payload:",
-        JSON.stringify(payload, null, 2)
-      );
-      console.log(" Step 8: Answer:", payload.answer);
-      console.log(" Step 9: Data:", payload.data);
-      console.log(" Step 10: Query Type:", payload.queryType);
-
-      const newSearchResults = {
+      setSearchResults({
         answer: payload.answer || "",
         data: payload.data || null,
         queryType: payload.queryType || "",
-      };
-
-      console.log(
-        " Step 11: Setting search results:",
-        JSON.stringify(newSearchResults, null, 2)
-      );
-      setSearchResults(newSearchResults);
-
-      console.log(" Step 12: Search results state should now be updated");
+      });
     } catch (error) {
-      console.error(" ERROR at step:", error);
-      console.error(" Error message:", error.message);
-      console.error(" Error response:", error.response);
-      console.error(" Error response data:", error.response?.data);
-      console.error(" Error response status:", error.response?.status);
+      console.error("Search error:", error);
       setSearchError("Search failed. Please try again.");
       setSearchResults(null);
     } finally {
       setSearching(false);
-      console.log(
-        " Search complete. Final searchResults state:",
-        searchResults
-      );
     }
   };
 
+  // Get current year for "Next Tournament" section
+  const currentYear = new Date().getFullYear();
+  const nextTournament = currentYear + 1;
+
   return (
     <>
-      {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(1200px_400px_at_50%_-50%,rgba(59,130,246,0.25),transparent_60%)]" />
-        <Container className="py-16">
-          <div className="text-center max-w-3xl mx-auto">
-            <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold">
-              <Trophy size={16} /> Since 1935
+      {/* Hero Section - Modern & Professional */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+            }}
+          />
+        </div>
+
+        <Container className="py-20 relative z-10">
+          <div className="text-center max-w-4xl mx-auto">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-semibold mb-6 border border-white/20">
+              <Trophy size={18} className="text-yellow-300" />
+              <span>Since 1935 • Wichita, Kansas</span>
             </div>
-            <h1 className="mt-4 text-4xl md:text-5xl font-extrabold tracking-tight">
-              90 Years of Champions
+
+            {/* Main Headline */}
+            <h1 className="text-5xl md:text-7xl font-black tracking-tight text-white mb-6 leading-none">
+              90 Years of
+              <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-500">
+                Championship Baseball
+              </span>
             </h1>
-            <p className="mt-3 text-gray-600">
-              National Baseball Congress World Series • Wichita, Kansas
+
+            {/* Subheadline */}
+            <p className="text-xl md:text-2xl text-blue-100 mb-8 leading-relaxed">
+              America's premier amateur baseball tournament.
+              <br className="hidden md:block" />
+              Where legends are made and champions are crowned.
             </p>
+
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <NavLink
+                to="/championships"
+                className="px-8 py-4 bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-bold rounded-xl text-lg shadow-2xl hover:shadow-yellow-500/50 transition-all hover:scale-105 inline-flex items-center gap-2"
+              >
+                <Trophy size={20} />
+                View All Champions
+              </NavLink>
+              <NavLink
+                to="/teams"
+                className="px-8 py-4 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white font-bold rounded-xl text-lg border-2 border-white/30 hover:border-white/50 transition-all inline-flex items-center gap-2"
+              >
+                <Users size={20} />
+                Explore Teams
+              </NavLink>
+            </div>
           </div>
+        </Container>
 
-          {/* Search */}
-          <div className="mt-12 max-w-2xl mx-auto">
-            <Card className="shadow-lg">
-              <CardBody>
-                <div className="flex items-center gap-2 mb-4">
-                  <Search className="text-blue-600" size={24} />
-                  <h2 className="text-xl font-bold">
-                    Ask About Tournament History
-                  </h2>
-                </div>
+        {/* Decorative Wave */}
+        <div className="absolute bottom-0 left-0 right-0">
+          <svg
+            viewBox="0 0 1440 120"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="w-full"
+          >
+            <path
+              d="M0,64L80,69.3C160,75,320,85,480,80C640,75,800,53,960,48C1120,43,1280,53,1360,58.7L1440,64L1440,120L1360,120C1280,120,1120,120,960,120C800,120,640,120,480,120C320,120,160,120,80,120L0,120Z"
+              fill="white"
+            />
+          </svg>
+        </div>
+      </section>
 
-                <form onSubmit={handleSearch} className="space-y-4">
-                  <div>
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder='Try: "First champion?" or "Most championships?"'
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-base"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={searching || !searchQuery.trim()}
-                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 rounded-lg transition-colors"
-                  >
-                    {searching ? "Searching..." : "Search"}
-                  </button>
-                </form>
-
-                {/* Search error */}
-                {searchError && (
-                  <div className="mt-4">
-                    <BannerError message={searchError} />
-                  </div>
-                )}
-
-                {/* Search results */}
-                {searchResults &&
-                  (searchResults.answer || searchResults.data) && (
-                    <div className="mt-6 space-y-4">
-                      {/* Answer */}
-                      {searchResults.answer && (
-                        <div className="p-4 bg-gradient-to-br from-green-50 to-blue-50 border-2 border-green-200 rounded-lg">
-                          <div className="flex items-start gap-3">
-                            <div className="text-green-600 mt-1">
-                              <Trophy size={20} />
-                            </div>
-                            <div className="flex-1">
-                              <div className="text-gray-800 leading-relaxed whitespace-pre-line">
-                                {searchResults.answer
-                                  .split("**")
-                                  .map((part, i) =>
-                                    i % 2 === 0 ? (
-                                      part
-                                    ) : (
-                                      <strong key={i}>{part}</strong>
-                                    )
-                                  )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Data Display */}
-                      {searchResults.data && searchResults.queryType && (
-                        <div>
-                          {/* First Champion */}
-                          {searchResults.queryType === "firstChampion" && (
-                            <Card>
-                              <CardBody>
-                                <div className="text-center">
-                                  <div className="text-5xl mb-3">🏆</div>
-                                  <div className="text-2xl font-bold text-gray-900">
-                                    {searchResults.data.champion}
-                                  </div>
-                                  <div className="text-gray-600 mt-2">
-                                    {searchResults.data.city},{" "}
-                                    {searchResults.data.state}
-                                  </div>
-                                  <div className="text-3xl font-bold text-blue-600 mt-3">
-                                    {searchResults.data.year}
-                                  </div>
-                                  <div className="text-sm text-gray-500 mt-1">
-                                    First NBC World Series Champion
-                                  </div>
-                                </div>
-                              </CardBody>
-                            </Card>
-                          )}
-
-                          {/* Championship Streaks */}
-                          {searchResults.queryType === "championshipStreaks" &&
-                            Array.isArray(searchResults.data) &&
-                            searchResults.data.length > 0 && (
-                              <div className="grid gap-3">
-                                {searchResults.data.map((streak, idx) => (
-                                  <Card key={idx}>
-                                    <CardBody className="flex items-center justify-between">
-                                      <div>
-                                        <div className="font-bold text-lg">
-                                          {streak.name}
-                                        </div>
-                                        <div className="text-sm text-gray-600">
-                                          {streak.start_year} -{" "}
-                                          {streak.end_year}
-                                        </div>
-                                      </div>
-                                      <div className="text-3xl font-bold text-blue-600">
-                                        {streak.consecutive_wins}{" "}
-                                        {streak.consecutive_wins === 1
-                                          ? "year"
-                                          : "years"}
-                                      </div>
-                                    </CardBody>
-                                  </Card>
-                                ))}
-                              </div>
-                            )}
-
-                          {/* Most Championships */}
-                          {searchResults.queryType === "mostChampionships" &&
-                            Array.isArray(searchResults.data) &&
-                            searchResults.data.length > 0 && (
-                              <div className="space-y-3">
-                                {searchResults.data.map((team, idx) => (
-                                  <Card key={idx}>
-                                    <CardBody className="flex items-center justify-between">
-                                      <div className="flex-1">
-                                        <div className="font-bold text-lg">
-                                          {team.name}
-                                        </div>
-                                        <div className="text-sm text-gray-600 mt-1">
-                                          Years: {team.years.join(", ")}
-                                        </div>
-                                      </div>
-                                      <div className="text-3xl font-bold text-blue-600 ml-4">
-                                        {team.championships}
-                                      </div>
-                                    </CardBody>
-                                  </Card>
-                                ))}
-                              </div>
-                            )}
-
-                          {/* Recent Champions */}
-                          {searchResults.queryType === "recentChampions" &&
-                            Array.isArray(searchResults.data) &&
-                            searchResults.data.length > 0 && (
-                              <div className="space-y-2">
-                                {searchResults.data.map((champ, idx) => (
-                                  <Card key={idx}>
-                                    <CardBody className="flex justify-between items-center">
-                                      <div>
-                                        <span className="font-bold text-lg">
-                                          {champ.year}
-                                        </span>
-                                        <span className="mx-3">•</span>
-                                        <span className="text-gray-700">
-                                          {champ.champion}
-                                        </span>
-                                        {champ.championship_score && (
-                                          <span className="text-sm text-gray-600 ml-3">
-                                            ({champ.championship_score})
-                                          </span>
-                                        )}
-                                      </div>
-                                      {champ.mvp && (
-                                        <div className="text-sm text-gray-600">
-                                          MVP: {champ.mvp}
-                                        </div>
-                                      )}
-                                    </CardBody>
-                                  </Card>
-                                ))}
-                              </div>
-                            )}
-
-                          {/* Location */}
-                          {searchResults.queryType === "location" && (
-                            <Card>
-                              <CardBody>
-                                <div className="text-center space-y-3">
-                                  <div className="text-4xl"></div>
-                                  <div>
-                                    <div className="text-2xl font-bold text-gray-900">
-                                      {searchResults.data.city},{" "}
-                                      {searchResults.data.state}
-                                    </div>
-                                    <div className="text-gray-600 mt-1">
-                                      Since {searchResults.data.since}
-                                    </div>
-                                  </div>
-                                  <div className="text-sm text-gray-700">
-                                    {searchResults.data.venue}
-                                  </div>
-                                  <div className="text-sm text-gray-600 mt-2">
-                                    The tournament typically runs in late July
-                                    through early August.
-                                  </div>
-                                </div>
-                              </CardBody>
-                            </Card>
-                          )}
-
-                          {/* Team Championship History */}
-                          {searchResults.queryType ===
-                            "teamChampionshipHistory" && (
-                            <Card>
-                              <CardBody>
-                                <div className="text-center">
-                                  <div className="text-5xl font-bold text-blue-600 mb-2">
-                                    {searchResults.data.championships_won}
-                                  </div>
-                                  <div className="text-lg font-semibold text-gray-800">
-                                    {searchResults.data.team}
-                                  </div>
-                                  <div className="text-sm text-gray-600 mt-2">
-                                    Championship
-                                    {searchResults.data.championships_won !== 1
-                                      ? "s"
-                                      : ""}{" "}
-                                    won
-                                  </div>
-                                  {searchResults.data.years &&
-                                    Array.isArray(searchResults.data.years) && (
-                                      <div className="mt-4 space-y-2">
-                                        {searchResults.data.years.map(
-                                          (yr, idx) => (
-                                            <div
-                                              key={idx}
-                                              className="text-xs text-gray-600 border-t pt-2"
-                                            >
-                                              <strong>{yr.year}</strong>
-                                              {yr.score && (
-                                                <span className="ml-2">
-                                                  • {yr.score}
-                                                </span>
-                                              )}
-                                              {yr.runner_up && (
-                                                <span className="ml-2">
-                                                  • vs {yr.runner_up}
-                                                </span>
-                                              )}
-                                              {yr.mvp && (
-                                                <span className="ml-2">
-                                                  • MVP: {yr.mvp}
-                                                </span>
-                                              )}
-                                            </div>
-                                          )
-                                        )}
-                                      </div>
-                                    )}
-                                </div>
-                              </CardBody>
-                            </Card>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                {/* No results */}
-                {searchResults &&
-                  !searchResults.answer &&
-                  !searchResults.data && (
-                    <div className="mt-6">
-                      <Card>
-                        <CardBody>
-                          <p className="text-gray-600">
-                            No results found for "{searchQuery}"
-                          </p>
-                        </CardBody>
-                      </Card>
-                    </div>
-                  )}
-              </CardBody>
-            </Card>
-          </div>
-
-          {/* Key stats */}
-          <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-5">
+      {/* Quick Stats Section - Modern Cards */}
+      <section className="py-16 bg-gray-50">
+        <Container>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {loading ? (
               <>
-                <Skeleton className="h-28" />
-                <Skeleton className="h-28" />
-                <Skeleton className="h-28" />
+                <Skeleton className="h-32" />
+                <Skeleton className="h-32" />
+                <Skeleton className="h-32" />
+                <Skeleton className="h-32" />
               </>
             ) : (
               <>
-                <Stat
-                  icon={Trophy}
-                  label="Championships"
-                  value={fmt(stats?.total_championships)}
-                  tone="yellow"
-                />
-                <Stat
-                  icon={Users}
-                  label="Teams"
-                  value={fmt(stats?.total_teams)}
-                  tone="green"
-                />
-                <Stat
-                  icon={Star}
-                  label="MLB Alumni"
-                  value={fmt(stats?.mlb_alumni)}
-                  tone="blue"
-                />
+                {/* Championships */}
+                <Card className="hover:shadow-xl transition-shadow border-l-4 border-l-yellow-500">
+                  <CardBody className="flex items-start gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-yellow-100 flex items-center justify-center flex-shrink-0">
+                      <Trophy className="w-7 h-7 text-yellow-600" />
+                    </div>
+                    <div>
+                      <div className="text-3xl font-black text-gray-900">
+                        {fmt(stats?.total_championships || 90)}
+                      </div>
+                      <div className="text-sm font-medium text-gray-600 mt-1">
+                        Championships
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        1935 - 2025
+                      </div>
+                    </div>
+                  </CardBody>
+                </Card>
+
+                {/* Teams */}
+                <Card className="hover:shadow-xl transition-shadow border-l-4 border-l-green-500">
+                  <CardBody className="flex items-start gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-green-100 flex items-center justify-center flex-shrink-0">
+                      <Users className="w-7 h-7 text-green-600" />
+                    </div>
+                    <div>
+                      <div className="text-3xl font-black text-gray-900">
+                        {fmt(stats?.total_teams)}
+                      </div>
+                      <div className="text-sm font-medium text-gray-600 mt-1">
+                        Participating Teams
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        From across America
+                      </div>
+                    </div>
+                  </CardBody>
+                </Card>
+
+                {/* MLB Alumni */}
+                <Card className="hover:shadow-xl transition-shadow border-l-4 border-l-blue-500">
+                  <CardBody className="flex items-start gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+                      <Star className="w-7 h-7 text-blue-600" />
+                    </div>
+                    <div>
+                      <div className="text-3xl font-black text-gray-900">
+                        800+
+                      </div>
+                      <div className="text-sm font-medium text-gray-600 mt-1">
+                        MLB Players
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        Started here
+                      </div>
+                    </div>
+                  </CardBody>
+                </Card>
+
+                {/* Most Successful */}
+                <Card className="hover:shadow-xl transition-shadow border-l-4 border-l-purple-500">
+                  <CardBody className="flex items-start gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-purple-100 flex items-center justify-center flex-shrink-0">
+                      <Award className="w-7 h-7 text-purple-600" />
+                    </div>
+                    <div>
+                      <div className="text-2xl font-black text-gray-900">
+                        {stats?.most_successful_team?.championships || 10}x
+                      </div>
+                      <div className="text-sm font-medium text-gray-600 mt-1 truncate">
+                        {stats?.most_successful_team?.name || "Santa Barbara"}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        Most championships
+                      </div>
+                    </div>
+                  </CardBody>
+                </Card>
               </>
             )}
           </div>
@@ -738,108 +544,294 @@ function Home() {
         </Container>
       </section>
 
-      {/* Recent Champions */}
-      <section>
-        <Container className="pt-4">
-          <SectionTitle
-            eyebrow="Spotlight"
-            title="Recent Champions"
-            desc="The latest title winners from the NBC World Series."
-          />
+      {/* Recent Champions - Enhanced */}
+      <section className="py-16">
+        <Container>
+          <div className="text-center mb-12">
+            <div className="inline-block text-xs tracking-widest uppercase font-semibold text-blue-700 bg-blue-100 px-3 py-1 rounded-full mb-3">
+              Latest Winners
+            </div>
+            <h2 className="text-4xl font-extrabold tracking-tight text-gray-900">
+              Recent Champions
+            </h2>
+            <p className="mt-3 text-lg text-gray-600 max-w-2xl mx-auto">
+              Celebrating the teams that claimed the title in the last three
+              tournaments
+            </p>
+          </div>
+
           {loading ? (
             <div className="grid md:grid-cols-3 gap-6">
-              <Skeleton className="h-40" />
-              <Skeleton className="h-40" />
-              <Skeleton className="h-40" />
+              <Skeleton className="h-64" />
+              <Skeleton className="h-64" />
+              <Skeleton className="h-64" />
             </div>
           ) : (
             <div className="grid md:grid-cols-3 gap-6">
-              {recent.map((r) => (
+              {recent.map((r, idx) => (
                 <Card
                   key={r.year}
-                  className="group hover:shadow-md transition-shadow"
+                  className="group hover:shadow-2xl transition-all hover:-translate-y-2 relative overflow-hidden"
                 >
-                  <CardBody>
-                    <div className="flex items-center gap-2 text-gray-700 mb-2">
-                      <Trophy size={18} className="text-yellow-600" />
-                      <span className="font-semibold text-lg">{r.year}</span>
+                  {/* Year Badge */}
+                  <div className="absolute top-4 right-4 w-16 h-16 rounded-xl bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center shadow-lg">
+                    <span className="text-white font-black text-lg">
+                      {r.year}
+                    </span>
+                  </div>
+
+                  <CardBody className="pt-24">
+                    {/* Trophy Icon */}
+                    <div className="w-16 h-16 rounded-2xl bg-yellow-100 flex items-center justify-center mb-4 mx-auto">
+                      <Trophy className="w-8 h-8 text-yellow-600" />
                     </div>
-                    <div className="text-base font-semibold">
-                      {r.champion_name}
-                    </div>
-                    <div className="mt-1 text-sm text-gray-600">
-                      Runner-up: {r.runner_up_name || "—"}
-                    </div>
-                    {r.mvp && (
-                      <div className="mt-2 text-sm text-blue-700">
-                        MVP: {r.mvp}
-                      </div>
+
+                    {/* Champion Name */}
+                    <h3 className="text-xl font-bold text-gray-900 text-center mb-2">
+                      {r.champion_name || r.champion}
+                    </h3>
+
+                    {/* Location */}
+                    {(r.champion_city || r.city) && (
+                      <p className="text-sm text-gray-600 text-center mb-4">
+                        {r.champion_city || r.city},{" "}
+                        {r.champion_state || r.state}
+                      </p>
                     )}
+
+                    {/* Divider */}
+                    <div className="border-t border-gray-200 my-4" />
+
+                    {/* Details */}
+                    <div className="space-y-2 text-sm">
+                      {(r.runner_up_name || r.runner_up) && (
+                        <div className="flex items-start gap-2">
+                          <Medal className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <span className="text-gray-500 text-xs">
+                              Runner-up:
+                            </span>
+                            <p className="text-gray-700 font-medium">
+                              {r.runner_up_name || r.runner_up}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {r.mvp && (
+                        <div className="flex items-start gap-2">
+                          <Award className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <span className="text-gray-500 text-xs">MVP:</span>
+                            <p className="text-gray-700 font-medium">{r.mvp}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* View Details Link */}
                     <NavLink
                       to={`/championships/${r.year}`}
-                      className="mt-4 inline-flex items-center text-sm text-blue-700 group-hover:underline"
+                      className="mt-6 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors text-sm"
                     >
-                      View details <ChevronRight size={16} className="ml-1" />
+                      View Full Details
+                      <ChevronRight size={16} />
                     </NavLink>
                   </CardBody>
                 </Card>
               ))}
+
               {!recent.length && (
-                <div className="text-gray-600">
+                <div className="col-span-3 text-center text-gray-600 py-12">
                   No recent results available.
                 </div>
               )}
             </div>
           )}
+
+          {/* View All Link */}
+          <div className="text-center mt-10">
+            <NavLink
+              to="/championships"
+              className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold text-lg group"
+            >
+              View Complete Championship History
+              <ChevronRight
+                size={20}
+                className="group-hover:translate-x-1 transition-transform"
+              />
+            </NavLink>
+          </div>
         </Container>
       </section>
 
-      {/* Tournament Statistics */}
-      <section className="mt-12">
+      {/* Tournament Info Section - New */}
+      <section className="py-16 bg-gradient-to-br from-gray-900 to-gray-800 text-white">
         <Container>
-          <SectionTitle
-            eyebrow="Statistics"
-            title="Tournament Metrics"
-            desc="High-level figures that define the competition."
-          />
-          <div className="grid md:grid-cols-4 gap-6">
-            {loading ? (
-              <>
-                <Skeleton className="h-28" />
-                <Skeleton className="h-28" />
-                <Skeleton className="h-28" />
-                <Skeleton className="h-28" />
-              </>
-            ) : (
-              <>
-                <Stat
-                  icon={Star}
-                  label="Hall of Fame Members"
-                  value={fmt(stats?.hall_of_fame_members)}
-                  tone="yellow"
-                />
-                <Stat
-                  icon={Trophy}
-                  label={`Championships by ${
-                    stats?.most_successful_team?.name || "—"
-                  }`}
-                  value={fmt(stats?.most_successful_team?.championships)}
-                  tone="blue"
-                />
-                <Stat
-                  icon={Users}
-                  label="Total Teams"
-                  value={fmt(stats?.total_teams)}
-                  tone="green"
-                />
-                <Stat
-                  icon={Calendar}
-                  label="Years of Excellence"
-                  value="1935–2025"
-                  tone="purple"
-                />
-              </>
-            )}
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            {/* Left: Info */}
+            <div>
+              <div className="inline-block text-xs tracking-widest uppercase font-semibold text-yellow-400 bg-yellow-400/10 px-3 py-1 rounded-full mb-4">
+                Tournament Info
+              </div>
+              <h2 className="text-4xl font-extrabold mb-6">
+                Join Baseball's
+                <br />
+                Premier Event
+              </h2>
+              <p className="text-lg text-gray-300 mb-8 leading-relaxed">
+                The NBC World Series brings together the finest amateur baseball
+                talent from across America. Held annually in Wichita, Kansas,
+                this prestigious tournament has launched over 800 professional
+                careers since 1935.
+              </p>
+
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-yellow-500/10 flex items-center justify-center flex-shrink-0">
+                    <Calendar className="w-5 h-5 text-yellow-400" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-lg">Next Tournament</div>
+                    <div className="text-gray-400">
+                      July 24 - August 2, {nextTournament}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-yellow-500/10 flex items-center justify-center flex-shrink-0">
+                    <Users className="w-5 h-5 text-yellow-400" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-lg">
+                      16 Teams Compete
+                    </div>
+                    <div className="text-gray-400">
+                      Top amateur teams nationwide
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-yellow-500/10 flex items-center justify-center flex-shrink-0">
+                    <Trophy className="w-5 h-5 text-yellow-400" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-lg">
+                      10 Days of Baseball
+                    </div>
+                    <div className="text-gray-400">
+                      Pool play + single elimination
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Legacy */}
+            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-8 border border-white/10">
+              <h3 className="text-2xl font-bold mb-6">Tournament Legacy</h3>
+              <div className="space-y-6">
+                <div>
+                  <div className="text-4xl font-black text-yellow-400 mb-2">
+                    800+
+                  </div>
+                  <div className="text-gray-300">
+                    Alumni reached the Major Leagues
+                  </div>
+                </div>
+                <div>
+                  <div className="text-4xl font-black text-yellow-400 mb-2">
+                    45,000+
+                  </div>
+                  <div className="text-gray-300">Fans attend annually</div>
+                </div>
+                <div>
+                  <div className="text-4xl font-black text-yellow-400 mb-2">
+                    Legends
+                  </div>
+                  <div className="text-gray-300">
+                    Satchel Paige • Roger Clemens • Barry Bonds • Albert Pujols
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Container>
+      </section>
+
+      {/* Search Section - Moved to bottom, cleaner */}
+      <section className="py-16 bg-gray-50">
+        <Container>
+          <div className="max-w-3xl mx-auto">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-extrabold text-gray-900 mb-3">
+                Explore Tournament History
+              </h2>
+              <p className="text-gray-600">
+                Search through 90 years of championships, MVPs, and memorable
+                moments
+              </p>
+            </div>
+
+            <Card className="shadow-xl">
+              <CardBody>
+                <form onSubmit={handleSearch} className="space-y-4">
+                  <div className="relative">
+                    <Search
+                      size={20}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                    />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder='Try: "First champion?" or "Most championships?"'
+                      className="w-full pl-12 pr-4 py-4 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 text-lg"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={searching || !searchQuery.trim()}
+                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-4 rounded-xl transition-colors text-lg"
+                  >
+                    {searching ? "Searching..." : "Search History"}
+                  </button>
+                </form>
+
+                {searchError && (
+                  <div className="mt-4">
+                    <BannerError message={searchError} />
+                  </div>
+                )}
+
+                {searchResults && searchResults.answer && (
+                  <div className="mt-6 p-6 bg-gradient-to-br from-green-50 to-blue-50 border-2 border-green-200 rounded-xl">
+                    <div className="flex items-start gap-3">
+                      <Trophy
+                        className="text-green-600 mt-1 flex-shrink-0"
+                        size={24}
+                      />
+                      <div className="flex-1">
+                        <div className="text-gray-800 leading-relaxed whitespace-pre-line text-lg">
+                          {searchResults.answer.split("**").map((part, i) =>
+                            i % 2 === 0 ? (
+                              part
+                            ) : (
+                              <strong key={i} className="text-blue-700">
+                                {part}
+                              </strong>
+                            )
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardBody>
+            </Card>
           </div>
         </Container>
       </section>
@@ -848,101 +840,382 @@ function Home() {
 }
 
 // ---------- Championships ----------
+
 function Championships() {
-  const [rows, setRows] = useState([]);
+  const [years, setYears] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState("");
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [decadeFilter, setDecadeFilter] = useState("all");
+  const [sortOrder, setSortOrder] = useState("desc");
 
   useEffect(() => {
-    let stop = false;
-    API.get("/championships")
-      .then((res) => !stop && setRows(pickArray(res)))
-      .catch((e) => {
-        setErr("Could not fetch championships right now.");
-        console.error(e);
-      })
-      .finally(() => !stop && setLoading(false));
-    return () => {
-      stop = true;
-    };
+    loadChampionships();
   }, []);
+
+  async function loadChampionships() {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await API.get("/championships");
+      const data = pickArray(res);
+      setYears(data);
+    } catch (err) {
+      console.error("Error loading championships:", err);
+      setError("Failed to load championships history.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const filteredYears = useMemo(() => {
+    let filtered = [...years];
+
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      filtered = filtered.filter((y) => {
+        const champion = (y.champion || "").toLowerCase();
+        const runnerUp = (y.runner_up || "").toLowerCase();
+        const mvp = (y.mvp || "").toLowerCase();
+        const yearStr = String(y.year);
+        return (
+          champion.includes(q) ||
+          runnerUp.includes(q) ||
+          mvp.includes(q) ||
+          yearStr.includes(q)
+        );
+      });
+    }
+
+    if (decadeFilter !== "all") {
+      const decade = parseInt(decadeFilter, 10);
+      filtered = filtered.filter((y) => {
+        const yearNum = parseInt(y.year, 10);
+        return yearNum >= decade && yearNum < decade + 10;
+      });
+    }
+
+    filtered.sort((a, b) => {
+      if (sortOrder === "desc") {
+        return b.year - a.year;
+      } else {
+        return a.year - b.year;
+      }
+    });
+
+    return filtered;
+  }, [years, search, decadeFilter, sortOrder]);
+
+  const decades = useMemo(() => {
+    const set = new Set();
+    years.forEach((y) => {
+      const decade = Math.floor(y.year / 10) * 10;
+      set.add(decade);
+    });
+    return Array.from(set).sort((a, b) => b - a);
+  }, [years]);
+
+  const stats = useMemo(() => {
+    const championCounts = {};
+    years.forEach((y) => {
+      const champ = y.champion || "Unknown";
+      championCounts[champ] = (championCounts[champ] || 0) + 1;
+    });
+
+    const sorted = Object.entries(championCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+
+    return {
+      totalYears: years.length,
+      topChampions: sorted,
+    };
+  }, [years]);
 
   return (
     <Container className="py-12">
       <SectionTitle
-        eyebrow="Archive"
+        eyebrow="Legacy"
         title="Championships History"
-        desc="A season-by-season look at the winners and runners-up."
+        desc="Complete record of NBC World Series champions, runners-up, and MVP awards from 1935 to present."
       />
 
-      {err && (
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <Card>
+          <CardBody>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  Total Tournaments
+                </p>
+                <p className="text-3xl font-bold text-gray-900 mt-1">
+                  {stats.totalYears}
+                </p>
+              </div>
+              <Trophy className="w-10 h-10 text-yellow-500" />
+            </div>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardBody>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  Most Championships
+                </p>
+                {stats.topChampions[0] && (
+                  <>
+                    <p className="text-lg font-bold text-gray-900 mt-1 leading-tight">
+                      {stats.topChampions[0][0]}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {stats.topChampions[0][1]} titles
+                    </p>
+                  </>
+                )}
+              </div>
+              <Award className="w-10 h-10 text-blue-500" />
+            </div>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardBody>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  Years Covered
+                </p>
+                <p className="text-3xl font-bold text-gray-900 mt-1">
+                  1935-2025
+                </p>
+              </div>
+              <Calendar className="w-10 h-10 text-green-500" />
+            </div>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardBody>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  Filtered Results
+                </p>
+                <p className="text-3xl font-bold text-gray-900 mt-1">
+                  {filteredYears.length}
+                </p>
+              </div>
+              <Search className="w-10 h-10 text-purple-500" />
+            </div>
+          </CardBody>
+        </Card>
+      </div>
+
+      {/* Controls */}
+      <Card className="mb-6">
+        <CardBody className="flex flex-wrap gap-4 items-end">
+          <div className="flex-1 min-w-[250px]">
+            <label className="block text-xs font-semibold text-gray-600 mb-1">
+              Search
+            </label>
+            <div className="relative">
+              <Search
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Search by team, year, or MVP name..."
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">
+              Decade
+            </label>
+            <select
+              value={decadeFilter}
+              onChange={(e) => setDecadeFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All decades</option>
+              {decades.map((d) => (
+                <option key={d} value={d}>
+                  {d}s
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">
+              Sort
+            </label>
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="desc">Newest first</option>
+              <option value="asc">Oldest first</option>
+            </select>
+          </div>
+
+          {(search || decadeFilter !== "all") && (
+            <button
+              onClick={() => {
+                setSearch("");
+                setDecadeFilter("all");
+              }}
+              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 font-medium"
+            >
+              Clear filters
+            </button>
+          )}
+        </CardBody>
+      </Card>
+
+      {error && (
         <div className="mb-4">
-          <BannerError message={err} />
+          <BannerError message={error} />
         </div>
       )}
 
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-700 border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-3 text-left font-semibold">Year</th>
-                <th className="px-6 py-3 text-left font-semibold">Champion</th>
-                <th className="px-6 py-3 text-left font-semibold">Runner-up</th>
-                <th className="px-6 py-3 text-left font-semibold">MVP</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {loading ? (
-                [...Array(8)].map((_, i) => (
-                  <tr key={i}>
-                    <td className="px-6 py-4">
-                      <Skeleton className="h-4 w-16" />
-                    </td>
-                    <td className="px-6 py-4">
-                      <Skeleton className="h-4 w-40" />
-                    </td>
-                    <td className="px-6 py-4">
-                      <Skeleton className="h-4 w-40" />
-                    </td>
-                    <td className="px-6 py-4">
-                      <Skeleton className="h-4 w-24" />
-                    </td>
-                  </tr>
-                ))
-              ) : rows.length ? (
-                rows.map((r, i) => (
-                  <tr key={r.year || i} className="hover:bg-gray-50/70">
-                    <td className="px-6 py-3 font-semibold text-gray-900">
-                      <NavLink
-                        to={`/championships/${r.year}`}
-                        className="text-blue-600 hover:underline"
-                      >
-                        {r.year}
-                      </NavLink>
-                    </td>
-                    <td className="px-6 py-3">{r.champion_name}</td>
-                    <td className="px-6 py-3 text-gray-700">
-                      {r.runner_up_name || "—"}
-                    </td>
-                    <td className="px-6 py-3 text-gray-700">{r.mvp || "—"}</td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td className="px-6 py-6 text-gray-500" colSpan={4}>
-                    No championship records found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+      {loading ? (
+        <div className="grid gap-3">
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
         </div>
-      </Card>
+      ) : filteredYears.length === 0 ? (
+        <Card>
+          <CardBody>
+            <p className="text-gray-600 text-center py-8">
+              No championships found matching your filters.
+            </p>
+          </CardBody>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {filteredYears.map((year) => (
+            <ChampionshipCard key={year.year} data={year} />
+          ))}
+        </div>
+      )}
+
+      {!search && decadeFilter === "all" && (
+        <Card className="mt-8">
+          <CardBody>
+            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-yellow-500" />
+              Most Championships
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              {stats.topChampions.map(([team, count], idx) => (
+                <div
+                  key={team}
+                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
+                >
+                  <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <span className="text-sm font-bold text-blue-700">
+                      {idx + 1}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">
+                      {team}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {count} {count === 1 ? "title" : "titles"}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardBody>
+        </Card>
+      )}
     </Container>
   );
 }
 
+function ChampionshipCard({ data }) {
+  const { year, champion, runner_up, mvp, championship_score, city, state } =
+    data;
+
+  const isCOVID = year === 2020;
+
+  return (
+    <Card className="hover:shadow-lg transition-shadow">
+      <CardBody>
+        <div className="flex flex-col md:flex-row md:items-center gap-4">
+          <div className="flex-shrink-0">
+            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex flex-col items-center justify-center text-white shadow-lg">
+              <span className="text-2xl font-bold">{year}</span>
+              {isCOVID && (
+                <span className="text-[9px] uppercase tracking-wide opacity-80">
+                  COVID
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <div className="flex items-center gap-1.5 mb-1">
+                <Trophy className="w-4 h-4 text-yellow-500" />
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  Champion
+                </span>
+              </div>
+              <p className="text-base font-bold text-gray-900">{champion}</p>
+              {city && state && (
+                <p className="text-xs text-gray-500">
+                  {city}, {state}
+                </p>
+              )}
+              {championship_score && (
+                <p className="text-xs text-blue-600 font-medium mt-1">
+                  Final: {championship_score}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <div className="flex items-center gap-1.5 mb-1">
+                <Medal className="w-4 h-4 text-gray-400" />
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  Runner-up
+                </span>
+              </div>
+              <p className="text-base font-semibold text-gray-700">
+                {runner_up || "—"}
+              </p>
+            </div>
+
+            <div>
+              <div className="flex items-center gap-1.5 mb-1">
+                <Award className="w-4 h-4 text-purple-500" />
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  MVP
+                </span>
+              </div>
+              <p className="text-base font-semibold text-gray-700">
+                {mvp || "—"}
+              </p>
+            </div>
+          </div>
+        </div>
+      </CardBody>
+    </Card>
+  );
+}
 // ---------- Teams ----------
 function Teams() {
   const [teams, setTeams] = useState([]);
@@ -1921,9 +2194,10 @@ function PlayerStatsPage() {
         const yStrings = ys.map(String).sort((a, b) => b.localeCompare(a));
         setYears(yStrings);
 
-        if (yStrings.length && !yStrings.includes(year)) {
-          setYear(yStrings[0]);
-        }
+        // Choose a default year without referencing 'year' from the closure
+        setYear((prev) =>
+          yStrings.length && !yStrings.includes(prev) ? yStrings[0] : prev
+        );
       } catch (e) {
         console.error("Error loading player-stats years:", e);
         if (!stop) setErr("Could not load available years.");
@@ -1934,7 +2208,7 @@ function PlayerStatsPage() {
     return () => {
       stop = true;
     };
-  }, [year]);
+  }, []);
 
   // Load stats whenever year changes
   useEffect(() => {

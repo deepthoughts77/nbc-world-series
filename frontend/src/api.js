@@ -3,7 +3,7 @@ import axios from "axios";
 
 // Base URL for your backend API (CRA exposes REACT_APP_* at build time)
 export const BASE_URL =
-  process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+  process.env.REACT_APP_API_URL || "https://nbc-backend.onrender.com/api";
 
 // Create a dedicated axios instance
 export const API = axios.create({

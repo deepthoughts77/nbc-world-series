@@ -269,52 +269,110 @@ app.get("/api/player-stats/years", async (_req, res) => {
 });
 console.log(" Registered: GET /api/player-stats/years");
 
-// ------------------------
-// Championships
-// ------------------------
-app.get("/api/championships", async (_req, res) => {
+// ============================================================================
+// CHAMPIONSHIPS API - Get all championships with champion, runner-up, and MVP
+// ============================================================================
+
+app.get("/api/championships", async (req, res) => {
   try {
-    const { rows } = await pool.query(`
-      SELECT
-        year,
-        championship_score,
-        champion_id, champion_name, champion_city, champion_state,
-        runner_up_id, runner_up_name, runner_up_city, runner_up_state,
-        mvp_player_id, mvp_full_name AS mvp
-      FROM public.vw_championships_full
-      ORDER BY year DESC
-    `);
-    res.json(rows);
-  } catch (err) {
-    console.error(" /api/championships error:", err.message);
-    res.status(500).json({ error: "Failed to fetch championships" });
+    const query = `
+      SELECT 
+        c.year,
+        c.championship_score as score,
+        
+        -- Champion info
+        ct.name as champion,
+        ct.city as champion_city,
+        ct.state as champion_state,
+        
+        -- Runner-up info
+        rt.name as runner_up,
+        rt.city as runner_up_city,
+        rt.state as runner_up_state,
+        
+        -- MVP info
+        CONCAT(p.first_name, ' ', p.last_name) as mvp,
+        p.id as mvp_player_id
+        
+      FROM championships c
+      LEFT JOIN teams ct ON c.champion_team_id = ct.id
+      LEFT JOIN teams rt ON c.runner_up_team_id = rt.id
+      LEFT JOIN players p ON c.mvp_player_id = p.id
+      
+      WHERE c.year != 2020
+      ORDER BY c.year DESC
+    `;
+
+    const result = await pool.query(query);
+
+    // Add computed fields
+    const enriched = result.rows.map((row) => ({
+      ...row,
+      city: row.champion_city,
+      state: row.champion_state,
+      championship_score: row.score,
+    }));
+
+    res.json(enriched);
+  } catch (error) {
+    console.error("Error fetching championships:", error);
+    res.status(500).json({
+      error: "Failed to fetch championships",
+      message: error.message,
+    });
   }
 });
-console.log(" Registered: GET /api/championships");
 
+// Get specific year
 app.get("/api/championships/:year", async (req, res) => {
   try {
-    const { year } = req.params;
-    const { rows } = await pool.query(
-      `
-      SELECT
-        year,
-        championship_score,
-        champion_id, champion_name, champion_city, champion_state,
-        runner_up_id, runner_up_name, runner_up_city, runner_up_state,
-        mvp_player_id, mvp_full_name AS mvp
-      FROM public.vw_championships_full
-      WHERE year = $1
-      `,
-      [year]
-    );
-    res.json(rows[0] || null);
-  } catch (err) {
-    console.error(" /api/championships/:year error:", err.message);
-    res.status(500).json({ error: "server_error" });
+    const year = parseInt(req.params.year, 10);
+
+    const query = `
+      SELECT 
+        c.year,
+        c.championship_score as score,
+        
+        ct.name as champion,
+        ct.city as champion_city,
+        ct.state as champion_state,
+        
+        rt.name as runner_up,
+        rt.city as runner_up_city,
+        rt.state as runner_up_state,
+        
+        CONCAT(p.first_name, ' ', p.last_name) as mvp,
+        p.id as mvp_player_id
+        
+      FROM championships c
+      LEFT JOIN teams ct ON c.champion_team_id = ct.id
+      LEFT JOIN teams rt ON c.runner_up_team_id = rt.id
+      LEFT JOIN players p ON c.mvp_player_id = p.id
+      
+      WHERE c.year = $1
+      LIMIT 1
+    `;
+
+    const result = await pool.query(query, [year]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Championship not found" });
+    }
+
+    const data = result.rows[0];
+    data.city = data.champion_city;
+    data.state = data.champion_state;
+    data.championship_score = data.score;
+
+    res.json(data);
+  } catch (error) {
+    console.error("Error fetching championship:", error);
+    res.status(500).json({
+      error: "Failed to fetch championship",
+      message: error.message,
+    });
   }
 });
-console.log(" Registered: GET /api/championships/:year");
 
 // ------------------------
 // Teams + views
@@ -432,7 +490,7 @@ app.get("/api/pitching-stats", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch pitching stats" });
   }
 });
-console.log("✅ Registered: GET /api/pitching-stats");
+console.log(" Registered: GET /api/pitching-stats");
 
 // Also add endpoint to get available years for pitching
 app.get("/api/pitching-stats/years", async (_req, res) => {
@@ -442,11 +500,11 @@ app.get("/api/pitching-stats/years", async (_req, res) => {
     );
     res.json(rows.map((r) => r.year));
   } catch (err) {
-    console.error("❌ /api/pitching-stats/years error:", err);
+    console.error(" /api/pitching-stats/years error:", err);
     res.status(500).json({ error: "Failed to fetch years" });
   }
 });
-console.log("✅ Registered: GET /api/pitching-stats/years");
+console.log(" Registered: GET /api/pitching-stats/years");
 // ------------------------
 // Hall of Fame
 // ------------------------
@@ -580,7 +638,7 @@ app.post("/api/search/ask", async (req, res) => {
       answer:
         `I didn't quite understand that question. Here are some things you can ask:\n\n` +
         `🏆 Championships:\n• "Who won in 2025?"\n• "Who was MVP in 2025?"\n• "Recent champions"\n• "Champions in the 2010s"\n• "Championship streaks"\n\n` +
-        `📊 Teams:\n• "How many championships has Hutchinson won?"\n• "When did Santa Barbara last win?"\n• "Most championships record"\n\n` +
+        ` Teams:\n• "How many championships has Hutchinson won?"\n• "When did Santa Barbara last win?"\n• "Most championships record"\n\n` +
         `📍 Tournament Info:\n• "Where is the tournament held?"\n• "Highest scoring game"\n• "MLB players from NBC"`,
       data: null,
       queryType: "help",

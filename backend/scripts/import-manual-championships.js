@@ -6,7 +6,7 @@ async function importManualChampionships() {
   const client = await pool.connect();
 
   try {
-    console.log("\n📥 IMPORTING MANUAL CHAMPIONSHIP DATA\n");
+    console.log("\n IMPORTING MANUAL CHAMPIONSHIP DATA\n");
     console.log("═".repeat(70));
 
     await client.query("BEGIN");
@@ -14,7 +14,7 @@ async function importManualChampionships() {
     // Read CSV
     const csvPath = "./data/manual-championships.csv";
     if (!fs.existsSync(csvPath)) {
-      console.log("❌ File not found: data/manual-championships.csv");
+      console.log(" File not found: data/manual-championships.csv");
       console.log("   Create this file first!\n");
       return;
     }
@@ -26,7 +26,7 @@ async function importManualChampionships() {
       trim: true,
     });
 
-    console.log(`📋 Found ${records.length} championship records\n`);
+    console.log(` Found ${records.length} championship records\n`);
 
     let imported = 0;
     let updated = 0;
@@ -163,14 +163,14 @@ async function importManualChampionships() {
     await client.query("COMMIT");
 
     console.log("\n" + "═".repeat(70));
-    console.log("📊 IMPORT SUMMARY:");
+    console.log(" IMPORT SUMMARY:");
     console.log(`   New championships: ${imported}`);
     console.log(`   Updated championships: ${updated}`);
     console.log(`   Skipped: ${skipped}`);
-    console.log("\n✅ Import completed!\n");
+    console.log("\n Import completed!\n");
   } catch (error) {
     await client.query("ROLLBACK");
-    console.error("❌ Import failed:", error);
+    console.error(" Import failed:", error);
     throw error;
   } finally {
     client.release();

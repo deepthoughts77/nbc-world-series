@@ -382,16 +382,16 @@ async function smartSearchHandler(req, res) {
   const question = norm(questionRaw).toLowerCase();
   const year = extractYear(question);
 
-  console.log("🔍 Backend received question:", questionRaw);
-  console.log("🔍 Normalized question:", question);
-  console.log("🔍 Extracted year:", year);
+  console.log(" Backend received question:", questionRaw);
+  console.log(" Normalized question:", question);
+  console.log(" Extracted year:", year);
 
   try {
     // === CHECK IN ORDER: Most specific patterns FIRST ===
 
     // === FIRST CHAMPION === (must come before generic "winner")
     if (looksLikeFirstChamp(question)) {
-      console.log("✅ Matched: firstChampion");
+      console.log(" Matched: firstChampion");
       const result = await pool.query(`
         SELECT year, champion, city, state
         FROM championships
@@ -404,7 +404,7 @@ async function smartSearchHandler(req, res) {
         const first = result.rows[0];
         return res.json({
           success: true,
-          answer: `🏆 The first NBC World Series champion was the **${first.champion}** from ${first.city}, ${first.state} in **${first.year}**.`,
+          answer: ` The first NBC World Series champion was the **${first.champion}** from ${first.city}, ${first.state} in **${first.year}**.`,
           data: first,
           queryType: "firstChampion",
         });
@@ -413,7 +413,7 @@ async function smartSearchHandler(req, res) {
 
     // === CHAMPIONSHIP STREAKS ===
     if (looksLikeStreak(question)) {
-      console.log("✅ Matched: championshipStreaks");
+      console.log(" Matched: championshipStreaks");
       const result = await pool.query(`
         WITH championship_data AS (
           SELECT 
@@ -441,7 +441,7 @@ async function smartSearchHandler(req, res) {
       if (result.rows.length > 0) {
         return res.json({
           success: true,
-          answer: `🏆 **Longest Championship Streaks:**`,
+          answer: ` **Longest Championship Streaks:**`,
           data: result.rows,
           queryType: "championshipStreaks",
         });
@@ -457,7 +457,7 @@ async function smartSearchHandler(req, res) {
 
     // === MOST CHAMPIONSHIPS ===
     if (looksLikeMostChamps(question)) {
-      console.log("✅ Matched: mostChampionships");
+      console.log(" Matched: mostChampionships");
       const result = await pool.query(`
         SELECT 
           champion as name,
@@ -473,7 +473,7 @@ async function smartSearchHandler(req, res) {
       if (result.rows.length > 0) {
         return res.json({
           success: true,
-          answer: `🏆 Teams with the most NBC World Series championships:`,
+          answer: ` Teams with the most NBC World Series championships:`,
           data: result.rows,
           queryType: "mostChampionships",
         });
@@ -482,7 +482,7 @@ async function smartSearchHandler(req, res) {
 
     // === RECENT CHAMPIONS ===
     if (looksLikeRecent(question)) {
-      console.log("✅ Matched: recentChampions");
+      console.log(" Matched: recentChampions");
       const result = await pool.query(`
         SELECT 
           year,
@@ -498,7 +498,7 @@ async function smartSearchHandler(req, res) {
       if (result.rows.length > 0) {
         return res.json({
           success: true,
-          answer: `🏆 Recent NBC World Series Champions:`,
+          answer: ` Recent NBC World Series Champions:`,
           data: result.rows,
           queryType: "recentChampions",
         });
@@ -507,10 +507,10 @@ async function smartSearchHandler(req, res) {
 
     // === LOCATION ===
     if (looksLikeLocation(question)) {
-      console.log("✅ Matched: location");
+      console.log(" Matched: location");
       return res.json({
         success: true,
-        answer: `🏟️ **NBC World Series Location**\n\nThe tournament has been held in **Wichita, Kansas** since **1935**.\n\n📍 **Current Venue**: Riverfront Stadium (formerly Lawrence-Dumont Stadium)\n\n🎟️ The tournament typically runs in late July through early August each year.`,
+        answer: ` **NBC World Series Location**\n\nThe tournament has been held in **Wichita, Kansas** since **1935**.\n\n📍 **Current Venue**: Riverfront Stadium (formerly Lawrence-Dumont Stadium)\n\n🎟️ The tournament typically runs in late July through early August each year.`,
         data: {
           city: "Wichita",
           state: "Kansas",
@@ -523,7 +523,7 @@ async function smartSearchHandler(req, res) {
 
     // === TEAM CHAMPIONSHIP COUNT ===
     if (looksLikeTeamChampCount(question)) {
-      console.log("✅ Matched: teamChampionshipHistory");
+      console.log(" Matched: teamChampionshipHistory");
       const team = await findTeamByName(questionRaw);
       if (!team) {
         return res.json({
@@ -571,7 +571,7 @@ async function smartSearchHandler(req, res) {
 
     // === MVP BY YEAR ===
     if (year && looksLikeMvp(question)) {
-      console.log("✅ Matched: mvp by year");
+      console.log(" Matched: mvp by year");
       const champ = await getChampionshipByYear(year);
       if (!champ) {
         return res.json({
@@ -633,7 +633,7 @@ async function smartSearchHandler(req, res) {
 
     // === WINNER BY YEAR === (comes AFTER first champion check)
     if (year && looksLikeWinner(question)) {
-      console.log("✅ Matched: winner by year", year);
+      console.log(" Matched: winner by year", year);
       const champ = await getChampionshipByYear(year);
       if (!champ) {
         return res.json({
@@ -675,7 +675,7 @@ async function smartSearchHandler(req, res) {
 
     // === TOP BATTERS ===
     if (year && looksLikeTopBatters(question)) {
-      console.log("✅ Matched: topBatters");
+      console.log(" Matched: topBatters");
       const rows = await getTopBatters(year, 50, 10);
       return res.json({
         answer: `Top batters in ${strong(String(year))}`,
@@ -687,7 +687,7 @@ async function smartSearchHandler(req, res) {
 
     // === TOP PITCHERS ===
     if (year && looksLikeTopPitchers(question)) {
-      console.log("✅ Matched: topPitchers");
+      console.log(" Matched: topPitchers");
       const rows = await getTopPitchers(year, 50, 5);
       return res.json({
         answer: `Top pitchers in ${strong(String(year))}`,
@@ -698,7 +698,7 @@ async function smartSearchHandler(req, res) {
     }
 
     // === FALLBACK ===
-    console.log("❌ No match found, using fallback");
+    console.log(" No match found, using fallback");
     return res.json({
       answer:
         'Try: "First champion", "Championship streaks", "Most championships", "Recent champions", "Who won in 2024?", "MVP 2024", or "Where is the tournament held?"',

@@ -461,7 +461,7 @@ function extractFromScoreline(text) {
 async function parseNBCAnnuals() {
   const pdfParse = await loadPdfParse();
 
-  console.log("\n📚 PARSING NBC WORLD SERIES ANNUALS (Enhanced)\n");
+  console.log("\n PARSING NBC WORLD SERIES ANNUALS (Enhanced)\n");
   console.log("═".repeat(70));
 
   try {
@@ -469,9 +469,9 @@ async function parseNBCAnnuals() {
 
     if (!fs.existsSync(pdfFolder)) {
       fs.mkdirSync(pdfFolder, { recursive: true });
-      console.log("📁 Created pdfs folder at backend/data/pdfs/");
+      console.log(" Created pdfs folder at backend/data/pdfs/");
       console.log(
-        "\n⚠️  Please place your NBC annual PDFs in backend/data/pdfs/\n"
+        "\n  Please place your NBC annual PDFs in backend/data/pdfs/\n"
       );
       return;
     }
@@ -486,13 +486,13 @@ async function parseNBCAnnuals() {
       });
 
     if (pdfFiles.length === 0) {
-      console.log("⚠️  No PDF files found in backend/data/pdfs/\n");
+      console.log("  No PDF files found in backend/data/pdfs/\n");
       return;
     }
 
     const filesToProcess = pdfFiles.filter((f) => !/2024/.test(f));
 
-    console.log(`📄 Found ${filesToProcess.length} PDF files to process:\n`);
+    console.log(` Found ${filesToProcess.length} PDF files to process:\n`);
     filesToProcess.forEach((f) => console.log(`   • ${f}`));
     console.log();
 
@@ -501,12 +501,12 @@ async function parseNBCAnnuals() {
     for (const pdfFile of filesToProcess) {
       const yearMatch = pdfFile.match(/\d{4}/);
       if (!yearMatch) {
-        console.log(`⏭️  Skipping ${pdfFile} (no year found)`);
+        console.log(`⏭  Skipping ${pdfFile} (no year found)`);
         continue;
       }
 
       const year = parseInt(yearMatch[0], 10);
-      console.log(`\n📖 Processing ${year} Annual...`);
+      console.log(`\n Processing ${year} Annual...`);
       console.log("─".repeat(70));
 
       const pdfPath = path.join(pdfFolder, pdfFile);
@@ -579,30 +579,28 @@ async function parseNBCAnnuals() {
 
         allData.push(extractedData);
 
-        console.log(`✅ Champion: ${extractedData.champion || "Not found"}`);
-        console.log(`✅ Runner-up: ${extractedData.runnerUp || "Not found"}`);
+        console.log(` Champion: ${extractedData.champion || "Not found"}`);
+        console.log(` Runner-up: ${extractedData.runnerUp || "Not found"}`);
         console.log(
-          `✅ Score: ${extractedData.championshipScore || "Not found"}`
+          ` Score: ${extractedData.championshipScore || "Not found"}`
         );
-        console.log(`✅ MVP: ${extractedData.mvp || "Not found"}`);
+        console.log(` MVP: ${extractedData.mvp || "Not found"}`);
+        console.log(` Batting leaders: ${extractedData.battingLeaders.length}`);
         console.log(
-          `✅ Batting leaders: ${extractedData.battingLeaders.length}`
+          ` Pitching leaders: ${extractedData.pitchingLeaders.length}`
         );
-        console.log(
-          `✅ Pitching leaders: ${extractedData.pitchingLeaders.length}`
-        );
-        console.log(`✅ Text extracted: ${text.length} characters`);
+        console.log(` Text extracted: ${text.length} characters`);
       } catch (err) {
-        console.error(`❌ Error parsing ${pdfFile}:`, err?.message || err);
+        console.error(` Error parsing ${pdfFile}:`, err?.message || err);
       }
     }
 
     const outputPath = path.join(__dirname, "../data/extracted-annuals.json");
     fs.writeFileSync(outputPath, JSON.stringify(allData, null, 2));
-    console.log(`\n💾 Saved to: ${outputPath}`);
+    console.log(`\n Saved to: ${outputPath}`);
 
     console.log("\n" + "═".repeat(70));
-    console.log("📊 EXTRACTION SUMMARY:");
+    console.log(" EXTRACTION SUMMARY:");
     console.log(`   PDFs processed: ${allData.length}`);
     if (allData.length > 0) {
       const years = allData.map((d) => d.year);
@@ -610,11 +608,11 @@ async function parseNBCAnnuals() {
         `   Years covered: ${Math.min(...years)}-${Math.max(...years)}`
       );
     }
-    console.log("\n✅ Extraction completed!\n");
-    console.log("💡 Next: Review extracted-annuals.json, then run:");
+    console.log("\n Extraction completed!\n");
+    console.log(" Next: Review extracted-annuals.json, then run:");
     console.log("   node scripts/import-extracted-annuals.js\n");
   } catch (error) {
-    console.error("❌ Fatal error:", error);
+    console.error(" Fatal error:", error);
     process.exit(1);
   }
 }
@@ -797,10 +795,10 @@ function extractFinalStandings(text, year) {
 
 parseNBCAnnuals()
   .then(() => {
-    console.log("✅ Done!\n");
+    console.log(" Done!\n");
     process.exit(0);
   })
   .catch((err) => {
-    console.error("❌ Failed:", err);
+    console.error(" Failed:", err);
     process.exit(1);
   });
