@@ -13,6 +13,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.69.0",
     "@neondatabase/serverless": "^1.0.2",
     "bcrypt": "^6.0.0",
     "compression": "^1.7.4",

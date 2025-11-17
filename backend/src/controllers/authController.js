@@ -1,14 +1,10 @@
-// src/routes/auth.js
-const express = require("express");
-const { comparePassword, generateToken } = require("../utils/auth");
-
-const router = express.Router();
+import { comparePassword, generateToken } from "../utils/auth.js";
 
 /**
- * POST /api/auth/login
- * Body: { email, password }
+ * @description Handle admin login
+ * @route POST /api/auth/login
  */
-router.post("/api/auth/login", async (req, res) => {
+export const login = async (req, res) => {
   try {
     const { email, password } = req.body || {};
     if (!email || !password) {
@@ -35,6 +31,4 @@ router.post("/api/auth/login", async (req, res) => {
     console.error("Auth login error:", err);
     res.status(500).json({ error: "Login failed" });
   }
-});
-
-module.exports = router;
+};

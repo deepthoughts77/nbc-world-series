@@ -1,52 +1,37 @@
-// src/routes/championships.js
-const express = require("express");
-const router = express.Router();
-const pool = require("../config/database");
+import { pool } from "../db.js";
 
 /**
- * GET /api/championships
- * Query params:
- *   - limit  (default 50, max 100)
- *   - offset (default 0)
- * Returns champion + runner-up details and basic pagination metadata.
+ * @description Get all championships with pagination
+ * @route GET /api/championships
  */
-router.get("/", async (req, res) => {
+export const getAllChampionships = async (req, res) => {
   try {
-    // Pagination (safe bounds)
-    const limit = Math.min(parseInt(req.query.limit || "50", 10), 100);
-    const offset = Math.max(parseInt(req.query.offset || "0", 10), 0);
-
-    const baseQuery = `
+    const query = `
       SELECT 
-        c.*,
+        c.id,
+        c.year,
+        c.championship_score,
         ct.name  AS champion_name,
         ct.city  AS champion_city,
         ct.state AS champion_state,
         rt.name  AS runner_up_name,
         rt.city  AS runner_up_city,
-        rt.state AS runner_up_state
+        rt.state AS runner_up_state,
+        CONCAT(p.first_name, ' ', p.last_name) as mvp
       FROM championships c
       LEFT JOIN teams ct ON c.champion_team_id = ct.id
       LEFT JOIN teams rt ON c.runner_up_team_id = rt.id
+      LEFT JOIN players p ON c.mvp_player_id = p.id
       ORDER BY c.year DESC
     `;
 
-    const pagedQuery = `${baseQuery} LIMIT $1 OFFSET $2`;
-
-    const [dataResult, countResult] = await Promise.all([
-      pool.query(pagedQuery, [limit, offset]),
-      pool.query("SELECT COUNT(*)::int AS total FROM championships"),
-    ]);
-
-    const total = countResult.rows[0]?.total ?? 0;
+    const result = await pool.query(query);
 
     res.json({
       success: true,
-      count: dataResult.rows.length,
-      total,
-      limit,
-      offset,
-      data: dataResult.rows,
+      count: result.rows.length,
+      total: result.rows.length,
+      data: result.rows,
     });
   } catch (error) {
     console.error("Error fetching championships:", error);
@@ -55,18 +40,16 @@ router.get("/", async (req, res) => {
       error: "Failed to fetch championships",
     });
   }
-});
+};
 
 /**
- * GET /api/championships/:year
- * Validates year as 4 digits.
- * Returns champion + runner-up details for the given year.
+ * @description Get a single championship by year
+ * @route GET /api/championships/:year
  */
-router.get("/:year", async (req, res) => {
+export const getChampionshipByYear = async (req, res) => {
   try {
     const { year } = req.params;
 
-    // Validate year is exactly 4 digits
     if (!/^\d{4}$/.test(year)) {
       return res
         .status(400)
@@ -75,16 +58,20 @@ router.get("/:year", async (req, res) => {
 
     const query = `
       SELECT 
-        c.*,
+        c.id,
+        c.year,
+        c.championship_score,
         ct.name  AS champion_name,
         ct.city  AS champion_city,
         ct.state AS champion_state,
         rt.name  AS runner_up_name,
         rt.city  AS runner_up_city,
-        rt.state AS runner_up_state
+        rt.state AS runner_up_state,
+        CONCAT(p.first_name, ' ', p.last_name) as mvp
       FROM championships c
       LEFT JOIN teams ct ON c.champion_team_id = ct.id
       LEFT JOIN teams rt ON c.runner_up_team_id = rt.id
+      LEFT JOIN players p ON c.mvp_player_id = p.id
       WHERE c.year = $1
       LIMIT 1
     `;
@@ -98,6 +85,7 @@ router.get("/:year", async (req, res) => {
       });
     }
 
+    // This is the data the frontend receives
     res.json({
       success: true,
       data: result.rows[0],
@@ -109,6 +97,4 @@ router.get("/:year", async (req, res) => {
       error: "Failed to fetch championship",
     });
   }
-});
-
-module.exports = router;
+};

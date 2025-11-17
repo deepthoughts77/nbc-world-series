@@ -1,10 +1,10 @@
-// src/routes/players.js
-const express = require("express");
-const router = express.Router();
-const pool = require("../config/database");
+import { pool } from "../db.js";
 
-// Search players by name: /api/players/search?q=smith
-router.get("/search", async (req, res) => {
+/**
+ * @description Search for players by name
+ * @route GET /api/players/search?q=...
+ */
+export const searchPlayers = async (req, res) => {
   const q = (req.query.q || "").trim();
   if (!q) return res.json([]);
 
@@ -28,20 +28,29 @@ router.get("/search", async (req, res) => {
     console.error(e);
     res.status(500).json({ error: "Search failed" });
   }
-});
+};
 
-// Get one player with history
-router.get("/:id", async (req, res) => {
+/**
+ * @description Get a single player by ID, including their team history
+ * @route GET /api/players/:id
+ */
+export const getPlayerById = async (req, res) => {
   const id = Number(req.params.id);
-  if (!Number.isInteger(id))
+  if (!Number.isInteger(id)) {
     return res.status(400).json({ error: "Invalid id" });
+  }
 
   try {
+    // 1. Get player's main details
     const { rows } = await pool.query(`SELECT * FROM players WHERE id = $1`, [
       id,
     ]);
-    if (!rows.length) return res.status(404).json({ error: "Not found" });
 
+    if (!rows.length) {
+      return res.status(404).json({ error: "Player not found" });
+    }
+
+    // 2. Get player's team history
     const history = await pool.query(
       `
       SELECT pt.year, pt.position, pt.stats,
@@ -54,11 +63,10 @@ router.get("/:id", async (req, res) => {
       [id]
     );
 
+    // 3. Combine and send response
     res.json({ ...rows[0], history: history.rows });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: "Failed to fetch player" });
   }
-});
-
-module.exports = router;
+};

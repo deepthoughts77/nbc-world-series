@@ -1,10 +1,10 @@
-// backend/src/routes/hallOfFame.js
-const express = require("express");
-const router = express.Router();
-const pool = require("../config/database");
+import { pool } from "../db.js";
 
-// GET /api/hall-of-fame  (list with optional pagination & search)
-router.get("/", async (req, res) => {
+/**
+ * @description Get all Hall of Fame members with pagination and search
+ * @route GET /api/hall-of-fame
+ */
+export const getAllHallOfFameMembers = async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit || "50", 10), 100);
     const offset = parseInt(req.query.offset || "0", 10);
@@ -42,7 +42,7 @@ router.get("/", async (req, res) => {
       total: count,
       limit,
       offset,
-      data: rows, // an array — good for your frontend
+      data: rows,
     });
   } catch (err) {
     console.error("HOF list error:", err);
@@ -50,10 +50,13 @@ router.get("/", async (req, res) => {
       .status(500)
       .json({ success: false, error: "Failed to load Hall of Fame" });
   }
-});
+};
 
-// GET /api/hall-of-fame/:id  (single member)
-router.get("/:id", async (req, res) => {
+/**
+ * @description Get a single Hall of Fame member by ID
+ * @route GET /api/hall-of-fame/:id
+ */
+export const getHallOfFameMemberById = async (req, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT id, inductee_name, induction_year, player_id, category, bio
@@ -70,6 +73,4 @@ router.get("/:id", async (req, res) => {
     console.error("HOF detail error:", err);
     res.status(500).json({ success: false, error: "Failed to load member" });
   }
-});
-
-module.exports = router;
+};

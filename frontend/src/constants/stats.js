@@ -1,0 +1,30 @@
+export const battingStatColumns = [
+  { key: "g", label: "G" },
+  { key: "ab", label: "AB" },
+  { key: "r", label: "R" },
+  { key: "h", label: "H" },
+  { key: "2b", label: "2B" },
+  { key: "3b", label: "3B" },
+  { key: "hr", label: "HR" },
+  { key: "sb", label: "SB" },
+  { key: "sh", label: "SH" },
+  { key: "rbi", label: "RBI" },
+  { key: "po", label: "PO" },
+  { key: "a", label: "A" },
+  { key: "e", label: "E" },
+  { key: "pct", label: "Pct" },
+];
+
+export const pitchingStatColumns = [
+  { key: "g", label: "G" },
+  { key: "w", label: "W" },
+  { key: "l", label: "L" },
+  { key: "ip", label: "IP" },
+  { key: "h", label: "H" },
+  { key: "r", label: "R" },
+  { key: "er", label: "ER" },
+  { key: "bb", label: "BB" },
+  { key: "so", label: "SO" },
+  { key: "wp", label: "WP" },
+  { key: "hb", label: "HB" },
+];
