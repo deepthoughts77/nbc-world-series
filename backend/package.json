@@ -7,7 +7,10 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "test": "echo \"no tests\" && exit 0"
+    "test": "echo \"no tests\" && exit 0",
+    "db:migrate": "node db/run-migrations.js",
+    "db:seed": "node db/run-seeds.js",
+    "db:reset": "node db/reset-and-seed.js"
   },
   "keywords": [],
   "author": "",
@@ -18,6 +21,7 @@
     "bcrypt": "^6.0.0",
     "compression": "^1.7.4",
     "cors": "^2.8.5",
+    "csv-parser": "^3.2.0",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "express-rate-limit": "^6.10.0",
@@ -28,10 +32,10 @@
     "pg": "^8.16.3",
     "ws": "^8.18.3"
   },
-  "devDependencies": {
-    "nodemon": "^3.1.10"
-  },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
   }
 }

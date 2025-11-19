@@ -1,21 +1,25 @@
-import pg from "pg";
-const { Pool } = pg;
+// backend/test-db.js
+import "dotenv/config";
+import { pool } from "./src/db.js";
 
-const pool = new Pool({
-  connectionString:
-    "postgresql://neondb_owner:npg_q2XRW3bhOVSF@ep-divine-fog-ah0jvjnf-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require",
-  ssl: { rejectUnauthorized: false },
-});
-
-(async () => {
+async function main() {
   try {
-    const result = await pool.query(
-      "SELECT COUNT(*) as championships FROM public.championships;"
-    );
-    console.log("✅ Connected! Championships:", result.rows[0].championships);
+    console.log(" Testing database connection...");
+
+    const { rows } = await pool.query("SELECT NOW() AS now");
+
+    console.log(" Connected successfully!");
+    console.log("   Server time:", rows[0].now);
   } catch (err) {
-    console.error("❌ Connection failed:", err.message);
+    console.error(" Connection failed:", err.message);
+    // Optional: debug more details
+    if (err.code) console.error("   code:", err.code);
+    if (err.stack) console.error(err.stack);
   } finally {
-    pool.end();
+    // Close pool cleanly so Node can exit
+    await pool.end();
+    process.exit(0);
   }
-})();
+}
+
+main();
