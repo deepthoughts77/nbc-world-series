@@ -43,11 +43,14 @@ export default function Home() {
       const response = await API.post("/search/ask", { question: searchQuery });
       const payload = response?.data ?? {};
 
-      setSearchResults({
-        answer: payload.answer || "",
-        data: payload.data || null,
-        queryType: payload.queryType || "",
-      });
+      console.log("=== HOME.JS RECEIVED ===");
+      console.log("Full response:", payload);
+      console.log("Answer:", payload.answer);
+      console.log("Data:", payload.data);
+      console.log("Message:", payload.message);
+      console.log("Results:", payload.results);
+
+      setSearchResults(payload);
     } catch (error) {
       console.error("Search error:", error);
       setSearchError("Search failed. Please try again.");
@@ -482,37 +485,292 @@ export default function Home() {
                     </div>
                   </div>
                 )}
+
                 {searchResults && searchResults.answer && (
-                  <div className="mt-6 p-6 bg-white border-2 border-green-200 rounded-lg">
-                    <div className="flex items-start gap-3 mb-4">
-                      <div className="flex-shrink-0 w-10 h-10 rounded-md bg-green-600 flex items-center justify-center">
-                        <Trophy className="text-white" size={20} />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-bold text-gray-900 text-lg">
-                          Search Results
-                        </h3>
-                        <p className="text-sm text-gray-500">
-                          Query type: {searchResults.queryType || "general"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="prose prose-sm max-w-none">
-                      <div className="text-gray-800 leading-relaxed whitespace-pre-line font-sans">
-                        {searchResults.answer}
-                      </div>
-                    </div>
-                    {searchResults.data &&
-                      Array.isArray(searchResults.data) &&
-                      searchResults.data.length > 0 && (
-                        <div className="mt-4 pt-4 border-t border-gray-200">
-                          <p className="text-xs text-gray-500">
-                            {searchResults.data.length} record
-                            {searchResults.data.length !== 1 ? "s" : ""} found
+                  <>
+                    <div className="mt-6 p-6 bg-white border-2 border-green-200 rounded-lg">
+                      <div className="flex items-start gap-3 mb-4">
+                        <div className="flex-shrink-0 w-10 h-10 rounded-md bg-green-600 flex items-center justify-center">
+                          <Trophy className="text-white" size={20} />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-bold text-gray-900 text-lg">
+                            Search Results
+                          </h3>
+                          <p className="text-sm text-gray-700 mt-2">
+                            {searchResults.answer}
                           </p>
                         </div>
-                      )}
-                  </div>
+                      </div>
+
+                      {/* Championship Details */}
+                      {searchResults.data &&
+                        !Array.isArray(searchResults.data) &&
+                        searchResults.data.champion_name && (
+                          <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                            <div className="grid md:grid-cols-2 gap-4">
+                              <div>
+                                <div className="text-xs text-gray-500 mb-1">
+                                  Champion
+                                </div>
+                                <div className="font-bold text-lg text-gray-900">
+                                  {searchResults.data.champion_name}
+                                </div>
+                                {searchResults.data.champion_city && (
+                                  <div className="text-sm text-gray-600">
+                                    {searchResults.data.champion_city},{" "}
+                                    {searchResults.data.champion_state}
+                                  </div>
+                                )}
+                              </div>
+                              {searchResults.data.runner_up_name && (
+                                <div>
+                                  <div className="text-xs text-gray-500 mb-1">
+                                    Runner-up
+                                  </div>
+                                  <div className="font-semibold text-gray-900">
+                                    {searchResults.data.runner_up_name}
+                                  </div>
+                                </div>
+                              )}
+                              {searchResults.data.mvp && (
+                                <div>
+                                  <div className="text-xs text-gray-500 mb-1">
+                                    MVP
+                                  </div>
+                                  <div className="font-semibold text-gray-900">
+                                    {searchResults.data.mvp}
+                                  </div>
+                                </div>
+                              )}
+                              {searchResults.data.championship_score && (
+                                <div>
+                                  <div className="text-xs text-gray-500 mb-1">
+                                    Final Score
+                                  </div>
+                                  <div className="font-semibold text-gray-900">
+                                    {searchResults.data.championship_score}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                      {/* Player Stats Display */}
+                      {searchResults.data &&
+                        !Array.isArray(searchResults.data) &&
+                        searchResults.data.first_name && (
+                          <div className="mt-4 p-6 bg-gray-50 rounded-lg">
+                            <div className="mb-4">
+                              <h4 className="text-xl font-bold text-gray-900">
+                                {searchResults.data.first_name}{" "}
+                                {searchResults.data.last_name}
+                              </h4>
+                              <p className="text-sm text-gray-600">
+                                {searchResults.data.team_name || "Unknown Team"}{" "}
+                                - 2025 Season
+                              </p>
+                            </div>
+
+                            {searchResults.data.avg !== null && (
+                              <div className="mb-6">
+                                <h5 className="text-sm font-semibold text-gray-700 uppercase mb-3">
+                                  ⚾ Batting Statistics
+                                </h5>
+                                <div className="grid grid-cols-4 md:grid-cols-7 gap-3">
+                                  <div className="text-center p-2 bg-white rounded shadow-sm">
+                                    <div className="text-xs text-gray-500 mb-1">
+                                      AVG
+                                    </div>
+                                    <div className="text-lg font-bold text-blue-600">
+                                      {searchResults.data.avg
+                                        ? `.${Math.round(
+                                            searchResults.data.avg * 1000
+                                          )
+                                            .toString()
+                                            .padStart(3, "0")}`
+                                        : ".000"}
+                                    </div>
+                                  </div>
+                                  <div className="text-center p-2 bg-white rounded shadow-sm">
+                                    <div className="text-xs text-gray-500 mb-1">
+                                      HR
+                                    </div>
+                                    <div className="text-lg font-bold text-blue-600">
+                                      {searchResults.data.hr || 0}
+                                    </div>
+                                  </div>
+                                  <div className="text-center p-2 bg-white rounded shadow-sm">
+                                    <div className="text-xs text-gray-500 mb-1">
+                                      RBI
+                                    </div>
+                                    <div className="text-lg font-bold text-blue-600">
+                                      {searchResults.data.rbi || 0}
+                                    </div>
+                                  </div>
+                                  <div className="text-center p-2 bg-white rounded shadow-sm">
+                                    <div className="text-xs text-gray-500 mb-1">
+                                      H
+                                    </div>
+                                    <div className="text-lg font-bold text-blue-600">
+                                      {searchResults.data.h || 0}
+                                    </div>
+                                  </div>
+                                  <div className="text-center p-2 bg-white rounded shadow-sm">
+                                    <div className="text-xs text-gray-500 mb-1">
+                                      R
+                                    </div>
+                                    <div className="text-lg font-bold text-blue-600">
+                                      {searchResults.data.r || 0}
+                                    </div>
+                                  </div>
+                                  <div className="text-center p-2 bg-white rounded shadow-sm">
+                                    <div className="text-xs text-gray-500 mb-1">
+                                      AB
+                                    </div>
+                                    <div className="text-lg font-bold text-blue-600">
+                                      {searchResults.data.ab || 0}
+                                    </div>
+                                  </div>
+                                  <div className="text-center p-2 bg-white rounded shadow-sm">
+                                    <div className="text-xs text-gray-500 mb-1">
+                                      OBP
+                                    </div>
+                                    <div className="text-lg font-bold text-blue-600">
+                                      {searchResults.data.obp
+                                        ? `.${Math.round(
+                                            searchResults.data.obp * 1000
+                                          )
+                                            .toString()
+                                            .padStart(3, "0")}`
+                                        : ".000"}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {searchResults.data.era !== null && (
+                              <div>
+                                <h5 className="text-sm font-semibold text-gray-700 uppercase mb-3">
+                                  🥎 Pitching Statistics
+                                </h5>
+                                <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
+                                  <div className="text-center p-2 bg-white rounded shadow-sm">
+                                    <div className="text-xs text-gray-500 mb-1">
+                                      ERA
+                                    </div>
+                                    <div className="text-lg font-bold text-blue-600">
+                                      {searchResults.data.era
+                                        ? parseFloat(
+                                            searchResults.data.era
+                                          ).toFixed(2)
+                                        : "0.00"}
+                                    </div>
+                                  </div>
+                                  <div className="text-center p-2 bg-white rounded shadow-sm">
+                                    <div className="text-xs text-gray-500 mb-1">
+                                      W
+                                    </div>
+                                    <div className="text-lg font-bold text-blue-600">
+                                      {searchResults.data.w || 0}
+                                    </div>
+                                  </div>
+                                  <div className="text-center p-2 bg-white rounded shadow-sm">
+                                    <div className="text-xs text-gray-500 mb-1">
+                                      L
+                                    </div>
+                                    <div className="text-lg font-bold text-blue-600">
+                                      {searchResults.data.l || 0}
+                                    </div>
+                                  </div>
+                                  <div className="text-center p-2 bg-white rounded shadow-sm">
+                                    <div className="text-xs text-gray-500 mb-1">
+                                      SV
+                                    </div>
+                                    <div className="text-lg font-bold text-blue-600">
+                                      {searchResults.data.sv || 0}
+                                    </div>
+                                  </div>
+                                  <div className="text-center p-2 bg-white rounded shadow-sm">
+                                    <div className="text-xs text-gray-500 mb-1">
+                                      IP
+                                    </div>
+                                    <div className="text-lg font-bold text-blue-600">
+                                      {searchResults.data.ip || 0}
+                                    </div>
+                                  </div>
+                                  <div className="text-center p-2 bg-white rounded shadow-sm">
+                                    <div className="text-xs text-gray-500 mb-1">
+                                      SO
+                                    </div>
+                                    <div className="text-lg font-bold text-blue-600">
+                                      {searchResults.data.p_so || 0}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                      {/* Leaderboard Results */}
+                      {searchResults.results &&
+                        Array.isArray(searchResults.results) &&
+                        searchResults.results.length > 0 && (
+                          <div className="mt-4">
+                            <h4 className="font-semibold text-gray-900 mb-3">
+                              {searchResults.message}
+                            </h4>
+                            <div className="space-y-2">
+                              {searchResults.results.map((player, idx) => (
+                                <div
+                                  key={idx}
+                                  className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+                                >
+                                  <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
+                                    {idx + 1}
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="font-semibold text-gray-900">
+                                      {player.first_name} {player.last_name}
+                                    </div>
+                                    <div className="text-xs text-gray-600">
+                                      {player.team_name}
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    {player.avg !== undefined && (
+                                      <div className="text-lg font-bold text-blue-600">
+                                        {player.avg
+                                          ? `.${Math.round(player.avg * 1000)
+                                              .toString()
+                                              .padStart(3, "0")}`
+                                          : ".000"}
+                                      </div>
+                                    )}
+                                    {player.hr !== undefined &&
+                                      player.avg === undefined && (
+                                        <div className="text-lg font-bold text-blue-600">
+                                          {player.hr}
+                                        </div>
+                                      )}
+                                    {player.era !== undefined && (
+                                      <div className="text-lg font-bold text-blue-600">
+                                        {player.era
+                                          ? parseFloat(player.era).toFixed(2)
+                                          : "0.00"}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                    </div>
+                  </>
                 )}
               </CardBody>
             </Card>
