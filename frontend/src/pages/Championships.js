@@ -84,7 +84,13 @@ function ChampionshipCard({ data }) {
                 </span>
               </div>
               <p className="text-base font-semibold text-gray-700">
-                {mvp || "—"}
+                {mvp ? (
+                  mvp
+                ) : (
+                  <span className="text-gray-400 italic text-sm">
+                    Not awarded
+                  </span>
+                )}
               </p>
             </div>
           </div>
@@ -344,6 +350,9 @@ export default function Championships() {
           {filteredYears.map((yearData) => (
             <ChampionshipCard key={yearData.year} data={yearData} />
           ))}
+          <div className="text-center text-sm text-gray-500 mt-4">
+            Showing {filteredYears.length} of {years.length} championships
+          </div>
         </div>
       )}
 

@@ -1,3 +1,4 @@
+// backend/src/routes/championshipRoutes.js
 import { Router } from "express";
 import * as champController from "../controllers/championshipController.js";
 

@@ -20,19 +20,22 @@ export const handleSearch = async (req, res) => {
     // SANTA BARBARA (specific team)
     // -----------------------------
     if (lower.includes("santa barbara")) {
-      const result = await pool.query(`
+      const result = await pool.query(
+        `
         SELECT c.year, t.name, t.city, t.state
         FROM championships c
         JOIN teams t ON c.champion_team_id = t.id
         WHERE LOWER(t.name) LIKE '%santa barbara%'
         ORDER BY c.year DESC
-      `);
+      `
+      );
 
       return res.json({
         success: true,
+        queryType: "team_championships",
         answer: `Santa Barbara has won ${
           result.rows.length
-        } championships: ${result.rows.map((r) => r.year).join(", ")}`,
+        } championships: ${result.rows.map((r) => r.year).join(", ")}.`,
         data: result.rows,
       });
     }
@@ -41,12 +44,13 @@ export const handleSearch = async (req, res) => {
     // TOURNAMENT FOUNDED / HISTORY
     // -----------------------------------
     if (
-      lower.match(
-        /when.*tournament.*found|when.*tournament.*start|when.*establish|tournament.*history|how long|since when/i
+      /when.*tournament.*found|when.*tournament.*start|when.*establish|tournament.*history|how long|since when/i.test(
+        question
       )
     ) {
       return res.json({
         success: true,
+        queryType: "tournament_history",
         answer:
           "The NBC World Series was founded in 1935 in Wichita, Kansas. It has been held annually for 91 tournaments spanning 90 years (1935–2025), making it one of the longest-running amateur baseball tournaments in American history.",
       });
@@ -55,9 +59,13 @@ export const handleSearch = async (req, res) => {
     // -----------------------------------
     // YOUNGEST/OLDEST MVP (age-related)
     // -----------------------------------
-    if (lower.match(/youngest|oldest|age/i) && lower.match(/mvp/i)) {
+    if (
+      /youngest|oldest|age/i.test(question) &&
+      /mvp|most valuable player/i.test(question)
+    ) {
       return res.json({
         success: true,
+        queryType: "mvp_age",
         answer:
           "MVP age data is not tracked in the database. The tournament records include MVP names and years, but not player ages at the time of the award.",
       });
@@ -66,31 +74,31 @@ export const handleSearch = async (req, res) => {
     // -----------------------------------
     // "Who won the MVP in [YEAR]?"
     // -----------------------------------
-
-    if (year && lower.match(/mvp|most valuable player/i)) {
+    if (year && /mvp|most valuable player/i.test(question)) {
       const result = await pool.query(
         `
-    SELECT 
-      CONCAT(p.first_name, ' ', p.last_name) AS player_name,
-      t.name  AS team_name,
-      t.city,
-      t.state,
-      c.year
-    FROM championships c
-    JOIN players p ON c.mvp_player_id = p.id
-    JOIN teams   t ON c.champion_team_id = t.id
-    WHERE c.year = $1
-      AND c.mvp_player_id IS NOT NULL
-    `,
+        SELECT 
+          CONCAT(p.first_name, ' ', p.last_name) AS player_name,
+          t.name  AS team_name,
+          t.city,
+          t.state,
+          c.year
+        FROM championships c
+        JOIN players p ON c.mvp_player_id = p.id
+        JOIN teams   t ON c.champion_team_id = t.id
+        WHERE c.year = $1
+          AND c.mvp_player_id IS NOT NULL
+      `,
         [year]
       );
 
       if (result.rows.length > 0) {
         const r = result.rows[0];
 
-        const wantsStats = lower.match(
-          /stat|stats|batting|bat.*average|hit.*average|slash line|box score/i
-        );
+        const wantsStats =
+          /stat|stats|batting|bat.*average|hit.*average|slash line|box score/i.test(
+            question
+          );
 
         let answer;
 
@@ -106,6 +114,7 @@ export const handleSearch = async (req, res) => {
 
         return res.json({
           success: true,
+          queryType: "mvp_by_year",
           answer,
           data: result.rows,
         });
@@ -113,6 +122,7 @@ export const handleSearch = async (req, res) => {
 
       return res.json({
         success: true,
+        queryType: "mvp_by_year",
         answer: `No MVP data is recorded in the database for ${year}.`,
       });
     }
@@ -120,9 +130,10 @@ export const handleSearch = async (req, res) => {
     // -----------------------------------
     // MVP QUERIES (overall "most MVPs?")
     // -----------------------------------
-    if (lower.match(/mvp|most valuable player/i)) {
+    if (/mvp|most valuable player/i.test(question)) {
       try {
-        const result = await pool.query(`
+        const result = await pool.query(
+          `
           SELECT 
             CONCAT(p.first_name, ' ', p.last_name) AS player_name,
             COUNT(*) AS mvp_count,
@@ -133,7 +144,8 @@ export const handleSearch = async (req, res) => {
           GROUP BY p.id, p.first_name, p.last_name
           ORDER BY mvp_count DESC
           LIMIT 10
-        `);
+        `
+        );
 
         if (result.rows.length > 0) {
           const top = result.rows[0];
@@ -156,6 +168,7 @@ export const handleSearch = async (req, res) => {
 
           return res.json({
             success: true,
+            queryType: "mvp_leaders",
             answer: answer.trim(),
             data: result.rows,
           });
@@ -166,6 +179,7 @@ export const handleSearch = async (req, res) => {
 
       return res.json({
         success: true,
+        queryType: "mvp_leaders",
         answer:
           "MVP data is limited in the database. Many historical tournaments did not record MVP awards.",
       });
@@ -174,14 +188,14 @@ export const handleSearch = async (req, res) => {
     // -----------------------------------
     // PITCHING (best pitcher / strikeouts)
     // -----------------------------------
-
     if (
-      lower.match(
-        /\bpitch\b|\bpitcher\b|strikeout|strike out|\bera\b|earned run average/i
+      /\bpitch\b|\bpitcher\b|strikeout|strike out|\bera\b|earned run average/i.test(
+        question
       )
     ) {
       return res.json({
         success: true,
+        queryType: "pitching_record",
         answer:
           "Tommy Hanson recorded 27 strikeouts for Aloha OR Knights in 2005, the most in a single tournament. For best pitching performance, he posted a dominant strikeout rate during the tournament.",
       });
@@ -190,9 +204,10 @@ export const handleSearch = async (req, res) => {
     // -----------------------------------
     // BATTING AVERAGE
     // -----------------------------------
-    if (lower.match(/batting|bat.*average|hit.*average/i)) {
+    if (/batting|bat.*average|hit.*average/i.test(question)) {
       return res.json({
         success: true,
+        queryType: "batting_record",
         answer:
           "Grant Nottlemann holds the highest batting average at .750 for Great Bend KS Bat Cats in 2023 (12 hits in 16 at-bats over 5 games).",
       });
@@ -201,9 +216,10 @@ export const handleSearch = async (req, res) => {
     // -----------------------------------
     // HOME RUNS
     // -----------------------------------
-    if (lower.match(/home run|hr|homer/i)) {
+    if (/home run|hr|homer/i.test(question)) {
       return res.json({
         success: true,
+        queryType: "home_run_record",
         answer:
           "Nolan Reimold hit 4 home runs for Hays KS Larks in 2004, the most in tournament history during the modern wood bat era.",
       });
@@ -212,18 +228,21 @@ export const handleSearch = async (req, res) => {
     // -----------------------------------
     // MOST CHAMPIONSHIPS (TOTAL)
     // -----------------------------------
-    if (lower.match(/most championship|most title|who.*won.*most/i)) {
-      const result = await pool.query(`
+    if (/most championship|most title|who.*won.*most/i.test(question)) {
+      const result = await pool.query(
+        `
         SELECT t.name, COUNT(*) AS total
         FROM championships c
         JOIN teams t ON c.champion_team_id = t.id
         GROUP BY t.name
         ORDER BY total DESC
         LIMIT 1
-      `);
+      `
+      );
 
       return res.json({
         success: true,
+        queryType: "most_championships",
         answer: `${result.rows[0].name} has won the most championships with ${result.rows[0].total} titles.`,
         data: result.rows,
       });
@@ -232,11 +251,12 @@ export const handleSearch = async (req, res) => {
     // -----------------------------------
     // CONSECUTIVE CHAMPIONSHIPS
     // -----------------------------------
-    if (lower.match(/consecutive|streak/i)) {
+    if (/consecutive|streak/i.test(question)) {
       return res.json({
         success: true,
+        queryType: "consecutive_championships",
         answer:
-          "Santa Barbara Foresters hold the record with 4 consecutive championships from 1997–2000.",
+          "The longest confirmed championship streak in the seeded data is 3 straight titles, shared by multiple teams: Ft. Wayne G-E Club (1947–1949), Fairbanks Goldpanners (1972–1974), and Santa Barbara Foresters (2020–2022).",
       });
     }
 
@@ -250,7 +270,7 @@ export const handleSearch = async (req, res) => {
         FROM championships c
         JOIN teams t ON c.champion_team_id = t.id
         WHERE c.year = $1
-        `,
+      `,
         [year]
       );
 
@@ -258,6 +278,7 @@ export const handleSearch = async (req, res) => {
         const r = result.rows[0];
         return res.json({
           success: true,
+          queryType: "champion_by_year",
           answer: `The ${year} NBC World Series champion was ${r.name} from ${r.city}, ${r.state}.`,
           data: result.rows,
         });
@@ -265,6 +286,7 @@ export const handleSearch = async (req, res) => {
 
       return res.json({
         success: true,
+        queryType: "champion_by_year",
         answer: `No championship data found for ${year}. The tournament may not have been held that year.`,
       });
     }
@@ -274,6 +296,7 @@ export const handleSearch = async (req, res) => {
     // -----------------------------------
     return res.json({
       success: true,
+      queryType: "help",
       answer:
         "Try asking:\n• How many championships has Santa Barbara won?\n• Who has won the most championships?\n• Who won the most consecutive championships?\n• Who hit the most home runs?\n• Who has the highest batting average?\n• Who was the best pitcher?\n• Who won the MVP in 2005?\n• Who won in 2013?",
     });

@@ -7,12 +7,13 @@ const SearchInterface = () => {
   const [results, setResults] = useState(null);
   const [answer, setAnswer] = useState("");
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState("search"); // 'search' or 'ask'
+  const [mode, setMode] = useState("ask"); // Default to 'ask' mode for natural language
 
   const handleSearch = async (e) => {
     e.preventDefault();
 
-    if (query.length < 2) {
+    const trimmedQuery = query.trim();
+    if (trimmedQuery.length < 2) {
       alert("Please enter at least 2 characters");
       return;
     }
@@ -25,28 +26,42 @@ const SearchInterface = () => {
       if (mode === "search") {
         // Simple keyword search
         const response = await axios.get(
-          `${process.env.REACT_APP_API_URL}/search`,
+          `${process.env.REACT_APP_API_URL || ""}/api/search`,
           {
-            params: { q: query },
+            params: { q: trimmedQuery },
           }
         );
+        console.log("=== SEARCH MODE RESPONSE ===");
+        console.log(response.data);
         setResults(response.data.results);
       } else {
         // Natural language question
         const response = await axios.post(
-          `${process.env.REACT_APP_API_URL}/search/ask`,
+          `${process.env.REACT_APP_API_URL || ""}/api/search/ask`,
           {
-            question: query,
+            question: trimmedQuery,
           }
         );
+
+        console.log("=== FRONTEND RECEIVED ===");
+        console.log("Full Response:", response.data);
+        console.log("Answer:", response.data.answer);
+        console.log("Data:", response.data.data);
+        console.log("Success:", response.data.success);
+
         setAnswer(response.data.answer);
-        setResults(
-          response.data.data ? { answer: [response.data.data] } : null
-        );
+
+        // Set results properly for player stats display
+        if (response.data.data) {
+          setResults(response.data);
+        } else {
+          setResults(null);
+        }
       }
     } catch (error) {
       console.error("Search error:", error);
-      alert("Search failed. Please try again.");
+      console.error("Error response:", error.response?.data);
+      alert(`Search failed: ${error.response?.data?.error || error.message}`);
     } finally {
       setLoading(false);
     }
@@ -82,7 +97,7 @@ const SearchInterface = () => {
           placeholder={
             mode === "search"
               ? "Search for players, teams, or years..."
-              : 'Ask a question like "Who won in 2024?" or "Stats for Jake Gutierrez"'
+              : 'Ask a question like "Who won in 2024?" or "Jake Gutierrez stats"'
           }
           className="search-input"
         />
@@ -105,14 +120,21 @@ const SearchInterface = () => {
       {mode === "ask" && (
         <div className="example-queries">
           <span>Try:</span>
-          <button onClick={() => setQuery("Who won in 2024?")}>
-            Who won in 2024?
+          <button onClick={() => setQuery("Jake Gutierrez stats")}>
+            Jake Gutierrez stats
           </button>
-          <button onClick={() => setQuery("Stats for Jake Gutierrez")}>
-            Stats for Jake Gutierrez
+          <button
+            onClick={() =>
+              setQuery("Who had the highest batting average in 2025?")
+            }
+          >
+            Highest batting average
           </button>
-          <button onClick={() => setQuery("Top batters in 2024")}>
-            Top batters
+          <button onClick={() => setQuery("Top 5 home run hitters")}>
+            Top home run hitters
+          </button>
+          <button onClick={() => setQuery("Lowest ERA in 2025")}>
+            Lowest ERA
           </button>
         </div>
       )}
@@ -124,7 +146,233 @@ const SearchInterface = () => {
         </div>
       )}
 
-      {results && (
+      {/* Player Stats Display - Single Player Lookup */}
+      {results && results.data && !Array.isArray(results.data) && (
+        <div className="result-section">
+          <div className="result-card player-stats-card">
+            <h3>
+              {results.data.first_name} {results.data.last_name}
+            </h3>
+            <p className="team-info">
+              {results.data.team_name || "Unknown Team"} - 2025 Season
+            </p>
+
+            {results.data.avg !== null && (
+              <div className="stats-section">
+                <h4>⚾ Batting Statistics</h4>
+                <div className="stats-grid">
+                  <div className="stat-item">
+                    <span className="stat-label">AVG</span>
+                    <span className="stat-value">
+                      {results.data.avg
+                        ? `.${Math.round(results.data.avg * 1000)
+                            .toString()
+                            .padStart(3, "0")}`
+                        : ".000"}
+                    </span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">GP</span>
+                    <span className="stat-value">{results.data.gp || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">AB</span>
+                    <span className="stat-value">{results.data.ab || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">R</span>
+                    <span className="stat-value">{results.data.r || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">H</span>
+                    <span className="stat-value">{results.data.h || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">2B</span>
+                    <span className="stat-value">
+                      {results.data["2b"] || 0}
+                    </span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">3B</span>
+                    <span className="stat-value">
+                      {results.data["3b"] || 0}
+                    </span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">HR</span>
+                    <span className="stat-value">{results.data.hr || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">RBI</span>
+                    <span className="stat-value">{results.data.rbi || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">BB</span>
+                    <span className="stat-value">{results.data.bb || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">SO</span>
+                    <span className="stat-value">{results.data.so || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">SB</span>
+                    <span className="stat-value">{results.data.sb || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">OBP</span>
+                    <span className="stat-value">
+                      {results.data.obp
+                        ? `.${Math.round(results.data.obp * 1000)
+                            .toString()
+                            .padStart(3, "0")}`
+                        : ".000"}
+                    </span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">SLG</span>
+                    <span className="stat-value">
+                      {results.data.slg
+                        ? `.${Math.round(results.data.slg * 1000)
+                            .toString()
+                            .padStart(3, "0")}`
+                        : ".000"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {results.data.era !== null && (
+              <div className="stats-section">
+                <h4>🥎 Pitching Statistics</h4>
+                <div className="stats-grid">
+                  <div className="stat-item">
+                    <span className="stat-label">ERA</span>
+                    <span className="stat-value">
+                      {results.data.era
+                        ? parseFloat(results.data.era).toFixed(2)
+                        : "0.00"}
+                    </span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">W</span>
+                    <span className="stat-value">{results.data.w || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">L</span>
+                    <span className="stat-value">{results.data.l || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">SV</span>
+                    <span className="stat-value">{results.data.sv || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">G</span>
+                    <span className="stat-value">{results.data.g || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">GS</span>
+                    <span className="stat-value">{results.data.gs || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">IP</span>
+                    <span className="stat-value">{results.data.ip || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">H</span>
+                    <span className="stat-value">{results.data.p_h || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">R</span>
+                    <span className="stat-value">{results.data.p_r || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">ER</span>
+                    <span className="stat-value">{results.data.er || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">BB</span>
+                    <span className="stat-value">{results.data.p_bb || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">SO</span>
+                    <span className="stat-value">{results.data.p_so || 0}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {results.data.avg === null && results.data.era === null && (
+              <p className="no-stats">
+                No 2025 stats available for this player.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Leaderboard Results - Array of Players */}
+      {results &&
+        results.results &&
+        Array.isArray(results.results) &&
+        results.results.length > 0 && (
+          <div className="result-section">
+            <h3 className="leaderboard-title">{results.message}</h3>
+            <div className="result-list">
+              {results.results.map((player, idx) => (
+                <div key={idx} className="result-card leaderboard-card">
+                  <div className="rank-badge">{idx + 1}</div>
+                  <div className="player-info">
+                    <h4>
+                      {player.first_name} {player.last_name}
+                    </h4>
+                    <p className="team-name">{player.team_name}</p>
+                  </div>
+                  <div className="stat-highlight">
+                    {player.avg !== undefined && (
+                      <>
+                        <span className="stat-label">AVG</span>
+                        <span className="stat-value">
+                          {player.avg
+                            ? `.${Math.round(player.avg * 1000)
+                                .toString()
+                                .padStart(3, "0")}`
+                            : ".000"}
+                        </span>
+                      </>
+                    )}
+                    {player.hr !== undefined && (
+                      <>
+                        <span className="stat-label">HR</span>
+                        <span className="stat-value">{player.hr || 0}</span>
+                      </>
+                    )}
+                    {player.era !== undefined && (
+                      <>
+                        <span className="stat-label">ERA</span>
+                        <span className="stat-value">
+                          {player.era
+                            ? parseFloat(player.era).toFixed(2)
+                            : "0.00"}
+                        </span>
+                      </>
+                    )}
+                    {player.so !== undefined && player.era !== undefined && (
+                      <>
+                        <span className="stat-label">SO</span>
+                        <span className="stat-value">{player.so || 0}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+      {/* Legacy search results */}
+      {results && mode === "search" && (
         <div className="search-results">
           {/* Players */}
           {results.players && results.players.length > 0 && (
@@ -191,7 +439,8 @@ const SearchInterface = () => {
           {/* No results */}
           {(!results.players || results.players.length === 0) &&
             (!results.teams || results.teams.length === 0) &&
-            (!results.championships || results.championships.length === 0) && (
+            (!results.championships || results.championships.length === 0) &&
+            !results.data && (
               <p className="no-results">No results found for "{query}"</p>
             )}
         </div>

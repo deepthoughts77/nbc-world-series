@@ -18,7 +18,8 @@ import { Container } from "../components/common/Container";
 import { Card, CardBody } from "../components/common/Card";
 import { BannerError } from "../components/common/BannerError";
 import { Skeleton } from "../components/common/Skeleton";
-
+import NaturalSearch from "../components/NaturalSearch";
+<NaturalSearch />;
 // This is the clean page component
 export default function Home() {
   // Data from our hook

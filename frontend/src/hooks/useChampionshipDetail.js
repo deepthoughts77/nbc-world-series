@@ -1,3 +1,4 @@
+// Hook to fetch championship details for a given year
 import { useState, useEffect } from "react";
 import { API } from "../api/apiClient";
 
@@ -16,7 +17,7 @@ export function useChampionshipDetail(year) {
       try {
         const res = await API.get(`/championships/${year}`);
         if (!stop) {
-          setChamp(res.data);
+          setChamp(res.data.data);
         }
       } catch (e) {
         if (!stop) setErr("Could not load championship details.");

@@ -1,0 +1,168 @@
+/* PitchingStatsTable.css */
+
+.batting-stats-container,
+.pitching-stats-container {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.batting-stats-container h2,
+.pitching-stats-container h2 {
+  color: #1a472a;
+  margin-bottom: 20px;
+  font-size: 28px;
+}
+
+.table-responsive {
+  overflow-x: auto;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  font-size: 14px;
+}
+
+.stats-table thead {
+  background: #1a472a;
+  color: white;
+}
+
+.stats-table th {
+  padding: 12px 8px;
+  text-align: center;
+  font-weight: 600;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stats-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s;
+}
+
+.stats-table th.sortable:hover {
+  background: #2a5a3a;
+}
+
+.sort-indicator {
+  margin-left: 4px;
+  font-size: 12px;
+}
+
+.stats-table tbody tr {
+  border-bottom: 1px solid #e0e0e0;
+  transition: background 0.2s;
+}
+
+.stats-table tbody tr:hover {
+  background: #f5f5f5;
+}
+
+.stats-table tbody tr:nth-child(even) {
+  background: #fafafa;
+}
+
+.stats-table tbody tr:nth-child(even):hover {
+  background: #f0f0f0;
+}
+
+.stats-table td {
+  padding: 10px 8px;
+  text-align: center;
+  border-right: 1px solid #f0f0f0;
+}
+
+.rank {
+  font-weight: 600;
+  color: #666;
+  width: 50px;
+}
+
+.player-name {
+  text-align: left !important;
+  font-weight: 500;
+  min-width: 150px;
+}
+
+.jersey-num {
+  font-size: 11px;
+  color: #999;
+  margin-left: 6px;
+  font-weight: 400;
+}
+
+.team-name {
+  text-align: left !important;
+  color: #555;
+  min-width: 120px;
+}
+
+/* Highlight modern statistics */
+.highlight {
+  background: #e8f5e9;
+  font-weight: 600;
+  color: #2e7d32;
+}
+
+.highlight-strong {
+  background: #c8e6c9;
+  font-weight: 700;
+  color: #1b5e20;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  font-size: 18px;
+  color: #666;
+}
+
+.stats-legend {
+  margin-top: 30px;
+  padding: 20px;
+  background: #f9f9f9;
+  border-left: 4px solid #1a472a;
+  border-radius: 4px;
+}
+
+.stats-legend h4 {
+  margin-top: 0;
+  color: #1a472a;
+}
+
+.stats-legend ul {
+  list-style: none;
+  padding: 0;
+}
+
+.stats-legend li {
+  padding: 6px 0;
+  color: #555;
+}
+
+.stats-legend strong {
+  color: #1a472a;
+  font-weight: 600;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .stats-table {
+    font-size: 12px;
+  }
+
+  .stats-table th,
+  .stats-table td {
+    padding: 8px 4px;
+  }
+
+  .player-name,
+  .team-name {
+    min-width: 100px;
+  }
+}

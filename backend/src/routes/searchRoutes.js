@@ -1,10 +1,16 @@
-import { Router } from "express";
-import * as searchController from "../controllers/searchController.js";
+import express from "express";
+import {
+  naturalLanguageSearch,
+  getSearchSuggestions,
+} from "../controllers/naturalSearchController.js";
 
-const router = Router();
+const router = express.Router();
 
-// @route   POST /api/search/ask
-// @desc    Handle all natural language search queries
-router.post("/ask", searchController.handleSearch);
+// Natural language search endpoint
+router.post("/natural", naturalLanguageSearch);
+router.post("/ask", naturalLanguageSearch); // ← ADD THIS LINE
+
+// Get search suggestions
+router.get("/suggestions", getSearchSuggestions);
 
 export default router;

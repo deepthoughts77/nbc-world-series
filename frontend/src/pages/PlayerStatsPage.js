@@ -7,8 +7,6 @@ import { Card, CardBody } from "../components/common/Card";
 import { BannerError } from "../components/common/BannerError";
 import { Skeleton } from "../components/common/Skeleton";
 import { PlayerStatsTable } from "../components/player-stats/PlayerStatsTable";
-// We only need pitching columns if we add a pitching table
-// import { pitchingStatColumns } from "../constants/stats";
 
 export default function PlayerStatsPage() {
   const {
@@ -16,8 +14,8 @@ export default function PlayerStatsPage() {
     selectedYear,
     setSelectedYear,
     battingRows,
-    pitchingRows, // This is available if you want to display it
-    loading, // Use the single loading state from the hook
+    pitchingRows,
+    loading,
     err,
   } = usePlayerStatsPage();
 
@@ -78,15 +76,8 @@ export default function PlayerStatsPage() {
   };
 
   const handleYearChange = (e) => {
-    setSelectedYear(e.target.value ? Number(e.target.value) : null);
+    setSelectedYear(e.target.value || null);
   };
-
-  // Auto-expand first team ONLY on initial load
-  //React.useEffect(() => {
-  // if (teams.length > 0 && expandedTeam === null) {
-  //   setExpandedTeam(teams[0].teamName);
-  // }
-  //}, [teams, expandedTeam]);
 
   const noData = !battingRows.length && !pitchingRows.length;
 
@@ -95,7 +86,7 @@ export default function PlayerStatsPage() {
       <SectionTitle
         eyebrow="Box Scores"
         title="Player Statistics"
-        desc="Detailed individual player statistics by team and year. Data currently available for 1966."
+        desc="Detailed individual player statistics by team and year. Data currently available for 1966 and 2025."
       />
 
       {/* Controls bar */}
@@ -267,7 +258,7 @@ export default function PlayerStatsPage() {
                     {/* BATTING TABLE */}
                     <PlayerStatsTable players={team.players} />
 
-                    {/* PITCHING TABLE (below batting) */}
+                    {/* PITCHING TABLE - MATCHES PDF EXACTLY */}
                     {pitchers.length > 0 && (
                       <div className="mt-6 border-t border-gray-200 pt-4">
                         <div className="px-6 mb-3">
@@ -275,25 +266,44 @@ export default function PlayerStatsPage() {
                             Pitchers
                           </h3>
                         </div>
-                        {/* You would create a <PitchingStatsTable players={pitchers} /> 
-                          component here, similar to the PlayerStatsTable.
-                          For now, we just list them.
-                        */}
+
                         <div className="overflow-x-auto">
-                          <table className="w-full min-w-[768px] text-xs md:text-sm">
+                          {/* Wider min-width for all columns */}
+                          <table className="w-full min-w-[1800px] text-xs md:text-sm">
                             <thead className="bg-gray-50">
                               <tr className="border-b border-gray-200 text-gray-700">
-                                <th className="px-4 py-2 text-left font-semibold">
+                                <th className="px-4 py-2 text-left font-semibold sticky left-0 bg-gray-50 z-10">
                                   Pitcher
                                 </th>
+                                <th className="px-2 py-2 text-center font-semibold">
+                                  No.
+                                </th>
                                 <th className="px-2 py-2 text-right font-semibold">
-                                  G
+                                  ERA
                                 </th>
                                 <th className="px-2 py-2 text-right font-semibold">
                                   W
                                 </th>
                                 <th className="px-2 py-2 text-right font-semibold">
                                   L
+                                </th>
+                                <th className="px-2 py-2 text-right font-semibold">
+                                  APP
+                                </th>
+                                <th className="px-2 py-2 text-right font-semibold">
+                                  GS
+                                </th>
+                                <th className="px-2 py-2 text-right font-semibold">
+                                  CG
+                                </th>
+                                <th className="px-2 py-2 text-right font-semibold">
+                                  SHO
+                                </th>
+                                <th className="px-2 py-2 text-right font-semibold">
+                                  CBO
+                                </th>
+                                <th className="px-2 py-2 text-right font-semibold">
+                                  SV
                                 </th>
                                 <th className="px-2 py-2 text-right font-semibold">
                                   IP
@@ -313,48 +323,160 @@ export default function PlayerStatsPage() {
                                 <th className="px-2 py-2 text-right font-semibold">
                                   SO
                                 </th>
+                                <th className="px-2 py-2 text-right font-semibold">
+                                  2B
+                                </th>
+                                <th className="px-2 py-2 text-right font-semibold">
+                                  3B
+                                </th>
+                                <th className="px-2 py-2 text-right font-semibold">
+                                  HR
+                                </th>
+                                <th className="px-2 py-2 text-right font-semibold">
+                                  AB
+                                </th>
+                                <th className="px-2 py-2 text-right font-semibold">
+                                  B/Avg
+                                </th>
+                                <th className="px-2 py-2 text-right font-semibold">
+                                  WP
+                                </th>
+                                <th className="px-2 py-2 text-right font-semibold">
+                                  HBP
+                                </th>
+                                <th className="px-2 py-2 text-right font-semibold">
+                                  BK
+                                </th>
+                                <th className="px-2 py-2 text-right font-semibold">
+                                  SFA
+                                </th>
+                                <th className="px-2 py-2 text-right font-semibold">
+                                  SHA
+                                </th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                              {pitchers.map((p, idx) => (
-                                <tr
-                                  key={p.id ?? p.player_name}
-                                  className={
-                                    idx % 2 === 0 ? "bg-white" : "bg-gray-50"
-                                  }
-                                >
-                                  <td className="px-4 py-1.5 font-medium text-gray-900">
-                                    {p.player_name}
-                                  </td>
-                                  <td className="px-2 py-1.5 text-right">
-                                    {p.g}
-                                  </td>
-                                  <td className="px-2 py-1.5 text-right">
-                                    {p.w}
-                                  </td>
-                                  <td className="px-2 py-1.5 text-right">
-                                    {p.l}
-                                  </td>
-                                  <td className="px-2 py-1.5 text-right">
-                                    {p.ip}
-                                  </td>
-                                  <td className="px-2 py-1.5 text-right">
-                                    {p.h}
-                                  </td>
-                                  <td className="px-2 py-1.5 text-right">
-                                    {p.r}
-                                  </td>
-                                  <td className="px-2 py-1.5 text-right">
-                                    {p.er}
-                                  </td>
-                                  <td className="px-2 py-1.5 text-right">
-                                    {p.bb}
-                                  </td>
-                                  <td className="px-2 py-1.5 text-right">
-                                    {p.so}
-                                  </td>
-                                </tr>
-                              ))}
+                              {pitchers.map((p, idx) => {
+                                // Helper functions
+                                const formatBAvg = (val) => {
+                                  if (val === null || val === undefined)
+                                    return "—";
+                                  const num = Number(val);
+                                  if (Number.isNaN(num)) return val;
+                                  return num.toFixed(3).slice(1); // .256
+                                };
+
+                                const formatEra = (val) => {
+                                  if (val === null || val === undefined)
+                                    return "—";
+                                  // Handle "INF" or infinite ERA
+                                  if (
+                                    typeof val === "string" &&
+                                    val.toLowerCase().includes("inf")
+                                  )
+                                    return "∞";
+                                  const num = Number(val);
+                                  if (Number.isNaN(num)) return val;
+                                  return num.toFixed(2); // 3.27
+                                };
+
+                                const safeDisplay = (val) => {
+                                  if (val === null || val === undefined)
+                                    return "—";
+                                  return val;
+                                };
+
+                                return (
+                                  <tr
+                                    key={p.id ?? p.player_name}
+                                    className={
+                                      idx % 2 === 0 ? "bg-white" : "bg-gray-50"
+                                    }
+                                  >
+                                    <td className="px-4 py-1.5 font-medium text-gray-900 sticky left-0 bg-inherit">
+                                      {p.player_name}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-center">
+                                      {p.jersey_num || "—"}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-right font-medium text-blue-600">
+                                      {formatEra(p.era)}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-right">
+                                      {safeDisplay(p.w)}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-right">
+                                      {safeDisplay(p.l)}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-right">
+                                      {safeDisplay(p.app)}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-right">
+                                      {safeDisplay(p.gs)}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-right">
+                                      {safeDisplay(p.cg)}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-right">
+                                      {safeDisplay(p.sho)}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-right">
+                                      {safeDisplay(p.cbo)}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-right">
+                                      {safeDisplay(p.sv)}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-right">
+                                      {safeDisplay(p.ip)}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-right">
+                                      {safeDisplay(p.h)}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-right">
+                                      {safeDisplay(p.r)}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-right">
+                                      {safeDisplay(p.er)}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-right">
+                                      {safeDisplay(p.bb)}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-right">
+                                      {safeDisplay(p.so)}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-right">
+                                      {safeDisplay(p.doubles || p["2b"])}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-right">
+                                      {safeDisplay(p.triples || p["3b"])}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-right">
+                                      {safeDisplay(p.hr)}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-right">
+                                      {safeDisplay(p.ab)}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-right">
+                                      {formatBAvg(p.b_avg)}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-right">
+                                      {safeDisplay(p.wp)}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-right">
+                                      {safeDisplay(p.hbp)}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-right">
+                                      {safeDisplay(p.bk)}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-right">
+                                      {safeDisplay(p.sfa)}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-right">
+                                      {safeDisplay(p.sha)}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
                             </tbody>
                           </table>
                         </div>

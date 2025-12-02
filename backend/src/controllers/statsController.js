@@ -1,23 +1,19 @@
+// backend/src/controllers/statsController.js
 import { pool } from "../db.js";
+
+/* ====================== OVERVIEW SUMMARY ====================== */
 
 export const getStatsOverview = async (_req, res) => {
   try {
     const champsResult = await pool.query("SELECT COUNT(*) FROM championships");
-    const total_championships = parseInt(champsResult.rows[0].count, 10);
-
     const teamsResult = await pool.query("SELECT COUNT(*) FROM teams");
-    const total_teams = parseInt(teamsResult.rows[0].count, 10);
-
     const mlbResult = await pool.query("SELECT COUNT(*) FROM mlb_alumni");
-    const mlb_alumni = parseInt(mlbResult.rows[0].count, 10);
-
     const hofResult = await pool.query("SELECT COUNT(*) FROM hall_of_fame");
-    const hall_of_fame_members = parseInt(hofResult.rows[0].count, 10);
 
     const mostSuccessfulResult = await pool.query(`
       SELECT
         t.name,
-        COUNT(c.id) as championships
+        COUNT(c.id) AS championships
       FROM teams t
       LEFT JOIN championships c ON t.id = c.champion_team_id
       GROUP BY t.id, t.name
@@ -25,17 +21,15 @@ export const getStatsOverview = async (_req, res) => {
       LIMIT 1
     `);
 
-    const most_successful_team = mostSuccessfulResult.rows[0] || {
-      name: "—",
-      championships: 0,
-    };
-
     res.json({
-      total_championships: total_championships,
-      total_teams: total_teams,
-      hall_of_fame_members: hall_of_fame_members,
-      mlb_alumni: mlb_alumni,
-      most_successful_team: most_successful_team,
+      total_championships: parseInt(champsResult.rows[0].count, 10),
+      total_teams: parseInt(teamsResult.rows[0].count, 10),
+      mlb_alumni: parseInt(mlbResult.rows[0].count, 10),
+      hall_of_fame_members: parseInt(hofResult.rows[0].count, 10),
+      most_successful_team: mostSuccessfulResult.rows[0] || {
+        name: "—",
+        championships: 0,
+      },
     });
   } catch (err) {
     console.error("statistics/overview error:", err);
@@ -43,52 +37,255 @@ export const getStatsOverview = async (_req, res) => {
   }
 };
 
+/* ====================== PLAYER (BATTING) STATS ====================== */
+/**
+ * If year === 1966 → use legacy player_stats table.
+ * Otherwise → use batting_stats + players + teams (your working 2024/2025 path).
+ */
 export const getPlayerStats = async (req, res) => {
   try {
     const { year, team } = req.query;
+
+    if (!year) {
+      return res
+        .status(400)
+        .json({ error: "Query parameter 'year' is required" });
+    }
+
+    const y = parseInt(year, 10);
+    if (Number.isNaN(y)) {
+      return res.status(400).json({ error: "Invalid 'year' parameter" });
+    }
+
+    /* ---------- A) 1966 → legacy player_stats ---------- */
+    if (y === 1966) {
+      const params = [y];
+      let teamFilterSql = "";
+
+      if (team) {
+        params.push(`%${team.toLowerCase()}%`);
+        teamFilterSql = ` AND LOWER(team_name) LIKE $${params.length}`;
+      }
+
+      const sql = `
+        SELECT
+          id,
+          year,
+          team_name,
+          player_name,
+          g,
+          ab,
+          r,
+          h,
+          "2b",
+          "3b",
+          hr,
+          sb,
+          sh,
+          rbi
+        FROM public.player_stats
+        WHERE year = $1
+        ${teamFilterSql}
+        ORDER BY team_name, player_name
+      `;
+
+      const { rows } = await pool.query(sql, params);
+
+      const formatted = rows.map((r) => {
+        const avg =
+          r.ab && r.ab !== 0
+            ? Number((Number(r.h) / Number(r.ab)).toFixed(3))
+            : null;
+
+        return {
+          id: r.id,
+          year: r.year,
+          team_name: r.team_name,
+          player_name: r.player_name,
+          g: r.g,
+          gp: r.g,
+          ab: r.ab,
+          r: r.r,
+          h: r.h,
+          "2b": r["2b"],
+          "3b": r["3b"],
+          hr: r.hr,
+          rbi: r.rbi,
+          bb: null,
+          so: null,
+          sb: r.sb,
+          avg,
+          obp: null,
+          slg: null,
+          ops: null,
+        };
+      });
+
+      return res.json(formatted);
+    }
+
+    /* ---------- B) 2024/2025 → batting_stats path (CORRECTED WITH ALL 27 FIELDS) ---------- */
+
     const conditions = [];
     const params = [];
 
     if (year) {
       params.push(parseInt(year, 10));
-      conditions.push(`year = $${params.length}`);
-    }
-    if (team) {
-      params.push(`%${team.toLowerCase()}%`);
-      conditions.push(`LOWER(team_name) LIKE $${params.length}`);
+      conditions.push(`b.year = $${params.length}`);
     }
 
-    const whereSql = conditions.length
-      ? `WHERE ${conditions.join(" AND ")}`
-      : "";
+    if (team) {
+      params.push(`%${team.toLowerCase()}%`);
+      conditions.push(`LOWER(t.name) LIKE $${params.length}`);
+    }
+
+    const whereSql =
+      conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
     const sql = `
       SELECT
-        id, year, team_name, player_name, position,
-        g, ab, r, h, "2b", "3b", hr, sb, sh, rbi, po, a, e, pct
-      FROM public.player_stats
+        b.id,
+        b.year,
+        t.name AS team_name,
+        p.first_name,
+        p.last_name,
+        b.jersey_num,
+        b.position,
+        b.gp,
+        b.gs,
+        b.ab,
+        b.r,
+        b.h,
+        b."2b",
+        b."3b",
+        b.hr,
+        b.rbi,
+        b.tb,
+        b.slg,
+        b.bb,
+        b.hbp,
+        b.so,
+        b.gdp,
+        b.obp,
+        b.sf,
+        b.sh,
+        b.sb,
+        b.att,
+        b.avg,
+        b.po,
+        b.a,
+        b.e,
+        b.fld
+      FROM public.batting_stats AS b
+      JOIN public.players AS p ON p.id = b.player_id
+      JOIN public.teams   AS t ON t.id = b.team_id
       ${whereSql}
-      ORDER BY year DESC, team_name, player_name
+      ORDER BY b.year DESC, t.name, p.last_name, p.first_name
     `;
+
     const { rows } = await pool.query(sql, params);
-    res.json(rows);
+
+    const formatted = rows.map((r) => ({
+      id: r.id,
+      year: r.year,
+      team_name: r.team_name,
+      player_name: `${r.first_name ?? ""} ${r.last_name ?? ""}`.trim(),
+      jersey_num: r.jersey_num,
+      position: r.position,
+      g: r.gp,
+      gp: r.gp,
+      gs: r.gs,
+      ab: r.ab,
+      r: r.r,
+      h: r.h,
+      "2b": r["2b"],
+      "3b": r["3b"],
+      hr: r.hr,
+      rbi: r.rbi,
+      tb: r.tb,
+      slg: r.slg,
+      bb: r.bb,
+      hbp: r.hbp,
+      so: r.so,
+      gdp: r.gdp,
+      obp: r.obp,
+      sf: r.sf,
+      sh: r.sh,
+      sb: r.sb,
+      att: r.att,
+      avg: r.avg,
+      po: r.po,
+      a: r.a,
+      e: r.e,
+      fld: r.fld,
+      ops:
+        r.obp != null && r.slg != null
+          ? Number((Number(r.obp) + Number(r.slg)).toFixed(3))
+          : null,
+    }));
+
+    return res.json(formatted);
   } catch (err) {
     console.error(" /api/player-stats error:", err);
     res.status(500).json({ error: "Failed to fetch player stats" });
   }
 };
 
+/**
+ * Years for the Player Stats dropdown.
+ * Union of:
+ *  - legacy player_stats (1966, 2025)
+ *  - batting_stats (2024/2025)
+ *  - pitching_stats (in case of extra years)
+ * Uses per-table try/catch so it **won't crash** if any table is missing.
+ */
 export const getPlayerStatsYears = async (_req, res) => {
   try {
-    const { rows } = await pool.query(
-      `SELECT DISTINCT year FROM public.player_stats ORDER BY year DESC`
-    );
-    res.json(rows.map((r) => r.year));
+    const years = new Set();
+
+    const collect = (rows) => {
+      for (const r of rows) {
+        const y = parseInt(r.year, 10);
+        if (!Number.isNaN(y)) years.add(y);
+      }
+    };
+
+    try {
+      const r1 = await pool.query(
+        `SELECT DISTINCT year FROM public.player_stats`
+      );
+      collect(r1.rows);
+    } catch (e) {
+      console.warn("player_stats year query failed:", e.message);
+    }
+
+    try {
+      const r2 = await pool.query(
+        `SELECT DISTINCT year FROM public.batting_stats`
+      );
+      collect(r2.rows);
+    } catch (e) {
+      console.warn("batting_stats year query failed:", e.message);
+    }
+
+    try {
+      const r3 = await pool.query(
+        `SELECT DISTINCT year FROM public.pitching_stats`
+      );
+      collect(r3.rows);
+    } catch (e) {
+      console.warn("pitching_stats year query failed:", e.message);
+    }
+
+    const sorted = Array.from(years).sort((a, b) => b - a); // e.g. [2025, 2024, 1966]
+    res.json(sorted);
   } catch (err) {
     console.error(" /api/player-stats/years error:", err);
     res.status(500).json({ error: "Failed to fetch years" });
   }
 };
+
+/* ====================== PITCHING STATS (2024/2025) - CORRECTED WITH ALL 27 FIELDS ====================== */
 
 export const getPitchingStats = async (req, res) => {
   try {
@@ -98,27 +295,94 @@ export const getPitchingStats = async (req, res) => {
 
     if (year) {
       params.push(parseInt(year, 10));
-      conditions.push(`year = $${params.length}`);
-    }
-    if (team) {
-      params.push(`%${team.toLowerCase()}%`);
-      conditions.push(`LOWER(team_name) LIKE $${params.length}`);
+      conditions.push(`ps.year = $${params.length}`);
     }
 
-    const whereSql = conditions.length
-      ? `WHERE ${conditions.join(" AND ")}`
-      : "";
+    if (team) {
+      params.push(`%${team.toLowerCase()}%`);
+      conditions.push(`LOWER(t.name) LIKE $${params.length}`);
+    }
+
+    const whereSql =
+      conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
     const sql = `
       SELECT
-        id, year, team_name, player_name,
-        g, w, l, ip, h, r, er, bb, so, wp, hb
-      FROM public.pitching_stats
+        ps.id,
+        ps.year,
+        t.name AS team_name,
+        p.first_name,
+        p.last_name,
+        ps.jersey_num,
+        ps.era,
+        ps.w,
+        ps.l,
+        ps.app,
+        ps.gs,
+        ps.cg,
+        ps.sho,
+        ps.cbo,
+        ps.sv,
+        ps.ip,
+        ps.h,
+        ps.r,
+        ps.er,
+        ps.bb,
+        ps.so,
+        ps."2b",
+        ps."3b",
+        ps.hr,
+        ps.ab,
+        ps.b_avg,
+        ps.wp,
+        ps.hbp,
+        ps.bk,
+        ps.sfa,
+        ps.sha
+      FROM public.pitching_stats AS ps
+      JOIN public.players AS p ON p.id = ps.player_id
+      JOIN public.teams   AS t ON t.id = ps.team_id
       ${whereSql}
-      ORDER BY year DESC, team_name, player_name
+      ORDER BY ps.year DESC, t.name, p.last_name, p.first_name
     `;
+
     const { rows } = await pool.query(sql, params);
-    res.json(rows);
+
+    const formatted = rows.map((r) => ({
+      id: r.id,
+      year: r.year,
+      team_name: r.team_name,
+      player_name: `${r.first_name ?? ""} ${r.last_name ?? ""}`.trim(),
+      jersey_num: r.jersey_num,
+      era: r.era,
+      w: r.w,
+      l: r.l,
+      app: r.app,
+      g: r.app,
+      gs: r.gs,
+      cg: r.cg,
+      sho: r.sho,
+      cbo: r.cbo,
+      sv: r.sv,
+      ip: r.ip,
+      h: r.h,
+      r: r.r,
+      er: r.er,
+      bb: r.bb,
+      so: r.so,
+      "2b": r["2b"],
+      "3b": r["3b"],
+      hr: r.hr,
+      ab: r.ab,
+      b_avg: r.b_avg,
+      wp: r.wp,
+      hbp: r.hbp,
+      bk: r.bk,
+      sfa: r.sfa,
+      sha: r.sha,
+    }));
+
+    res.json(formatted);
   } catch (err) {
     console.error(" /api/pitching-stats error:", err);
     res.status(500).json({ error: "Failed to fetch pitching stats" });

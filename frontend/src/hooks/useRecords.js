@@ -8,7 +8,7 @@ export function useRecords() {
 
   useEffect(() => {
     let stop = false;
-    // FIX: Change from "/records" to "/records/overview"
+
     API.get("/records/overview")
       .then((r) => !stop && setRecords(r.data))
       .catch((e) => {

@@ -8,6 +8,7 @@ import hofRoutes from "./hofRoutes.js";
 import recordsRoutes from "./recordsRoutes.js";
 import searchRoutes from "./searchRoutes.js";
 import healthRoutes from "./healthRoutes.js";
+import playerStatsRoutes from "./playerStatsRoutes.js";
 import playerRoutes from "./playerRoutes.js";
 import tournamentRoutes from "./tournamentRoutes.js";
 import authRoutes from "./authRoutes.js"; // <-- 1. IMPORT THE AUTH ROUTER
