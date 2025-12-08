@@ -1,4 +1,4 @@
-import { pool } from "../src/db.js";
+import { pool } from "../../src/db.js";
 
 async function createRecordsTables() {
   const client = await pool.connect();

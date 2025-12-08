@@ -16,6 +16,7 @@ const TeamDetail = React.lazy(() => import("./pages/TeamDetail"));
 const HallOfFame = React.lazy(() => import("./pages/HallOfFame"));
 const Records = React.lazy(() => import("./pages/Records"));
 const PlayerStatsPage = React.lazy(() => import("./pages/PlayerStatsPage"));
+const PlayerProfile = React.lazy(() => import("./pages/PlayerProfile"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 
 // A simple loading component to show while pages are loading
@@ -47,8 +48,9 @@ export default function App() {
               element={<ChampionshipDetail />}
             />
             <Route path="/teams/:teamSlug" element={<TeamDetail />} />
+            <Route path="/players/:id" element={<PlayerProfile />} />
 
-            {/* 404 Not Found Page */}
+            {/* 404 Catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
-import { Search, ChevronRight } from "lucide-react";
+import { Search, ChevronRight, User } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { usePlayerStatsPage } from "../hooks/usePlayerStatsPage";
 import { Container } from "../components/common/Container";
 import { SectionTitle } from "../components/common/SectionTitle";
@@ -9,6 +10,7 @@ import { Skeleton } from "../components/common/Skeleton";
 import { PlayerStatsTable } from "../components/player-stats/PlayerStatsTable";
 
 export default function PlayerStatsPage() {
+  const navigate = useNavigate();
   const {
     availableYears,
     selectedYear,
@@ -23,6 +25,12 @@ export default function PlayerStatsPage() {
   const [teamFilter, setTeamFilter] = useState("");
   const [search, setSearch] = useState("");
   const [expandedTeam, setExpandedTeam] = useState(null);
+
+  // Player search state
+  const [playerSearchQuery, setPlayerSearchQuery] = useState("");
+  const [playerSearchResults, setPlayerSearchResults] = useState([]);
+  const [playerSearchLoading, setPlayerSearchLoading] = useState(false);
+  const [showPlayerSearch, setShowPlayerSearch] = useState(false);
 
   // Memo: Get team list from batting data
   const allTeams = useMemo(() => {
@@ -75,6 +83,41 @@ export default function PlayerStatsPage() {
     });
   };
 
+  // Player search across all years
+  const handlePlayerSearch = async (query) => {
+    setPlayerSearchQuery(query);
+
+    if (!query || query.length < 2) {
+      setPlayerSearchResults([]);
+      setShowPlayerSearch(false);
+      return;
+    }
+
+    setPlayerSearchLoading(true);
+    setShowPlayerSearch(true);
+
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/players/search?q=${encodeURIComponent(
+          query
+        )}`
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setPlayerSearchResults(data);
+      }
+    } catch (error) {
+      console.error("Player search error:", error);
+    } finally {
+      setPlayerSearchLoading(false);
+    }
+  };
+
+  const handlePlayerClick = (playerId) => {
+    navigate(`/players/${playerId}`);
+  };
+
   const handleYearChange = (e) => {
     setSelectedYear(e.target.value || null);
   };
@@ -86,8 +129,75 @@ export default function PlayerStatsPage() {
       <SectionTitle
         eyebrow="Box Scores"
         title="Player Statistics"
-        desc="Detailed individual player statistics by team and year. Data currently available for 1966 and 2025."
+        desc="Detailed individual player statistics by team and year. Data currently available for 2020 through 2025."
       />
+
+      {/* Cross-Year Player Search */}
+      <Card className="mb-6">
+        <CardBody>
+          <div className="flex items-center gap-2 mb-3">
+            <User size={20} className="text-blue-600" />
+            <h3 className="font-bold text-gray-900">Find Player History</h3>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">
+            Search for any player to see their complete NBC World Series history
+            across all years
+          </p>
+          <div className="relative">
+            <Search
+              size={18}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            />
+            <input
+              value={playerSearchQuery}
+              onChange={(e) => handlePlayerSearch(e.target.value)}
+              className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Search by player name (e.g., 'Jake Gutierrez')"
+            />
+          </div>
+
+          {/* Player Search Results */}
+          {showPlayerSearch && (
+            <div className="mt-4">
+              {playerSearchLoading ? (
+                <div className="text-center py-4 text-gray-600">
+                  Searching...
+                </div>
+              ) : playerSearchResults.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600 mb-2">
+                    Found {playerSearchResults.length} player
+                    {playerSearchResults.length !== 1 ? "s" : ""}
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-60 overflow-y-auto">
+                    {playerSearchResults.map((player) => (
+                      <button
+                        key={player.id}
+                        onClick={() => handlePlayerClick(player.id)}
+                        className="flex items-center gap-2 p-3 text-left border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                      >
+                        <User size={16} className="text-gray-400" />
+                        <span className="font-medium text-gray-900">
+                          {player.full_name ||
+                            `${player.first_name} ${player.last_name}`}
+                        </span>
+                        <ChevronRight
+                          size={16}
+                          className="ml-auto text-gray-400"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-4 text-gray-600">
+                  No players found matching "{playerSearchQuery}"
+                </div>
+              )}
+            </div>
+          )}
+        </CardBody>
+      </Card>
 
       {/* Controls bar */}
       <Card className="mb-6">
@@ -138,13 +248,13 @@ export default function PlayerStatsPage() {
             </select>
           </div>
 
-          {/* Player search */}
+          {/* Player search (current year) */}
           <div className="flex-1 min-w-[180px]">
             <label
               htmlFor="player-search"
               className="block text-xs font-semibold text-gray-600 mb-1"
             >
-              Player search
+              Filter {selectedYear} players
             </label>
             <div className="relative">
               <Search
@@ -157,7 +267,7 @@ export default function PlayerStatsPage() {
                 onChange={(e) => setSearch(e.target.value)}
                 disabled={loading}
                 className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Search by player name or position"
+                placeholder="Filter by name or position"
               />
             </div>
           </div>
@@ -258,7 +368,7 @@ export default function PlayerStatsPage() {
                     {/* BATTING TABLE */}
                     <PlayerStatsTable players={team.players} />
 
-                    {/* PITCHING TABLE - MATCHES PDF EXACTLY */}
+                    {/* PITCHING TABLE */}
                     {pitchers.length > 0 && (
                       <div className="mt-6 border-t border-gray-200 pt-4">
                         <div className="px-6 mb-3">
@@ -268,7 +378,6 @@ export default function PlayerStatsPage() {
                         </div>
 
                         <div className="overflow-x-auto">
-                          {/* Wider min-width for all columns */}
                           <table className="w-full min-w-[1800px] text-xs md:text-sm">
                             <thead className="bg-gray-50">
                               <tr className="border-b border-gray-200 text-gray-700">
@@ -357,19 +466,17 @@ export default function PlayerStatsPage() {
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                               {pitchers.map((p, idx) => {
-                                // Helper functions
                                 const formatBAvg = (val) => {
                                   if (val === null || val === undefined)
                                     return "—";
                                   const num = Number(val);
                                   if (Number.isNaN(num)) return val;
-                                  return num.toFixed(3).slice(1); // .256
+                                  return num.toFixed(3).slice(1);
                                 };
 
                                 const formatEra = (val) => {
                                   if (val === null || val === undefined)
                                     return "—";
-                                  // Handle "INF" or infinite ERA
                                   if (
                                     typeof val === "string" &&
                                     val.toLowerCase().includes("inf")
@@ -377,7 +484,7 @@ export default function PlayerStatsPage() {
                                     return "∞";
                                   const num = Number(val);
                                   if (Number.isNaN(num)) return val;
-                                  return num.toFixed(2); // 3.27
+                                  return num.toFixed(2);
                                 };
 
                                 const safeDisplay = (val) => {
