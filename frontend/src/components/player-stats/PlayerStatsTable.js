@@ -1,5 +1,5 @@
 import React from "react";
-// FIX: Import 'battingStatColumns' and rename it to 'statColumns'
+import { Link } from "react-router-dom";
 import { battingStatColumns as statColumns } from "../../constants/stats";
 
 export function PlayerStatsTable({ players }) {
@@ -16,7 +16,6 @@ export function PlayerStatsTable({ players }) {
               Player
             </th>
             <th className="px-2 py-2 text-left font-semibold w-24">Pos</th>
-            {/* FIX: This line now works */}
             {statColumns.map((col) => (
               <th
                 key={col.key}
@@ -34,15 +33,20 @@ export function PlayerStatsTable({ players }) {
               className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
             >
               <td
-                className="px-4 py-1.5 whitespace-nowrap sticky left-0 z-10 w-48 font-medium text-gray-900"
+                className="px-4 py-1.5 whitespace-nowrap sticky left-0 z-10 w-48 font-medium"
                 style={{
                   backgroundColor: idx % 2 === 0 ? "white" : "#F9FAFB",
                 }}
               >
-                {p.player_name}
+                {/* FIXED: Use p.id (not p.player_id) */}
+                <Link
+                  to={`/players/${p.id}`}
+                  className="text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+                >
+                  {p.player_name}
+                </Link>
               </td>
               <td className="px-2 py-1.5">{p.position || "—"}</td>
-              {/* FIX: This line now works */}
               {statColumns.map((col) => (
                 <td key={col.key} className="px-2 py-1.5 text-right">
                   {p[col.key] === null ||

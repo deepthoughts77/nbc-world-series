@@ -1,4 +1,114 @@
+// backend/src/controllers/playerController.js
 import { pool } from "../db.js";
+
+/**
+ * Resolve a "raw" id (from the frontend) into a canonical player_id.
+ *
+ * The ID coming from the frontend might be:
+ *  - a players.id
+ *  - a batting_stats.id
+ *  - a pitching_stats.id
+ *  - or already a batting_stats.player_id / pitching_stats.player_id
+ */
+const resolvePlayerId = async (rawId) => {
+  const id = Number(rawId);
+
+  // 1) If this ID is already used as player_id in any stats table, use it directly
+  try {
+    const r1 = await pool.query(
+      `SELECT 1 FROM batting_stats WHERE player_id = $1 LIMIT 1`,
+      [id]
+    );
+    const r2 = await pool.query(
+      `SELECT 1 FROM pitching_stats WHERE player_id = $1 LIMIT 1`,
+      [id]
+    );
+    if (r1.rowCount > 0 || r2.rowCount > 0) {
+      return id;
+    }
+  } catch (e) {
+    console.warn("resolvePlayerId: check player_id failed:", e.message);
+  }
+
+  // 2) Maybe the ID is a batting_stats row id
+  try {
+    const r = await pool.query(
+      `SELECT player_id FROM batting_stats WHERE id = $1 LIMIT 1`,
+      [id]
+    );
+    if (r.rows[0]?.player_id) {
+      return r.rows[0].player_id;
+    }
+  } catch (e) {
+    console.warn("resolvePlayerId: batting_stats.id lookup failed:", e.message);
+  }
+
+  // 3) Maybe the ID is a pitching_stats row id
+  try {
+    const r = await pool.query(
+      `SELECT player_id FROM pitching_stats WHERE id = $1 LIMIT 1`,
+      [id]
+    );
+    if (r.rows[0]?.player_id) {
+      return r.rows[0].player_id;
+    }
+  } catch (e) {
+    console.warn(
+      "resolvePlayerId: pitching_stats.id lookup failed:",
+      e.message
+    );
+  }
+
+  // 4) As a last resort, maybe it's players.id and stats use player_id = players.id
+  try {
+    const r = await pool.query(`SELECT 1 FROM players WHERE id = $1 LIMIT 1`, [
+      id,
+    ]);
+    if (r.rowCount > 0) {
+      // we assume player_id in stats = players.id
+      return id;
+    }
+  } catch (e) {
+    console.warn("resolvePlayerId: players.id lookup failed:", e.message);
+  }
+
+  // If nothing matched, just return original id (will likely lead to 404 later)
+  return id;
+};
+
+/**
+ * Safely resolve a player's name by player_id.
+ * Tries likely column names on the players table.
+ */
+const getPlayerNameSafe = async (playerId) => {
+  // 1) Try players.name
+  try {
+    const r = await pool.query(
+      `SELECT name FROM players WHERE id = $1 LIMIT 1`,
+      [playerId]
+    );
+    if (r.rows[0]?.name) return r.rows[0].name;
+  } catch (e) {
+    console.warn("getPlayerNameSafe: players.name lookup failed:", e.message);
+  }
+
+  // 2) Try players.player_name (just in case)
+  try {
+    const r = await pool.query(
+      `SELECT player_name FROM players WHERE id = $1 LIMIT 1`,
+      [playerId]
+    );
+    if (r.rows[0]?.player_name) return r.rows[0].player_name;
+  } catch (e) {
+    console.warn(
+      "getPlayerNameSafe: players.player_name lookup failed:",
+      e.message
+    );
+  }
+
+  // Fallback
+  return "Unknown Player";
+};
 
 /**
  * @description Search for players by name
@@ -8,23 +118,37 @@ export const searchPlayers = async (req, res) => {
   const q = (req.query.q || "").trim();
   if (!q) return res.json([]);
 
+  const term = `%${q.toLowerCase()}%`;
+
+  // 1) Preferred: search players table by name
   try {
     const { rows } = await pool.query(
-      `SELECT DISTINCT p.id, p.first_name, p.last_name,
-              CONCAT(p.first_name, ' ', p.last_name) AS full_name
-       FROM players p
-       LEFT JOIN batting_stats b ON p.id = b.player_id
-       LEFT JOIN pitching_stats pi ON p.id = pi.player_id
-       WHERE LOWER(CONCAT(p.first_name, ' ', p.last_name)) LIKE LOWER($1)
-       ORDER BY p.last_name, p.first_name
+      `SELECT 
+         id,
+         name
+       FROM players
+       WHERE LOWER(name) LIKE $1
+       ORDER BY name
        LIMIT 25`,
-      [`%${q}%`]
+      [term]
     );
-    res.json(rows);
+
+    if (rows.length > 0) {
+      return res.json(
+        rows.map((r) => ({
+          id: r.id,
+          full_name: r.name,
+        }))
+      );
+    }
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "Search failed" });
+    console.warn("searchPlayers: players.name search failed:", e.message);
   }
+
+  // 2) Fallbacks (if you later add player_name to stats / players, you can extend here)
+
+  // If everything fails, don't crash the UI
+  return res.json([]);
 };
 
 /**
@@ -32,29 +156,27 @@ export const searchPlayers = async (req, res) => {
  * @route GET /api/players/:id
  */
 export const getPlayerById = async (req, res) => {
-  const id = Number(req.params.id);
-  if (!Number.isInteger(id)) {
+  const rawId = req.params.id;
+  const numericId = Number(rawId);
+  if (!Number.isInteger(numericId)) {
     return res.status(400).json({ error: "Invalid id" });
   }
 
   try {
-    // 1. Get player's main details
-    const playerResult = await pool.query(
-      `SELECT * FROM players WHERE id = $1`,
-      [id]
-    );
+    // 1) Resolve the REAL player_id from whatever ID the frontend sent
+    const playerId = await resolvePlayerId(numericId);
 
-    if (!playerResult.rows.length) {
-      return res.status(404).json({ error: "Player not found" });
-    }
+    // 2) Grab the player name using that player_id
+    const playerName = await getPlayerNameSafe(playerId);
+    const nameParts = playerName.trim().split(" ");
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.slice(1).join(" ") || "";
 
-    const player = playerResult.rows[0];
-
-    // 2. Get batting stats by year - using ACTUAL column names from your database
+    // 3) Batting stats across all years/teams
     const battingStatsResult = await pool.query(
       `SELECT 
         b.year,
-        t.name as team_name,
+        t.name AS team_name,
         t.city,
         t.state,
         b.jersey_num,
@@ -63,8 +185,8 @@ export const getPlayerById = async (req, res) => {
         b.ab, 
         b.r, 
         b.h,
-        b."2b" as doubles,
-        b."3b" as triples,
+        b."2b" AS doubles,
+        b."3b" AS triples,
         b.hr, 
         b.rbi,
         b.tb,
@@ -78,26 +200,25 @@ export const getPlayerById = async (req, res) => {
         b.sh,
         b.sb,
         b.cs,
-        b.att,
+        b.att AS sb_att,
         b.position,
         b.po,
         b.a,
         b.e,
         b.fld,
-        b.avg,
-        b.sb_att
+        b.avg
        FROM batting_stats b
        JOIN teams t ON b.team_id = t.id
        WHERE b.player_id = $1
        ORDER BY b.year DESC`,
-      [id]
+      [playerId]
     );
 
-    // 3. Get pitching stats by year - using ACTUAL column names
+    // 4) Pitching stats across all years/teams
     const pitchingStatsResult = await pool.query(
       `SELECT 
         p.year,
-        t.name as team_name,
+        t.name AS team_name,
         t.city,
         t.state,
         p.jersey_num,
@@ -116,8 +237,8 @@ export const getPlayerById = async (req, res) => {
         p.er,
         p.bb, 
         p.so,
-        p."2b" as doubles,
-        p."3b" as triples,
+        p."2b" AS doubles,
+        p."3b" AS triples,
         p.hr, 
         p.ab, 
         p.b_avg, 
@@ -130,74 +251,79 @@ export const getPlayerById = async (req, res) => {
        JOIN teams t ON p.team_id = t.id
        WHERE p.player_id = $1
        ORDER BY p.year DESC`,
-      [id]
+      [playerId]
     );
 
-    // 4. Get career batting totals
+    // 5) If no stats at all, treat as not found
+    if (!battingStatsResult.rows.length && !pitchingStatsResult.rows.length) {
+      return res.status(404).json({ error: "Player not found" });
+    }
+
+    // 6) Career batting totals
     const careerBattingResult = await pool.query(
       `SELECT 
-        COUNT(DISTINCT year) as seasons,
-        COUNT(DISTINCT team_id) as teams_count,
-        SUM(gp) as total_gp,
-        SUM(ab) as total_ab,
-        SUM(h) as total_h,
-        SUM(r) as total_r,
-        SUM(rbi) as total_rbi,
-        SUM(hr) as total_hr,
-        SUM(bb) as total_bb,
-        SUM(so) as total_so,
-        SUM(sb) as total_sb,
-        SUM("2b") as total_2b,
-        SUM("3b") as total_3b,
-        SUM(COALESCE(tb, 0)) as total_tb,
+        COUNT(DISTINCT year) AS seasons,
+        COUNT(DISTINCT team_id) AS teams_count,
+        SUM(gp) AS total_gp,
+        SUM(ab) AS total_ab,
+        SUM(h) AS total_h,
+        SUM(r) AS total_r,
+        SUM(rbi) AS total_rbi,
+        SUM(hr) AS total_hr,
+        SUM(bb) AS total_bb,
+        SUM(so) AS total_so,
+        SUM(sb) AS total_sb,
+        SUM("2b") AS total_2b,
+        SUM("3b") AS total_3b,
+        SUM(COALESCE(tb, 0)) AS total_tb,
         CASE 
           WHEN SUM(ab) > 0 
           THEN ROUND(CAST(SUM(h) AS DECIMAL) / SUM(ab), 3)::TEXT
           ELSE '.000'
-        END as career_avg,
+        END AS career_avg,
         CASE 
           WHEN SUM(ab) + SUM(bb) > 0 
           THEN ROUND(CAST(SUM(h) + SUM(bb) AS DECIMAL) / (SUM(ab) + SUM(bb)), 3)::TEXT
           ELSE '.000'
-        END as career_obp,
+        END AS career_obp,
         CASE 
           WHEN SUM(ab) > 0 AND SUM(COALESCE(tb, 0)) > 0
           THEN ROUND(CAST(SUM(COALESCE(tb, 0)) AS DECIMAL) / SUM(ab), 3)::TEXT
           ELSE '.000'
-        END as career_slg
+        END AS career_slg
        FROM batting_stats
        WHERE player_id = $1`,
-      [id]
+      [playerId]
     );
 
-    // 5. Get career pitching totals
+    // 7) Career pitching totals
     const careerPitchingResult = await pool.query(
       `SELECT 
-        COUNT(DISTINCT year) as seasons,
-        COUNT(DISTINCT team_id) as teams_count,
-        SUM(w) as total_w,
-        SUM(l) as total_l,
-        SUM(app) as total_app,
-        SUM(gs) as total_gs,
-        SUM(sv) as total_sv,
-        SUM(ip) as total_ip,
-        SUM(so) as total_so,
-        SUM(h) as total_h,
-        SUM(er) as total_er,
-        SUM(bb) as total_bb,
-        SUM(cg) as total_cg,
-        SUM(sho) as total_sho,
+        COUNT(DISTINCT year) AS seasons,
+        COUNT(DISTINCT team_id) AS teams_count,
+        SUM(w) AS total_w,
+        SUM(l) AS total_l,
+        SUM(app) AS total_app,
+        SUM(gs) AS total_gs,
+        SUM(sv) AS total_sv,
+        SUM(ip) AS total_ip,
+        SUM(so) AS total_so,
+        SUM(h) AS total_h,
+        SUM(er) AS total_er,
+        SUM(bb) AS total_bb,
+        SUM(cg) AS total_cg,
+        SUM(sho) AS total_sho,
         CASE 
           WHEN SUM(ip) > 0 
           THEN ROUND(CAST(SUM(er) * 9 AS DECIMAL) / SUM(ip), 2)::TEXT
           ELSE '0.00'
-        END as career_era
+        END AS career_era
        FROM pitching_stats
        WHERE player_id = $1`,
-      [id]
+      [playerId]
     );
 
-    // 6. Get all teams player has played for - FIXED query without ORDER BY in subquery
+    // 8) All teams this player has appeared for
     const teamsResult = await pool.query(
       `WITH team_years AS (
         SELECT 
@@ -205,9 +331,9 @@ export const getPlayerById = async (req, res) => {
           t.name,
           t.city,
           t.state,
-          b.year as b_year,
-          p.year as p_year,
-          COALESCE(b.year, p.year) as any_year
+          b.year AS b_year,
+          p.year AS p_year,
+          COALESCE(b.year, p.year) AS any_year
         FROM teams t
         LEFT JOIN batting_stats b ON t.id = b.team_id AND b.player_id = $1
         LEFT JOIN pitching_stats p ON t.id = p.team_id AND p.player_id = $1
@@ -217,34 +343,38 @@ export const getPlayerById = async (req, res) => {
         name,
         city,
         state,
-        ARRAY_AGG(DISTINCT b_year ORDER BY b_year) FILTER (WHERE b_year IS NOT NULL) as batting_years,
-        ARRAY_AGG(DISTINCT p_year ORDER BY p_year) FILTER (WHERE p_year IS NOT NULL) as pitching_years,
-        MIN(any_year) as first_year
+        ARRAY_AGG(DISTINCT b_year ORDER BY b_year) 
+          FILTER (WHERE b_year IS NOT NULL) AS batting_years,
+        ARRAY_AGG(DISTINCT p_year ORDER BY p_year) 
+          FILTER (WHERE p_year IS NOT NULL) AS pitching_years,
+        MIN(any_year) AS first_year
       FROM team_years
       GROUP BY name, city, state
       ORDER BY first_year`,
-      [id]
+      [playerId]
     );
 
-    // Get career stats (will be null if no stats exist)
     const careerBatting = careerBattingResult.rows[0];
     const careerPitching = careerPitchingResult.rows[0];
 
-    // Only include career stats if player actually has games played
     const battingCareer =
-      careerBatting && careerBatting.total_gp > 0 ? careerBatting : null;
+      careerBatting && Number(careerBatting.total_gp || 0) > 0
+        ? careerBatting
+        : null;
     const pitchingCareer =
-      careerPitching && careerPitching.total_app > 0 ? careerPitching : null;
+      careerPitching && Number(careerPitching.total_app || 0) > 0
+        ? careerPitching
+        : null;
 
-    // 7. Combine and send response
+    // 9) Final JSON response
     res.json({
       player: {
-        id: player.id,
-        firstName: player.first_name,
-        lastName: player.last_name,
-        fullName: `${player.first_name} ${player.last_name}`,
-        isHallOfFame: player.is_hall_of_fame || false,
-        mlbTeam: player.mlb_team,
+        id: playerId,
+        firstName,
+        lastName,
+        fullName: playerName,
+        isHallOfFame: false,
+        mlbTeam: null,
       },
       batting: {
         stats: battingStatsResult.rows,

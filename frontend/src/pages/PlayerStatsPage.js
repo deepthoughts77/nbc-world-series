@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { Search, ChevronRight, User } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { usePlayerStatsPage } from "../hooks/usePlayerStatsPage";
 import { Container } from "../components/common/Container";
 import { SectionTitle } from "../components/common/SectionTitle";
@@ -495,13 +495,19 @@ export default function PlayerStatsPage() {
 
                                 return (
                                   <tr
-                                    key={p.id ?? p.player_name}
+                                    key={p.id ?? p.player_id ?? p.player_name}
                                     className={
                                       idx % 2 === 0 ? "bg-white" : "bg-gray-50"
                                     }
                                   >
-                                    <td className="px-4 py-1.5 font-medium text-gray-900 sticky left-0 bg-inherit">
-                                      {p.player_name}
+                                    <td className="px-4 py-1.5 font-medium sticky left-0 bg-inherit">
+                                      {/* UPDATED: Make pitcher names clickable */}
+                                      <Link
+                                        to={`/players/${p.id || p.player_id}`}
+                                        className="text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+                                      >
+                                        {p.player_name}
+                                      </Link>
                                     </td>
                                     <td className="px-2 py-1.5 text-center">
                                       {p.jersey_num || "—"}
