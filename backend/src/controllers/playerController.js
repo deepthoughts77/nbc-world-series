@@ -78,35 +78,32 @@ const resolvePlayerId = async (rawId) => {
 
 /**
  * Safely resolve a player's name by player_id.
- * Tries likely column names on the players table.
+ * Uses players.first_name + players.last_name.
  */
 const getPlayerNameSafe = async (playerId) => {
-  // 1) Try players.name
   try {
     const r = await pool.query(
-      `SELECT name FROM players WHERE id = $1 LIMIT 1`,
+      `SELECT first_name, last_name
+       FROM players
+       WHERE id = $1
+       LIMIT 1`,
       [playerId]
     );
-    if (r.rows[0]?.name) return r.rows[0].name;
-  } catch (e) {
-    console.warn("getPlayerNameSafe: players.name lookup failed:", e.message);
-  }
 
-  // 2) Try players.player_name (just in case)
-  try {
-    const r = await pool.query(
-      `SELECT player_name FROM players WHERE id = $1 LIMIT 1`,
-      [playerId]
-    );
-    if (r.rows[0]?.player_name) return r.rows[0].player_name;
+    if (r.rows[0]) {
+      const first = r.rows[0].first_name || "";
+      const last = r.rows[0].last_name || "";
+      const full = `${first} ${last}`.trim();
+      if (full) return full;
+    }
   } catch (e) {
     console.warn(
-      "getPlayerNameSafe: players.player_name lookup failed:",
+      "getPlayerNameSafe: players first/last lookup failed:",
       e.message
     );
   }
 
-  // Fallback
+  // Fallback if somehow nothing is there
   return "Unknown Player";
 };
 
@@ -120,35 +117,29 @@ export const searchPlayers = async (req, res) => {
 
   const term = `%${q.toLowerCase()}%`;
 
-  // 1) Preferred: search players table by name
   try {
+    // Build a full_name from first_name + last_name
     const { rows } = await pool.query(
-      `SELECT 
+      `SELECT
          id,
-         name
+         (first_name || ' ' || last_name) AS full_name
        FROM players
-       WHERE LOWER(name) LIKE $1
-       ORDER BY name
+       WHERE LOWER(first_name || ' ' || last_name) LIKE $1
+       ORDER BY full_name
        LIMIT 25`,
       [term]
     );
 
-    if (rows.length > 0) {
-      return res.json(
-        rows.map((r) => ({
-          id: r.id,
-          full_name: r.name,
-        }))
-      );
-    }
+    return res.json(
+      rows.map((r) => ({
+        id: r.id,
+        full_name: r.full_name,
+      }))
+    );
   } catch (e) {
-    console.warn("searchPlayers: players.name search failed:", e.message);
+    console.warn("searchPlayers failed:", e.message);
+    return res.status(500).json({ error: "Search failed" });
   }
-
-  // 2) Fallbacks (if you later add player_name to stats / players, you can extend here)
-
-  // If everything fails, don't crash the UI
-  return res.json([]);
 };
 
 /**
