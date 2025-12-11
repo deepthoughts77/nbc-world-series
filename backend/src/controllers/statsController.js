@@ -5,75 +5,38 @@ import { pool } from "../db.js";
 
 export const getStatsOverview = async (_req, res) => {
   try {
-    // Simple counts – these should work in both local + Neon
-    const [champsResult, teamsResult, mlbResult, hofResult] = await Promise.all(
-      [
-        pool.query("SELECT COUNT(*) FROM public.championships"),
-        pool.query("SELECT COUNT(*) FROM public.teams"),
-        pool.query("SELECT COUNT(*) FROM public.mlb_alumni"),
-        pool.query("SELECT COUNT(*) FROM public.hall_of_fame"),
-      ]
-    );
+    const champsResult = await pool.query("SELECT COUNT(*) FROM championships");
+    const teamsResult = await pool.query("SELECT COUNT(*) FROM teams");
+    const mlbResult = await pool.query("SELECT COUNT(*) FROM mlb_alumni");
+    const hofResult = await pool.query("SELECT COUNT(*) FROM hall_of_fame");
 
-    let mostSuccessfulRow = null;
-
-    // 1) Try Neon-style schema: champion_name column
-    try {
-      const { rows } = await pool.query(`
-        SELECT
-          champion_name AS name,
-          COUNT(*) AS championships
-        FROM public.championships
-        WHERE champion_name IS NOT NULL AND champion_name <> ''
-        GROUP BY champion_name
-        ORDER BY championships DESC
-        LIMIT 1
-      `);
-      mostSuccessfulRow = rows[0] || null;
-    } catch (e1) {
-      console.warn(
-        "stats overview: champion_name query failed, trying legacy join:",
-        e1.message
-      );
-
-      // 2) Fallback: original local-style join on champion_team_id
-      try {
-        const { rows } = await pool.query(`
-          SELECT
-            t.name,
-            COUNT(c.id) AS championships
-          FROM public.teams t
-          LEFT JOIN public.championships c
-            ON t.id = c.champion_team_id
-          GROUP BY t.id, t.name
-          ORDER BY championships DESC
-          LIMIT 1
-        `);
-        mostSuccessfulRow = rows[0] || null;
-      } catch (e2) {
-        console.error(
-          "stats overview: fallback champion_team_id query also failed:",
-          e2.message
-        );
-        mostSuccessfulRow = null;
-      }
-    }
+    const mostSuccessfulResult = await pool.query(`
+      SELECT
+        t.name,
+        COUNT(c.id) AS championships
+      FROM teams t
+      LEFT JOIN championships c ON t.id = c.champion_team_id
+      GROUP BY t.id, t.name
+      ORDER BY championships DESC
+      LIMIT 1
+    `);
 
     res.json({
       total_championships: parseInt(champsResult.rows[0].count, 10),
       total_teams: parseInt(teamsResult.rows[0].count, 10),
       mlb_alumni: parseInt(mlbResult.rows[0].count, 10),
       hall_of_fame_members: parseInt(hofResult.rows[0].count, 10),
-      most_successful_team: mostSuccessfulRow || {
+      most_successful_team: mostSuccessfulResult.rows[0] || {
         name: "—",
         championships: 0,
       },
     });
   } catch (err) {
-    console.error("statistics/overview error (outer):", err);
+    console.error("statistics/overview error:", err);
     res.status(500).json({ error: "Failed to load statistics" });
   }
 };
+
 /* ====================== PLAYER (BATTING) STATS ====================== */
 /**
  * If year === 1966 → use legacy player_stats table.
