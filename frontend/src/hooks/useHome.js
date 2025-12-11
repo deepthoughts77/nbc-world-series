@@ -10,15 +10,23 @@ export function useHome() {
 
   useEffect(() => {
     let stop = false;
+
     async function load() {
       try {
         const [s, c] = await Promise.all([
           API.get("/statistics/overview"),
           API.get("/championships"),
         ]);
+
         if (stop) return;
-        setStats(s.data || {});
-        setRecent(pickArray(c).slice(0, 3));
+
+        // 🔑 unwrap { success, data: {...} } into just the inner stats object
+        const overview = s?.data?.data ?? s?.data ?? {};
+        setStats(overview);
+
+        // make sure we’re giving pickArray the actual payload
+        const champs = pickArray(c?.data ?? c);
+        setRecent(champs.slice(0, 3));
       } catch (e) {
         setErr("We couldn't load the latest overview. Please try again.");
         console.error("Home load error:", e);
@@ -26,6 +34,7 @@ export function useHome() {
         if (!stop) setLoading(false);
       }
     }
+
     load();
     return () => {
       stop = true;

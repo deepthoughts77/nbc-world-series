@@ -147,7 +147,7 @@ export default function Home() {
                     </div>
                     <div>
                       <div className="text-3xl font-black text-gray-900">
-                        {fmt(stats?.total_championships || 90)}
+                        {fmt(stats?.total_championships ?? 0)}
                       </div>
                       <div className="text-sm font-medium text-gray-600 mt-1">
                         Championships
@@ -165,7 +165,7 @@ export default function Home() {
                     </div>
                     <div>
                       <div className="text-3xl font-black text-gray-900">
-                        {fmt(stats?.total_teams)}
+                        {fmt(stats?.total_teams || 0)}
                       </div>
                       <div className="text-sm font-medium text-gray-600 mt-1">
                         Participating Teams

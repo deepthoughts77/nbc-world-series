@@ -21,19 +21,28 @@ export const getStatsOverview = async (_req, res) => {
       LIMIT 1
     `);
 
-    res.json({
-      total_championships: parseInt(champsResult.rows[0].count, 10),
-      total_teams: parseInt(teamsResult.rows[0].count, 10),
-      mlb_alumni: parseInt(mlbResult.rows[0].count, 10),
-      hall_of_fame_members: parseInt(hofResult.rows[0].count, 10),
+    const payload = {
+      total_championships: Number(champsResult.rows[0]?.count ?? 0),
+      total_teams: Number(teamsResult.rows[0]?.count ?? 0),
+      mlb_alumni: Number(mlbResult.rows[0]?.count ?? 0),
+      hall_of_fame_members: Number(hofResult.rows[0]?.count ?? 0),
       most_successful_team: mostSuccessfulResult.rows[0] || {
-        name: "—",
+        name: "Data coming soon",
         championships: 0,
       },
+    };
+
+    // Shape that the frontend expects
+    return res.json({
+      success: true,
+      data: payload,
     });
   } catch (err) {
     console.error("statistics/overview error:", err);
-    res.status(500).json({ error: "Failed to load statistics" });
+    return res.status(500).json({
+      success: false,
+      error: "Failed to load statistics",
+    });
   }
 };
 
