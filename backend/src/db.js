@@ -1,38 +1,38 @@
 // backend/src/db.js
-import pg from "pg";
 import dotenv from "dotenv";
+import pkg from "pg";
+
+const { Pool } = pkg;
 
 dotenv.config();
-
-const { Pool } = pg;
 
 const hasDatabaseUrl = !!process.env.DATABASE_URL;
 
 console.log("[db] Environment:", {
   hasDatabaseUrl,
-  host: process.env.PGHOST,
-  db: process.env.PGDATABASE,
+  host: process.env.PGHOST || "127.0.0.1",
+  db: process.env.PGDATABASE || "nbc_world_series",
 });
 
-let pool;
+// Use DATABASE_URL if present (Render / Neon), otherwise local settings
+const pool = hasDatabaseUrl
+  ? new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+    })
+  : new Pool({
+      host: process.env.PGHOST || "127.0.0.1",
+      port: process.env.PGPORT || 5432,
+      user: process.env.PGUSER || "postgres",
+      password: process.env.PGPASSWORD || "",
+      database: process.env.PGDATABASE || "nbc_world_series",
+    });
 
-if (hasDatabaseUrl) {
-  // Use Neon (or any cloud DB) whenever DATABASE_URL is set
-  console.log("[db] Using DATABASE_URL (Neon / cloud)");
-  pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }, // required by Neon
-  });
-} else {
-  // Fallback: local Postgres for dev
-  console.log("[db] Using local PG settings");
-  pool = new Pool({
-    host: process.env.PGHOST || "127.0.0.1",
-    port: process.env.PGPORT ? Number(process.env.PGPORT) : 5432,
-    user: process.env.PGUSER || "nbc_admin",
-    password: process.env.PGPASSWORD || "",
-    database: process.env.PGDATABASE || "nbc_world_series",
-  });
-}
+// IMPORTANT: always use the public schema on every new connection
+pool.on("connect", (client) => {
+  client
+    .query("SET search_path TO public")
+    .catch((err) => console.error("Failed to set search_path", err));
+});
 
 export { pool };
