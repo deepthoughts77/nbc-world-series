@@ -21,35 +21,26 @@ export const getStatsOverview = async (_req, res) => {
       LIMIT 1
     `);
 
-    const payload = {
-      total_championships: Number(champsResult.rows[0]?.count ?? 0),
-      total_teams: Number(teamsResult.rows[0]?.count ?? 0),
-      mlb_alumni: Number(mlbResult.rows[0]?.count ?? 0),
-      hall_of_fame_members: Number(hofResult.rows[0]?.count ?? 0),
+    res.json({
+      total_championships: parseInt(champsResult.rows[0].count, 10),
+      total_teams: parseInt(teamsResult.rows[0].count, 10),
+      mlb_alumni: parseInt(mlbResult.rows[0].count, 10),
+      hall_of_fame_members: parseInt(hofResult.rows[0].count, 10),
       most_successful_team: mostSuccessfulResult.rows[0] || {
-        name: "Data coming soon",
+        name: "—",
         championships: 0,
       },
-    };
-
-    // Shape that the frontend expects
-    return res.json({
-      success: true,
-      data: payload,
     });
   } catch (err) {
     console.error("statistics/overview error:", err);
-    return res.status(500).json({
-      success: false,
-      error: "Failed to load statistics",
-    });
+    res.status(500).json({ error: "Failed to load statistics" });
   }
 };
 
 /* ====================== PLAYER (BATTING) STATS ====================== */
 /**
  * If year === 1966 → use legacy player_stats table.
- * Otherwise → use batting_stats + players + teams (your working 2024/2025 path).
+ * Otherwise → use batting_stats + players + teams.
  */
 export const getPlayerStats = async (req, res) => {
   try {
@@ -133,7 +124,7 @@ export const getPlayerStats = async (req, res) => {
       return res.json(formatted);
     }
 
-    /* ---------- B) 2024/2025 → batting_stats path (CORRECTED WITH ALL 27 FIELDS) ---------- */
+    /* ---------- B) modern years → batting_stats path ---------- */
 
     const conditions = [];
     const params = [];
@@ -243,10 +234,9 @@ export const getPlayerStats = async (req, res) => {
 /**
  * Years for the Player Stats dropdown.
  * Union of:
- *  - legacy player_stats (1966, 2025)
- *  - batting_stats (2024/2025)
+ *  - legacy player_stats
+ *  - batting_stats
  *  - pitching_stats (in case of extra years)
- * Uses per-table try/catch so it **won't crash** if any table is missing.
  */
 export const getPlayerStatsYears = async (_req, res) => {
   try {
@@ -286,7 +276,7 @@ export const getPlayerStatsYears = async (_req, res) => {
       console.warn("pitching_stats year query failed:", e.message);
     }
 
-    const sorted = Array.from(years).sort((a, b) => b - a); // e.g. [2025, 2024, 1966]
+    const sorted = Array.from(years).sort((a, b) => b - a);
     res.json(sorted);
   } catch (err) {
     console.error(" /api/player-stats/years error:", err);
@@ -294,7 +284,7 @@ export const getPlayerStatsYears = async (_req, res) => {
   }
 };
 
-/* ====================== PITCHING STATS (2024/2025) - CORRECTED WITH ALL 27 FIELDS ====================== */
+/* ====================== PITCHING STATS ====================== */
 
 export const getPitchingStats = async (req, res) => {
   try {
