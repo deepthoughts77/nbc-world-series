@@ -7,3 +7,4 @@ backend/data/pdfs/
 nbc_backup.sql
 nbc_world_series_backup.dump
 neon_export.sql
+.env
