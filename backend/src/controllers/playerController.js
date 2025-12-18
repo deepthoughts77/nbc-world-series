@@ -108,7 +108,7 @@ const getPlayerNameSafe = async (playerId) => {
 };
 
 /**
- * @description Search for players by name
+ * @description Search for players by name (only players with stats)
  * @route GET /api/players/search?q=...
  */
 export const searchPlayers = async (req, res) => {
@@ -118,14 +118,21 @@ export const searchPlayers = async (req, res) => {
   const term = `%${q.toLowerCase()}%`;
 
   try {
-    // Build a full_name from first_name + last_name
+    // Only return players who have either batting or pitching stats
     const { rows } = await pool.query(
-      `SELECT
-         id,
-         (first_name || ' ' || last_name) AS full_name
-       FROM players
-       WHERE LOWER(first_name || ' ' || last_name) LIKE $1
-       ORDER BY full_name
+      `SELECT DISTINCT
+         p.id,
+         p.first_name,
+         p.last_name,
+         (p.first_name || ' ' || p.last_name) AS full_name
+       FROM players p
+       WHERE EXISTS (
+         SELECT 1 FROM batting_stats b WHERE b.player_id = p.id
+         UNION
+         SELECT 1 FROM pitching_stats pi WHERE pi.player_id = p.id
+       )
+       AND LOWER(p.first_name || ' ' || p.last_name) LIKE $1
+       ORDER BY p.last_name, p.first_name
        LIMIT 25`,
       [term]
     );
