@@ -1,11 +1,14 @@
+// frontend/src/App.jsx
 import React, { Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { PageShell } from "./layout/PageShell";
 import { Container } from "./components/common/Container";
 import { Skeleton } from "./components/common/Skeleton";
 
-// Lazy load all pages for better performance (code-splitting)
-// This requires each page file to use 'export default function ...'
+// IMPORTANT: normal import for BattingLeadersPage so it can't be undefined
+import BattingLeadersPage from "./pages/BattingLeadersPage";
+
+// Lazy load the rest (these were already working)
 const Home = React.lazy(() => import("./pages/Home"));
 const Championships = React.lazy(() => import("./pages/Championships"));
 const ChampionshipDetail = React.lazy(() =>
@@ -19,7 +22,6 @@ const PlayerStatsPage = React.lazy(() => import("./pages/PlayerStatsPage"));
 const PlayerProfile = React.lazy(() => import("./pages/PlayerProfile"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 
-// A simple loading component to show while pages are loading
 function PageLoader() {
   return (
     <Container className="py-12">
@@ -42,6 +44,9 @@ export default function App() {
             <Route path="/records" element={<Records />} />
             <Route path="/player-stats" element={<PlayerStatsPage />} />
 
+            {/* NEW: Batting leaders route */}
+            <Route path="/leaders/batting" element={<BattingLeadersPage />} />
+
             {/* Detail Pages */}
             <Route
               path="/championships/:year"
@@ -50,7 +55,7 @@ export default function App() {
             <Route path="/teams/:teamSlug" element={<TeamDetail />} />
             <Route path="/players/:id" element={<PlayerProfile />} />
 
-            {/* 404 Catch-all */}
+            {/* 404 */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>

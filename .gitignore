@@ -9,5 +9,10 @@ nbc_world_series_backup.dump
 neon_export.sql
 .env
 
+# Database dumps
+*.sql
+*.dump
+*.bak
+
 # local db dumps
 *.sql

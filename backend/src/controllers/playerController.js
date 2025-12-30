@@ -150,6 +150,166 @@ export const searchPlayers = async (req, res) => {
 };
 
 /**
+ * @description Batting leaders for a given year
+ * @route GET /api/players/batting-leaders?year=2025&sort=avg&order=desc&teamId=463
+ *
+ * sort: avg, h, hr, rbi, ab, g, r, obp, slg, team
+ * order: asc | desc
+ */
+export const getBattingLeaders = async (req, res) => {
+  try {
+    const year = Number(req.query.year) || 2025;
+    const sort = (req.query.sort || "avg").toLowerCase();
+    const order = (req.query.order || "desc").toLowerCase();
+    const teamId = req.query.teamId ? Number(req.query.teamId) : null;
+
+    const sortMap = {
+      avg: "b.avg",
+      h: "b.h",
+      hr: "b.hr",
+      rbi: "b.rbi",
+      ab: "b.ab",
+      g: "b.gp",
+      r: "b.r",
+      obp: "b.obp",
+      slg: "b.slg",
+      // "team" handled in JS below
+    };
+
+    const sortColumn = sortMap[sort] || "b.avg";
+    const sortDir = order === "asc" ? "ASC" : "DESC";
+
+    const { rows } = await pool.query(
+      `
+      SELECT 
+        b.player_id,
+        p.first_name,
+        p.last_name,
+        b.year,
+        b.gp,
+        b.ab,
+        b.r,
+        b.h,
+        b.hr,
+        b.rbi,
+        b.avg,
+        b.obp,
+        b.slg,
+        t.id   AS team_id,
+        t.name AS team_name
+      FROM batting_stats b
+      JOIN players p ON p.id = b.player_id
+      JOIN teams   t ON t.id = b.team_id
+      WHERE b.year = $1
+        AND b.ab > 0
+      ORDER BY ${sortColumn} ${sortDir}, p.last_name ASC
+      LIMIT 500
+      `,
+      [year]
+    );
+
+    let result = rows;
+
+    // Optional team filter
+    if (teamId && !Number.isNaN(teamId)) {
+      result = result.filter((row) => row.team_id === teamId);
+    }
+
+    // Special sorting by team name
+    if (sort === "team") {
+      result = [...result].sort((a, b) => {
+        const tn = a.team_name.localeCompare(b.team_name);
+        if (tn !== 0) return tn;
+        return (Number(b.avg) || 0) - (Number(a.avg) || 0);
+      });
+    }
+
+    res.json({ players: result });
+  } catch (err) {
+    console.error("getBattingLeaders failed:", err);
+    res.status(500).json({ error: "Failed to load batting leaders" });
+  }
+};
+
+/**
+ * @description Pitching leaders for a given year
+ * @route GET /api/players/pitching-leaders?year=2025&sort=era&order=asc&teamId=463
+ *
+ * sort: era, so, w, sv, ip, team
+ * order: asc | desc
+ */
+export const getPitchingLeaders = async (req, res) => {
+  try {
+    const year = Number(req.query.year) || 2025;
+    const sort = (req.query.sort || "era").toLowerCase();
+    const defaultOrder = sort === "era" ? "asc" : "desc";
+    const order = (req.query.order || defaultOrder).toLowerCase();
+    const teamId = req.query.teamId ? Number(req.query.teamId) : null;
+
+    const sortMap = {
+      era: "p.era",
+      so: "p.so",
+      w: "p.w",
+      sv: "p.sv",
+      ip: "p.ip",
+      // "team" handled below
+    };
+
+    const sortColumn = sortMap[sort] || "p.era";
+    const sortDir = order === "desc" ? "DESC" : "ASC";
+
+    const { rows } = await pool.query(
+      `
+      SELECT
+        p.player_id,
+        pl.first_name,
+        pl.last_name,
+        p.year,
+        p.app,
+        p.gs,
+        p.w,
+        p.l,
+        p.sv,
+        p.ip,
+        p.so,
+        p.era,
+        p.b_avg,
+        t.id   AS team_id,
+        t.name AS team_name
+      FROM pitching_stats p
+      JOIN players pl ON pl.id = p.player_id
+      JOIN teams   t  ON t.id = p.team_id
+      WHERE p.year = $1
+        AND p.ip > 0
+      ORDER BY ${sortColumn} ${sortDir}, pl.last_name ASC
+      LIMIT 500
+      `,
+      [year]
+    );
+
+    let result = rows;
+
+    if (teamId && !Number.isNaN(teamId)) {
+      result = result.filter((row) => row.team_id === teamId);
+    }
+
+    if (sort === "team") {
+      result = [...result].sort((a, b) => {
+        const tn = a.team_name.localeCompare(b.team_name);
+        if (tn !== 0) return tn;
+        // ERA tie-breaker: lower is better
+        return (Number(a.era) || 9999) - (Number(b.era) || 9999);
+      });
+    }
+
+    res.json({ players: result });
+  } catch (err) {
+    console.error("getPitchingLeaders failed:", err);
+    res.status(500).json({ error: "Failed to load pitching leaders" });
+  }
+};
+
+/**
  * @description Get complete player profile with all stats across all years
  * @route GET /api/players/:id
  */
@@ -387,7 +547,7 @@ export const getPlayerById = async (req, res) => {
         city: t.city,
         state: t.state,
         batting_years: t.batting_years,
-        pitching_years: t.pitching_years,
+        pitching_years: t.patching_years,
       })),
     });
   } catch (e) {
