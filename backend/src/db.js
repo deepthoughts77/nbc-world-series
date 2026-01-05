@@ -6,7 +6,8 @@ const { Pool } = pkg;
 
 dotenv.config();
 
-const hasDatabaseUrl = !!process.env.DATABASE_URL;
+const isProd = process.env.NODE_ENV === "production";
+const hasDatabaseUrl = !!process.env.DATABASE_URL && isProd;
 
 console.log("[db] Environment:", {
   hasDatabaseUrl,
@@ -14,7 +15,7 @@ console.log("[db] Environment:", {
   db: process.env.PGDATABASE || "nbc_world_series",
 });
 
-// Use DATABASE_URL if present (Render / Neon), otherwise local settings
+// Use DATABASE_URL if present (Render / Neon in production), otherwise local settings
 const pool = hasDatabaseUrl
   ? new Pool({
       connectionString: process.env.DATABASE_URL,
