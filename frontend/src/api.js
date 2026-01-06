@@ -1,14 +1,38 @@
-// src/api.js
+// frontend/src/api.js
 import axios from "axios";
 
-// Base URL for your backend API (CRA exposes REACT_APP_* at build time)
-export const BASE_URL =
-  process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+function computeBaseUrl() {
+  // 1) If env var is set at build-time, use it
+  if (process.env.REACT_APP_API_URL) {
+    return process.env.REACT_APP_API_URL;
+  }
+
+  // 2) If we're in the browser, decide based on current origin
+  if (typeof window !== "undefined") {
+    const origin = window.location.origin;
+
+    // Local development cases
+    if (origin.includes("localhost") || origin.includes("127.0.0.1")) {
+      // Our backend dev server is on 5000
+      return "http://localhost:5000/api";
+    }
+
+    // 3) Production: frontend and backend share the same origin on Render
+    // e.g. https://nbc-world-series.onrender.com/api
+    return `${origin}/api`;
+  }
+
+  // 4) Fallback (SSR / tests)
+  return "http://localhost:5000/api";
+}
+
+// Base URL for your backend API
+export const BASE_URL = computeBaseUrl();
 
 // Create a dedicated axios instance
 export const API = axios.create({
   baseURL: BASE_URL,
-  timeout: 10000, // 10s
+  timeout: 15000, // a bit higher than 10s to give Render time to wake
 });
 
 // ---- Auth token helpers ----------------------------------------------------
@@ -62,7 +86,6 @@ API.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     } else {
-      // Ensure we don't send a stale header
       delete config.headers.Authorization;
     }
     return config;
@@ -74,8 +97,6 @@ API.interceptors.request.use(
 API.interceptors.response.use(
   (response) => response,
   (error) => {
-    // You can hook 401 handling here if you want to auto-logout:
-    // if (error?.response?.status === 401) clearAuthToken();
     return Promise.reject(error);
   }
 );
