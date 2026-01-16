@@ -16,3 +16,4 @@ neon_export.sql
 
 # local db dumps
 *.sql
+frontend/build
