@@ -1,3 +1,4 @@
+// frontend/src/pages/Championships.js
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Trophy, Medal, Award, Calendar, Search } from "lucide-react";

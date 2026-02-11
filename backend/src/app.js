@@ -25,24 +25,38 @@ app.use((req, _res, next) => {
 });
 
 // CORS
-const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  process.env.FRONTEND_DEV_URL,
-  process.env.FRONTEND_PROD_URL,
-  process.env.FRONTEND_ADMIN_URL,
-  process.env.FRONTEND_ADMIN_DEV_URL,
-  process.env.FRONTEND_ADMIN_PROD_URL,
-].filter(Boolean);
+const allowedOrigins = new Set(
+  [
+    process.env.FRONTEND_URL,
+    process.env.FRONTEND_DEV_URL,
+    process.env.FRONTEND_PROD_URL,
+    process.env.FRONTEND_ADMIN_URL,
+    process.env.FRONTEND_ADMIN_DEV_URL,
+    process.env.FRONTEND_ADMIN_PROD_URL,
+    "http://localhost:3000", // local frontend
+  ].filter(Boolean),
+);
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: (origin, cb) => {
+      // allow requests with no origin (curl, server-to-server, render health check)
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.has(origin)) return cb(null, true);
+      return cb(new Error(`CORS blocked for origin: ${origin}`), false);
+    },
     credentials: true,
-  })
+  }),
 );
 
 app.use(express.json()); // Body parser
 app.use(morgan("dev")); // HTTP request logger
+
+// Preflight for all routes (safe in Express 5 + path-to-regexp updates)
+app.use((req, res, next) => {
+  if (req.method === "OPTIONS") return res.sendStatus(204);
+  next();
+});
 
 // --- API Routes ---
 // All API routes are now handled in the /routes/index.js file
