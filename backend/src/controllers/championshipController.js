@@ -100,6 +100,21 @@ export const getChampionshipByYear = async (req, res) => {
 };
 
 /**
+ * Helper function to check if a column exists in a table
+ */
+async function columnExists(tableName, columnName) {
+  const result = await pool.query(
+    `SELECT column_name 
+     FROM information_schema.columns 
+     WHERE table_schema = 'public' 
+     AND table_name = $1 
+     AND column_name = $2`,
+    [tableName, columnName],
+  );
+  return result.rows.length > 0;
+}
+
+/**
  * @description Get championship final stats (batting + pitching)
  * @route GET /api/championships/:year/final
  * Query:
@@ -151,7 +166,7 @@ export const getChampionshipFinalStats = async (req, res) => {
         ? [champ.runner_up_team_id]
         : [champ.champion_team_id, champ.runner_up_team_id];
 
-    // Check if batting table exists
+    // Check if tables exist
     const battingTableCheck = await pool.query(
       `SELECT EXISTS (
         SELECT FROM information_schema.tables 
@@ -160,7 +175,6 @@ export const getChampionshipFinalStats = async (req, res) => {
       )`,
     );
 
-    // Check if pitching table exists
     const pitchingTableCheck = await pool.query(
       `SELECT EXISTS (
         SELECT FROM information_schema.tables 
@@ -176,37 +190,103 @@ export const getChampionshipFinalStats = async (req, res) => {
     let pitchingRes = { rows: [] };
 
     if (battingTableExists) {
-      battingRes = await pool.query(
-        `
-        SELECT
-          b.team_id,
-          t.name AS team_name,
-          b.player_name,
-          b.ab, b.r, b.h, b.rbi, b.bb, b.so, b.po, b.a, b.lob
-        FROM championship_final_batting b
-        JOIN teams t ON t.id = b.team_id
-        WHERE b.year = $1 AND b.team_id = ANY($2::int[])
-        ORDER BY t.name, b.player_name
-        `,
-        [year, teamIds],
+      // Check if year column exists in batting table
+      const battingHasYear = await columnExists(
+        "championship_final_batting",
+        "year",
       );
+      const battingHasChampId = await columnExists(
+        "championship_final_batting",
+        "championship_id",
+      );
+
+      let battingQuery;
+      let battingParams;
+
+      if (battingHasYear) {
+        battingQuery = `
+          SELECT
+            b.team_id,
+            t.name AS team_name,
+            b.player_name,
+            b.ab, b.r, b.h, b.rbi, b.bb, b.so, b.po, b.a, b.lob
+          FROM championship_final_batting b
+          JOIN teams t ON t.id = b.team_id
+          WHERE b.year = $1 AND b.team_id = ANY($2::int[])
+          ORDER BY t.name, b.player_name
+        `;
+        battingParams = [year, teamIds];
+      } else if (battingHasChampId) {
+        battingQuery = `
+          SELECT
+            b.team_id,
+            t.name AS team_name,
+            b.player_name,
+            b.ab, b.r, b.h, b.rbi, b.bb, b.so, b.po, b.a, b.lob
+          FROM championship_final_batting b
+          JOIN teams t ON t.id = b.team_id
+          WHERE b.championship_id = $1 AND b.team_id = ANY($2::int[])
+          ORDER BY t.name, b.player_name
+        `;
+        battingParams = [champ.championship_id, teamIds];
+      } else {
+        // No year or championship_id column - skip
+        battingRes = { rows: [] };
+      }
+
+      if (battingQuery) {
+        battingRes = await pool.query(battingQuery, battingParams);
+      }
     }
 
     if (pitchingTableExists) {
-      pitchingRes = await pool.query(
-        `
-        SELECT
-          p.team_id,
-          t.name AS team_name,
-          p.player_name,
-          p.ip, p.h, p.r, p.er, p.bb, p.so, p.bf, p.hbp, p.wp, p.bk, p.rbi
-        FROM championship_final_pitching p
-        JOIN teams t ON t.id = p.team_id
-        WHERE p.year = $1 AND p.team_id = ANY($2::int[])
-        ORDER BY t.name, p.player_name
-        `,
-        [year, teamIds],
+      // Check if year column exists in pitching table
+      const pitchingHasYear = await columnExists(
+        "championship_final_pitching",
+        "year",
       );
+      const pitchingHasChampId = await columnExists(
+        "championship_final_pitching",
+        "championship_id",
+      );
+
+      let pitchingQuery;
+      let pitchingParams;
+
+      if (pitchingHasYear) {
+        pitchingQuery = `
+          SELECT
+            p.team_id,
+            t.name AS team_name,
+            p.player_name,
+            p.ip, p.h, p.r, p.er, p.bb, p.so, p.bf, p.hbp, p.wp, p.bk, p.rbi
+          FROM championship_final_pitching p
+          JOIN teams t ON t.id = p.team_id
+          WHERE p.year = $1 AND p.team_id = ANY($2::int[])
+          ORDER BY t.name, p.player_name
+        `;
+        pitchingParams = [year, teamIds];
+      } else if (pitchingHasChampId) {
+        pitchingQuery = `
+          SELECT
+            p.team_id,
+            t.name AS team_name,
+            p.player_name,
+            p.ip, p.h, p.r, p.er, p.bb, p.so, p.bf, p.hbp, p.wp, p.bk, p.rbi
+          FROM championship_final_pitching p
+          JOIN teams t ON t.id = p.team_id
+          WHERE p.championship_id = $1 AND p.team_id = ANY($2::int[])
+          ORDER BY t.name, p.player_name
+        `;
+        pitchingParams = [champ.championship_id, teamIds];
+      } else {
+        // No year or championship_id column - skip
+        pitchingRes = { rows: [] };
+      }
+
+      if (pitchingQuery) {
+        pitchingRes = await pool.query(pitchingQuery, pitchingParams);
+      }
     }
 
     const byTeam = new Map();
@@ -362,31 +442,77 @@ export const getChampionshipMvpStats = async (req, res) => {
     let pitRes = { rows: [] };
 
     if (battingTableExists) {
-      batRes = await pool.query(
-        `
-        SELECT b.*, t.name AS team_name
-        FROM championship_final_batting b
-        JOIN teams t ON t.id = b.team_id
-        WHERE b.year = $1 AND b.player_name ILIKE $2
-        ORDER BY t.name, b.player_name
-        LIMIT 10
-        `,
-        [year, `%${name}%`],
+      const battingHasYear = await columnExists(
+        "championship_final_batting",
+        "year",
       );
+      const battingHasChampId = await columnExists(
+        "championship_final_batting",
+        "championship_id",
+      );
+
+      if (battingHasYear) {
+        batRes = await pool.query(
+          `
+          SELECT b.*, t.name AS team_name
+          FROM championship_final_batting b
+          JOIN teams t ON t.id = b.team_id
+          WHERE b.year = $1 AND b.player_name ILIKE $2
+          ORDER BY t.name, b.player_name
+          LIMIT 10
+          `,
+          [year, `%${name}%`],
+        );
+      } else if (battingHasChampId) {
+        batRes = await pool.query(
+          `
+          SELECT b.*, t.name AS team_name
+          FROM championship_final_batting b
+          JOIN teams t ON t.id = b.team_id
+          WHERE b.championship_id = $1 AND b.player_name ILIKE $2
+          ORDER BY t.name, b.player_name
+          LIMIT 10
+          `,
+          [champ.championship_id, `%${name}%`],
+        );
+      }
     }
 
     if (pitchingTableExists) {
-      pitRes = await pool.query(
-        `
-        SELECT p.*, t.name AS team_name
-        FROM championship_final_pitching p
-        JOIN teams t ON t.id = p.team_id
-        WHERE p.year = $1 AND p.player_name ILIKE $2
-        ORDER BY t.name, p.player_name
-        LIMIT 10
-        `,
-        [year, `%${name}%`],
+      const pitchingHasYear = await columnExists(
+        "championship_final_pitching",
+        "year",
       );
+      const pitchingHasChampId = await columnExists(
+        "championship_final_pitching",
+        "championship_id",
+      );
+
+      if (pitchingHasYear) {
+        pitRes = await pool.query(
+          `
+          SELECT p.*, t.name AS team_name
+          FROM championship_final_pitching p
+          JOIN teams t ON t.id = p.team_id
+          WHERE p.year = $1 AND p.player_name ILIKE $2
+          ORDER BY t.name, p.player_name
+          LIMIT 10
+          `,
+          [year, `%${name}%`],
+        );
+      } else if (pitchingHasChampId) {
+        pitRes = await pool.query(
+          `
+          SELECT p.*, t.name AS team_name
+          FROM championship_final_pitching p
+          JOIN teams t ON t.id = p.team_id
+          WHERE p.championship_id = $1 AND p.player_name ILIKE $2
+          ORDER BY t.name, p.player_name
+          LIMIT 10
+          `,
+          [champ.championship_id, `%${name}%`],
+        );
+      }
     }
 
     res.json({
