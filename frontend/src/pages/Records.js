@@ -1,17 +1,13 @@
 import React from "react";
 import { Trophy, Users, Star, Calendar, Award } from "lucide-react";
-// FIX: Use the dedicated hook
 import { useRecords } from "../hooks/useRecords";
 import { Container } from "../components/common/Container";
 import { SectionTitle } from "../components/common/SectionTitle";
-// FIX: Import CardBody
 import { Card, CardBody } from "../components/common/Card";
 import { BannerError } from "../components/common/BannerError";
 import { Skeleton } from "../components/common/Skeleton";
 
-// FIX: Added 'export default'
 export default function Records() {
-  // FIX: Call the hook
   const { records, loading, err } = useRecords();
 
   return (
@@ -28,7 +24,6 @@ export default function Records() {
         </div>
       )}
 
-      {/* FIX: Check for loading OR records being null */}
       {loading || !records ? (
         <div className="space-y-6">
           <Skeleton className="h-48" />
@@ -36,7 +31,6 @@ export default function Records() {
           <Skeleton className="h-64" />
         </div>
       ) : (
-        // FIX: This is the full JSX that was missing
         <>
           {/* All-Time Records Section */}
           <div className="mb-12">
@@ -178,7 +172,7 @@ export default function Records() {
                 </CardBody>
               </Card>
 
-              {/* Most MVP Awards */}
+              {/* Most MVP Awards (FIXED to match backend: { name, mvps }) */}
               <Card className="overflow-hidden border-2 border-purple-200">
                 <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 border-b border-purple-200">
                   <div className="flex items-center gap-3 mb-2">
@@ -193,23 +187,26 @@ export default function Records() {
                     </div>
                   </div>
                 </div>
+
                 <CardBody>
-                  {records?.most_mvp_awards ? (
+                  {records?.most_mvp_awards?.mvps ? (
                     <div className="space-y-4">
                       <div className="flex items-baseline gap-3">
                         <div className="text-5xl font-black text-purple-600">
-                          {records.most_mvp_awards.mvp_awards}
+                          {records.most_mvp_awards.mvps}
                         </div>
                         <div className="text-xl text-gray-500">MVPs</div>
                       </div>
+
                       <div>
                         <div className="text-xl font-bold text-gray-900">
-                          {records.most_mvp_awards.player_name}
+                          {records.most_mvp_awards.name}
                         </div>
                         <div className="text-sm text-gray-600 mt-1">
                           Outstanding individual performance
                         </div>
                       </div>
+
                       <div className="pt-4 border-t border-gray-200">
                         <div className="text-sm">
                           <div className="text-gray-500">Achievement</div>
@@ -304,7 +301,6 @@ export default function Records() {
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Highest Batting Average */}
               <Card className="hover:shadow-lg transition-shadow">
                 <CardBody>
                   <div className="text-center mb-4">
@@ -335,7 +331,6 @@ export default function Records() {
                 </CardBody>
               </Card>
 
-              {/* Most Hits */}
               <Card className="hover:shadow-lg transition-shadow">
                 <CardBody>
                   <div className="text-center mb-4">
@@ -360,7 +355,6 @@ export default function Records() {
                 </CardBody>
               </Card>
 
-              {/* Most RBIs */}
               <Card className="hover:shadow-lg transition-shadow">
                 <CardBody>
                   <div className="text-center mb-4">
@@ -387,7 +381,6 @@ export default function Records() {
                 </CardBody>
               </Card>
 
-              {/* Most Home Runs */}
               <Card className="hover:shadow-lg transition-shadow">
                 <CardBody>
                   <div className="text-center mb-4">
@@ -409,7 +402,6 @@ export default function Records() {
                 </CardBody>
               </Card>
 
-              {/* Most Strikeouts (Pitcher) */}
               <Card className="hover:shadow-lg transition-shadow">
                 <CardBody>
                   <div className="text-center mb-4">
@@ -433,7 +425,6 @@ export default function Records() {
                 </CardBody>
               </Card>
 
-              {/* Team Batting Average */}
               <Card className="hover:shadow-lg transition-shadow">
                 <CardBody>
                   <div className="text-center mb-4">

@@ -1,7 +1,15 @@
 // frontend/src/hooks/usePlayerStatsPage.js
 import { useState, useEffect } from "react";
-import { API } from "../api/apiClient";
-import { pickArray } from "../utils/data";
+import { API } from "../api";
+
+// helper: supports both array responses and { data: [...] } wrappers
+function pickArray(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.rows)) return payload.rows;
+  if (Array.isArray(payload?.records)) return payload.records;
+  return [];
+}
 
 export function usePlayerStatsPage() {
   const [availableYears, setAvailableYears] = useState([]);
@@ -20,18 +28,19 @@ export function usePlayerStatsPage() {
         const res = await API.get("/player-stats/years");
         if (stop) return;
 
-        const d = res.data;
-        const ys = Array.isArray(d)
-          ? d
-          : Array.isArray(d?.years)
-          ? d.years
-          : [];
+        const ys = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray(res.data?.years)
+            ? res.data.years
+            : [];
 
-        const yStrings = ys.map(String).sort((a, b) => b.localeCompare(a));
-        if (yStrings.length > 0) {
-          setAvailableYears(yStrings);
-          setSelectedYear(yStrings[0]); // newest year by default
-        }
+        const nums = ys
+          .map((y) => Number(y))
+          .filter((n) => Number.isFinite(n))
+          .sort((a, b) => b - a);
+
+        setAvailableYears(nums);
+        if (nums.length > 0) setSelectedYear(nums[0]);
       } catch (e) {
         console.error("Error loading player-stats years:", e);
         if (!stop) setErr("Could not load available years.");
@@ -52,20 +61,23 @@ export function usePlayerStatsPage() {
     async function loadStats() {
       setLoading(true);
       setErr("");
+
       try {
-        const [battingRes, pitchingRes] = await Promise.all([
-          API.get("/player-stats", { params: { year: selectedYear } }),
-          API.get("/pitching-stats", { params: { year: selectedYear } }),
-        ]);
+        // Batting rows come from /api/player-stats/:year (playerStatsController.js)
+        const battingRes = await API.get(`/player-stats/${selectedYear}`);
+
+        // Pitching rows come from your existing /api/pitching-stats?year=YYYY route
+        const pitchingRes = await API.get("/pitching-stats", {
+          params: { year: selectedYear },
+        });
+
         if (stop) return;
 
-        setBattingRows(pickArray(battingRes));
-        setPitchingRows(pickArray(pitchingRes));
+        setBattingRows(pickArray(battingRes.data));
+        setPitchingRows(pickArray(pitchingRes.data));
       } catch (e) {
         console.error("Error loading player stats:", e);
-        if (!stop) {
-          setErr(`Could not load player stats for ${selectedYear}.`);
-        }
+        if (!stop) setErr(`Could not load player stats for ${selectedYear}.`);
       } finally {
         if (!stop) setLoading(false);
       }

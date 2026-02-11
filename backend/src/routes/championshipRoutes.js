@@ -1,14 +1,17 @@
+// backend/src/routes/championshipRoutes.js
 import { Router } from "express";
 import * as champController from "../controllers/championshipController.js";
 
 const router = Router();
 
-// @route   GET /api/championships/
-// @desc    Get all championships (with pagination)
+// Get all championships
 router.get("/", champController.getAllChampionships);
 
-// @route   GET /api/championships/:year
-// @desc    Get a single championship by year
+// IMPORTANT: put these BEFORE /:year
+router.get("/:year/final", champController.getChampionshipFinalStats);
+router.get("/:year/mvp", champController.getChampionshipMvpStats);
+
+// Get a single championship by year
 router.get("/:year", champController.getChampionshipByYear);
 
 export default router;

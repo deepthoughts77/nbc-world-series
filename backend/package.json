@@ -10,7 +10,8 @@
     "test": "echo \"no tests\" && exit 0",
     "db:migrate": "node db/run-migrations.js",
     "db:seed": "node db/run-seeds.js",
-    "db:reset": "node db/reset-and-seed.js"
+    "db:reset": "node db/reset-and-seed.js",
+    "import:finals:2000-2024": "node scripts/importChampionshipFinalsRange.js --from 2000 --to 2024"
   },
   "keywords": [],
   "author": "",

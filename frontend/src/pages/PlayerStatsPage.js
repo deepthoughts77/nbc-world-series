@@ -45,8 +45,35 @@ export default function PlayerStatsPage() {
   const hasForcedDefaultYear = useRef(false);
   const hasSetInitialExpandedTeam = useRef(false);
 
-  // ✅ Pitching sort per team: { [teamName]: { field, dir } }
+  // Pitching sort per team: { [teamName]: { field, dir } }
   const [pitchSortByTeam, setPitchSortByTeam] = useState({});
+
+  // ---------- Helpers ----------
+  const pickTeamName = (r) => {
+    // Robust team-name inference across different API/table shapes
+    return (
+      r?.team_name ||
+      r?.team ||
+      r?.teamName ||
+      r?.team_full ||
+      r?.team_full_name ||
+      r?.team_display ||
+      r?.team_title ||
+      r?.name || // sometimes rows are already grouped by team name
+      ""
+    );
+  };
+
+  const pickPlayerName = (r) => {
+    return (
+      r?.player_name ||
+      r?.playerName ||
+      r?.full_name ||
+      r?.fullName ||
+      r?.name ||
+      ""
+    );
+  };
 
   // ---------- Force default year 2025 once ----------
   useEffect(() => {
@@ -67,13 +94,14 @@ export default function PlayerStatsPage() {
     async function fetchChampion() {
       try {
         const res = await API.get(`/championships/${selectedYear}`);
-        const data = res.data || {};
+        const payload = res.data || {};
 
         const name =
-          data.champion_team_name ||
-          data.championTeamName ||
-          data.champion_team?.name ||
-          data.champion_team?.team_name ||
+          payload.data?.champion_name ||
+          payload.champion_team_name ||
+          payload.championTeamName ||
+          payload.champion_team?.name ||
+          payload.champion_team?.team_name ||
           null;
 
         setChampionTeamName(name);
@@ -88,41 +116,50 @@ export default function PlayerStatsPage() {
     fetchChampion();
   }, [selectedYear]);
 
-  // ---------- Normalize rows (don’t trust id fields blindly) ----------
+  // ---------- Normalize rows ----------
   const normalizedBattingRows = useMemo(() => {
     return (battingRows || []).map((r) => ({
       ...r,
-      player_name: r.player_name || r.full_name || r.name || "",
-      team_name: r.team_name || r.team || "",
+      player_name: pickPlayerName(r),
+      team_name: pickTeamName(r),
     }));
   }, [battingRows]);
 
   const normalizedPitchingRows = useMemo(() => {
     return (pitchingRows || []).map((r) => ({
       ...r,
-      player_name: r.player_name || r.full_name || r.name || "",
-      team_name: r.team_name || r.team || "",
+      player_name: pickPlayerName(r),
+      team_name: pickTeamName(r),
     }));
   }, [pitchingRows]);
 
-  // ---------- Team list ----------
+  // ---------- Team list (use batting + pitching) ----------
   const allTeams = useMemo(() => {
     const s = new Set();
+
     normalizedBattingRows.forEach((r) => {
       if (r.team_name) s.add(r.team_name);
     });
+
+    normalizedPitchingRows.forEach((r) => {
+      if (r.team_name) s.add(r.team_name);
+    });
+
     return Array.from(s).sort();
-  }, [normalizedBattingRows]);
+  }, [normalizedBattingRows, normalizedPitchingRows]);
 
   // ---------- Filter + group ----------
   const teams = useMemo(() => {
-    const normalize = (v) => (v ? String(v).toLowerCase() : "");
+    const normalize = (v) => (v ? String(v).toLowerCase().trim() : "");
     const teamF = normalize(teamFilter);
     const q = normalize(search);
 
     const filteredBattingRows = normalizedBattingRows.filter((r) => {
-      if (teamF && normalize(r.team_name) !== teamF) return false;
+      const t = normalize(r.team_name);
+      if (teamF && t !== teamF) return false;
+
       if (!q) return true;
+
       const name = normalize(r.player_name);
       const pos = normalize(r.position);
       return name.includes(q) || pos.includes(q);
@@ -147,7 +184,7 @@ export default function PlayerStatsPage() {
     if (!teams || !teams.length) return;
 
     const match = teams.find(
-      (t) => t.teamName.toLowerCase() === championTeamName.toLowerCase()
+      (t) => t.teamName.toLowerCase() === championTeamName.toLowerCase(),
     );
     if (match) {
       setExpandedTeam(match.teamName);
@@ -158,19 +195,20 @@ export default function PlayerStatsPage() {
   // ---------- Get pitchers for a team (filtered) ----------
   const getPitchersForTeam = useCallback(
     (teamName) => {
-      const normalize = (v) => (v ? String(v).toLowerCase() : "");
+      const normalize = (v) => (v ? String(v).toLowerCase().trim() : "");
       const teamNameNorm = normalize(teamName);
       const teamFilterNorm = normalize(teamFilter);
       const q = normalize(search);
 
       return normalizedPitchingRows.filter((r) => {
-        if (normalize(r.team_name) !== teamNameNorm) return false;
+        const t = normalize(r.team_name);
+        if (t !== teamNameNorm) return false;
         if (teamFilterNorm && teamFilterNorm !== teamNameNorm) return false;
         if (!q) return true;
         return normalize(r.player_name).includes(q);
       });
     },
-    [normalizedPitchingRows, teamFilter, search]
+    [normalizedPitchingRows, teamFilter, search],
   );
 
   // ---------- Cross-year player search (top card) ----------
@@ -187,17 +225,14 @@ export default function PlayerStatsPage() {
     setShowPlayerSearch(true);
 
     try {
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/players/search?q=${encodeURIComponent(
-          query
-        )}`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setPlayerSearchResults(data);
-      }
+      const res = await API.get("/players/search", {
+        params: { q: query },
+      });
+      const data = Array.isArray(res.data) ? res.data : [];
+      setPlayerSearchResults(data);
     } catch (error) {
       console.error("Player search error:", error);
+      setPlayerSearchResults([]);
     } finally {
       setPlayerSearchLoading(false);
     }
@@ -207,7 +242,7 @@ export default function PlayerStatsPage() {
     navigate(`/players/${playerId}`);
   };
 
-  // ---------- THE IMPORTANT PART: Resolve correct player id before navigating ----------
+  // ---------- Resolve correct player id before navigating ----------
   const resolveAndNavigateToPlayer = useCallback(
     async (row) => {
       if (!row) return;
@@ -236,11 +271,8 @@ export default function PlayerStatsPage() {
       // 1) Try candidate ids but VERIFY against /players/:id name
       for (const id of candidates) {
         try {
-          const res = await fetch(
-            `${process.env.REACT_APP_API_URL}/players/${id}`
-          );
-          if (!res.ok) continue;
-          const data = await res.json();
+          const res = await API.get(`/players/${id}`);
+          const data = res.data || {};
 
           const apiFullName =
             data.full_name ||
@@ -259,34 +291,28 @@ export default function PlayerStatsPage() {
         } catch (e) {}
       }
 
-      // 2) Fallback: use /players/search?q=NAME and pick best exact match
+      // 2) Fallback: /players/search?q=NAME
       try {
-        const res = await fetch(
-          `${
-            process.env.REACT_APP_API_URL
-          }/players/search?q=${encodeURIComponent(rowName)}`
+        const res = await API.get(
+          `/players/search?q=${encodeURIComponent(rowName)}`,
         );
-        if (!res.ok) return;
-
-        const list = await res.json();
+        const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
         if (!Array.isArray(list) || list.length === 0) return;
 
         const exact = list.find((p) =>
           nameMatches(
             rowName,
-            p.full_name || `${p.first_name || ""} ${p.last_name || ""}`.trim()
-          )
+            p.full_name || `${p.first_name || ""} ${p.last_name || ""}`.trim(),
+          ),
         );
 
         const pick = exact || list[0];
-        if (pick?.id) {
-          navigate(`/players/${pick.id}`);
-        }
+        if (pick?.id) navigate(`/players/${pick.id}`);
       } catch (e) {
         console.error("Could not resolve player id for:", rowName, e);
       }
     },
-    [navigate]
+    [navigate],
   );
 
   const handleYearChange = (e) => {
@@ -295,8 +321,6 @@ export default function PlayerStatsPage() {
     setTeamFilter("");
     setSearch("");
     setExpandedTeam(null);
-
-    // optional: reset pitching sorts when changing year
     setPitchSortByTeam({});
   };
 
@@ -304,7 +328,7 @@ export default function PlayerStatsPage() {
     !normalizedBattingRows.length && !normalizedPitchingRows.length;
 
   // =========================
-  // ✅ Pitching sorting helpers
+  // Pitching sorting helpers
   // =========================
   const pitchingNumericFields = useMemo(
     () => [
@@ -335,12 +359,12 @@ export default function PlayerStatsPage() {
       "sfa",
       "sha",
     ],
-    []
+    [],
   );
 
   const pitIsNumeric = useCallback(
     (field) => pitchingNumericFields.includes(field),
-    [pitchingNumericFields]
+    [pitchingNumericFields],
   );
 
   const pitGetValue = useCallback((p, field) => {
@@ -369,7 +393,7 @@ export default function PlayerStatsPage() {
 
   const getPitchSortSpec = useCallback(
     (teamName) => pitchSortByTeam[teamName] || { field: "era", dir: "asc" },
-    [pitchSortByTeam]
+    [pitchSortByTeam],
   );
 
   const pitchArrow = useCallback(
@@ -378,7 +402,7 @@ export default function PlayerStatsPage() {
       if (spec.field !== field) return "";
       return spec.dir === "desc" ? "▼" : "▲";
     },
-    [getPitchSortSpec]
+    [getPitchSortSpec],
   );
 
   const handlePitchSort = useCallback(
@@ -386,21 +410,19 @@ export default function PlayerStatsPage() {
       setPitchSortByTeam((prev) => {
         const current = prev[teamName] || { field: "era", dir: "asc" };
 
-        // toggle
         if (current.field === field) {
           const nextDir = current.dir === "asc" ? "desc" : "asc";
           return { ...prev, [teamName]: { field, dir: nextDir } };
         }
 
-        // new field default direction
         let dir = "asc";
-        if (field === "era") dir = "asc"; // lower ERA better
+        if (field === "era") dir = "asc";
         else dir = pitIsNumeric(field) ? "desc" : "asc";
 
         return { ...prev, [teamName]: { field, dir } };
       });
     },
-    [pitIsNumeric]
+    [pitIsNumeric],
   );
 
   const sortPitchers = useCallback(
@@ -440,7 +462,7 @@ export default function PlayerStatsPage() {
 
       return list;
     },
-    [pitGetValue, pitIsNumeric, pitToNumber]
+    [pitGetValue, pitIsNumeric, pitToNumber],
   );
 
   return (
@@ -448,7 +470,7 @@ export default function PlayerStatsPage() {
       <SectionTitle
         eyebrow="Box Scores"
         title="Player Statistics"
-        desc="Detailed individual player statistics by team and year. Data currently available for 2020 through 2025."
+        desc="Detailed individual player statistics by team and year."
       />
 
       {/* Cross-Year Player Search */}
@@ -462,6 +484,7 @@ export default function PlayerStatsPage() {
             Search for any player to see their complete NBC World Series history
             across all years.
           </p>
+
           <div className="relative">
             <Search
               size={18}
@@ -497,7 +520,9 @@ export default function PlayerStatsPage() {
                         <User size={16} className="text-gray-400" />
                         <span className="font-medium text-gray-900">
                           {player.full_name ||
-                            `${player.first_name} ${player.last_name}`}
+                            `${player.first_name || ""} ${
+                              player.last_name || ""
+                            }`.trim()}
                         </span>
                         <ChevronRight
                           size={16}
@@ -521,14 +546,10 @@ export default function PlayerStatsPage() {
       <Card className="mb-6">
         <CardBody className="flex flex-wrap gap-4 items-end">
           <div>
-            <label
-              htmlFor="year-select"
-              className="block text-xs font-semibold text-gray-600 mb-1"
-            >
+            <label className="block text-xs font-semibold text-gray-600 mb-1">
               Year
             </label>
             <select
-              id="year-select"
               value={selectedYear ?? ""}
               onChange={handleYearChange}
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -542,14 +563,10 @@ export default function PlayerStatsPage() {
           </div>
 
           <div>
-            <label
-              htmlFor="team-select"
-              className="block text-xs font-semibold text-gray-600 mb-1"
-            >
+            <label className="block text-xs font-semibold text-gray-600 mb-1">
               Team
             </label>
             <select
-              id="team-select"
               value={teamFilter}
               onChange={(e) => setTeamFilter(e.target.value)}
               disabled={loading || allTeams.length === 0}
@@ -565,10 +582,7 @@ export default function PlayerStatsPage() {
           </div>
 
           <div className="flex-1 min-w-[180px]">
-            <label
-              htmlFor="player-search"
-              className="block text-xs font-semibold text-gray-600 mb-1"
-            >
+            <label className="block text-xs font-semibold text-gray-600 mb-1">
               Filter {selectedYear} players
             </label>
             <div className="relative">
@@ -577,7 +591,6 @@ export default function PlayerStatsPage() {
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
               />
               <input
-                id="player-search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 disabled={loading}
@@ -612,25 +625,12 @@ export default function PlayerStatsPage() {
         </Card>
       )}
 
-      {!loading && !err && !noData && teams.length === 0 && (
-        <Card>
-          <CardBody>
-            <p className="text-gray-600 text-center py-8">
-              No player stats found for {selectedYear}
-              {teamFilter ? ` (${teamFilter})` : ""}
-              {search ? ` matching "${search}"` : ""}.
-            </p>
-          </CardBody>
-        </Card>
-      )}
-
       {!loading && teams.length > 0 && (
         <div className="space-y-6">
           {teams.map((team) => {
             const isOpen = expandedTeam === team.teamName;
             const pitchers = getPitchersForTeam(team.teamName);
 
-            // ✅ sorted version for THIS team's pitching table
             const pitSpec = getPitchSortSpec(team.teamName);
             const sortedPitchers = sortPitchers(pitchers, pitSpec);
 
@@ -644,7 +644,7 @@ export default function PlayerStatsPage() {
                 acc.rbi += toNum(p.rbi);
                 return acc;
               },
-              { ab: 0, h: 0, hr: 0, rbi: 0 }
+              { ab: 0, h: 0, hr: 0, rbi: 0 },
             );
 
             const avg =
@@ -679,6 +679,7 @@ export default function PlayerStatsPage() {
                       HR {battingTotals.hr}, RBI {battingTotals.rbi}, AVG .{avg}
                     </div>
                   </div>
+
                   <ChevronRight
                     size={18}
                     className={`text-gray-400 transform transition-transform ${
@@ -689,13 +690,11 @@ export default function PlayerStatsPage() {
 
                 {isOpen && (
                   <div>
-                    {/* Batting */}
                     <PlayerStatsTable
                       players={team.players}
                       onPlayerClick={resolveAndNavigateToPlayer}
                     />
 
-                    {/* Pitching */}
                     {pitchers.length > 0 && (
                       <div className="mt-6 border-t border-gray-200 pt-4">
                         <div className="px-6 mb-3">
@@ -713,46 +712,20 @@ export default function PlayerStatsPage() {
                                   onClick={() =>
                                     handlePitchSort(
                                       team.teamName,
-                                      "player_name"
+                                      "player_name",
                                     )
                                   }
                                 >
-                                  <span className="inline-flex items-center">
-                                    Pitcher{" "}
-                                    {pitchArrow(
-                                      team.teamName,
-                                      "player_name"
-                                    ) && (
-                                      <span className="ml-0.5 text-[10px]">
-                                        {pitchArrow(
-                                          team.teamName,
-                                          "player_name"
-                                        )}
-                                      </span>
-                                    )}
-                                  </span>
+                                  Pitcher{" "}
+                                  {pitchArrow(team.teamName, "player_name")}
                                 </th>
-
                                 <th
                                   className="px-2 py-2 text-center font-semibold cursor-pointer"
                                   onClick={() =>
                                     handlePitchSort(team.teamName, "jersey_num")
                                   }
                                 >
-                                  <span className="inline-flex items-center">
-                                    No.{" "}
-                                    {pitchArrow(
-                                      team.teamName,
-                                      "jersey_num"
-                                    ) && (
-                                      <span className="ml-0.5 text-[10px]">
-                                        {pitchArrow(
-                                          team.teamName,
-                                          "jersey_num"
-                                        )}
-                                      </span>
-                                    )}
-                                  </span>
+                                  No. {pitchArrow(team.teamName, "jersey_num")}
                                 </th>
 
                                 {[
@@ -789,14 +762,7 @@ export default function PlayerStatsPage() {
                                       handlePitchSort(team.teamName, field)
                                     }
                                   >
-                                    <span className="inline-flex items-center">
-                                      {label}{" "}
-                                      {pitchArrow(team.teamName, field) && (
-                                        <span className="ml-0.5 text-[10px]">
-                                          {pitchArrow(team.teamName, field)}
-                                        </span>
-                                      )}
-                                    </span>
+                                    {label} {pitchArrow(team.teamName, field)}
                                   </th>
                                 ))}
                               </tr>
@@ -939,11 +905,6 @@ export default function PlayerStatsPage() {
                               })}
                             </tbody>
                           </table>
-
-                          {/* tiny helper line so you can see current sort while testing */}
-                          {/* <div className="px-6 py-2 text-xs text-gray-400">
-                            Sorting: {pitSpec.field} ({pitSpec.dir})
-                          </div> */}
                         </div>
                       </div>
                     )}

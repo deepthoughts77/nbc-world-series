@@ -1,37 +1,58 @@
-import { useQuery } from "@tanstack/react-query";
-import { API } from "../api/apiClient";
-import { pickArray } from "../utils/data";
+// frontend/src/hooks/useChampionships.js
+import { useEffect, useState } from "react";
+import axios from "axios";
 
-const fetchChampionships = async () => {
-  const res = await API.get("/championships");
-
-  // DEBUG LOGGING
-  console.log("=== CHAMPIONSHIPS DEBUG ===");
-  console.log("Full response:", res);
-  console.log("res.data:", res.data);
-  console.log("res.data.data:", res.data?.data);
-  console.log("res.data.data.length:", res.data?.data?.length);
-
-  const picked = pickArray(res);
-  console.log("After pickArray:", picked);
-  console.log("After pickArray length:", picked.length);
-  console.log("=========================");
-
-  return picked;
-};
+// helper: supports both array responses and { data: [...] } wrappers
+function pickArray(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.rows)) return payload.rows;
+  return [];
+}
 
 export function useChampionships() {
-  const {
-    data: years = [],
+  const [years, setYears] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let alive = true;
+
+    async function run() {
+      setIsLoading(true);
+      setIsError(false);
+      setError(null);
+
+      try {
+        // If you have a proxy set in frontend package.json, you can use "/api/championships"
+        // Otherwise, keep the full backend URL:
+        const res = await axios.get("http://localhost:5000/api/championships");
+        const arr = pickArray(res.data);
+
+        if (!alive) return;
+        setYears(arr);
+      } catch (e) {
+        if (!alive) return;
+        setIsError(true);
+        setError(e);
+        setYears([]);
+      } finally {
+        if (!alive) return;
+        setIsLoading(false);
+      }
+    }
+
+    run();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  return {
+    years,
     isLoading,
     isError,
-    error,
-  } = useQuery({
-    queryKey: ["championships"],
-    queryFn: fetchChampionships,
-  });
-
-  console.log("Final years in hook:", years.length);
-
-  return { years, isLoading, isError, error };
+    error: error || { message: "Unknown error" },
+  };
 }

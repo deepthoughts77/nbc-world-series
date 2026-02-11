@@ -1,3 +1,4 @@
+// frontend/src/pages/PlayerProfilePage.js
 import React, { useEffect, useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
@@ -6,42 +7,121 @@ import { SectionTitle } from "../components/common/SectionTitle";
 import { Card, CardBody } from "../components/common/Card";
 import { BannerError } from "../components/common/BannerError";
 import { Skeleton } from "../components/common/Skeleton";
+import { API } from "../api";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || "/api";
+function pickArray(v) {
+  if (Array.isArray(v)) return v;
+  if (Array.isArray(v?.data)) return v.data;
+  if (Array.isArray(v?.rows)) return v.rows;
+  return [];
+}
+
+function unwrapPayload(payload) {
+  // Supports:
+  // 1) { success: true, data: {...} }
+  // 2) {...} direct
+  if (!payload) return null;
+  if (payload.success === true && payload.data) return payload.data;
+  return payload;
+}
 
 export default function PlayerProfilePage() {
   const { id } = useParams();
-  const [data, setData] = useState(null);
+  const [data, setData] = useState(null); // normalized payload
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    const fetchPlayer = async () => {
+    async function fetchPlayer() {
       setLoading(true);
       setErr(null);
 
       try {
-        const res = await fetch(`${API_BASE_URL}/players/${id}`);
-        if (!res.ok) {
-          if (res.status === 404) {
-            throw new Error("Player not found.");
-          }
-          throw new Error("Failed to load player data.");
-        }
-        const json = await res.json();
-        if (!cancelled) setData(json);
+        const res = await API.get(`/players/${id}`);
+        const raw = unwrapPayload(res.data);
+
+        if (!raw) throw new Error("Failed to load player data.");
+
+        // normalize common field-name differences
+        const player = raw.player || raw;
+        const fullName =
+          player.fullName ||
+          player.full_name ||
+          raw.fullName ||
+          raw.full_name ||
+          raw.player?.fullName ||
+          raw.player?.full_name ||
+          (player.first_name && player.last_name
+            ? `${player.first_name} ${player.last_name}`
+            : null) ||
+          (player.firstName && player.lastName
+            ? `${player.firstName} ${player.lastName}`
+            : null) ||
+          "Player";
+
+        const batting = raw.batting || {};
+        const pitching = raw.pitching || {};
+
+        // arrays might be batting.stats OR batting.rows OR batting.data
+        const battingStats =
+          pickArray(batting.stats) ||
+          pickArray(batting.rows) ||
+          pickArray(batting.data) ||
+          pickArray(raw.batting_stats) ||
+          [];
+
+        const pitchingStats =
+          pickArray(pitching.stats) ||
+          pickArray(pitching.rows) ||
+          pickArray(pitching.data) ||
+          pickArray(raw.pitching_stats) ||
+          [];
+
+        const battingCareer =
+          batting.career || raw.batting_career || raw.career_batting || null;
+        const pitchingCareer =
+          pitching.career || raw.pitching_career || raw.career_pitching || null;
+
+        const teams = pickArray(raw.teams);
+
+        const normalized = {
+          player: {
+            ...player,
+            fullName,
+          },
+          batting: {
+            ...batting,
+            stats: battingStats,
+            career: battingCareer,
+          },
+          pitching: {
+            ...pitching,
+            stats: pitchingStats,
+            career: pitchingCareer,
+          },
+          teams,
+        };
+
+        if (!cancelled) setData(normalized);
       } catch (e) {
-        if (!cancelled) setErr(e.message || "Failed to load player.");
+        if (!cancelled) {
+          // axios error shape fallback
+          const msg =
+            e?.response?.status === 404
+              ? "Player not found."
+              : e?.response?.data?.error ||
+                e?.message ||
+                "Failed to load player.";
+          setErr(msg);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
-    };
-
-    if (id) {
-      fetchPlayer();
     }
+
+    if (id) fetchPlayer();
 
     return () => {
       cancelled = true;
@@ -50,28 +130,26 @@ export default function PlayerProfilePage() {
 
   const battingStats = data?.batting?.stats || [];
   const pitchingStats = data?.pitching?.stats || [];
-  const battingCareer = data?.batting?.career;
-  const pitchingCareer = data?.pitching?.career;
+  const battingCareer = data?.batting?.career || null;
+  const pitchingCareer = data?.pitching?.career || null;
   const teams = data?.teams || [];
 
   const headline = data?.player?.fullName || "Player";
 
-  // quick derived summary
   const summary = useMemo(() => {
     const seasons = Math.max(
       Number(battingCareer?.seasons || 0),
-      Number(pitchingCareer?.seasons || 0)
+      Number(pitchingCareer?.seasons || 0),
     );
     const teamsCount = Math.max(
       Number(battingCareer?.teams_count || 0),
-      Number(pitchingCareer?.teams_count || 0)
+      Number(pitchingCareer?.teams_count || 0),
     );
     return { seasons, teamsCount };
   }, [battingCareer, pitchingCareer]);
 
   return (
     <Container className="py-12">
-      {/* Back link */}
       <div className="mb-4">
         <Link
           to="/player-stats"
@@ -104,7 +182,6 @@ export default function PlayerProfilePage() {
 
       {!loading && !err && data && (
         <div className="space-y-8">
-          {/* Top summary card */}
           <Card>
             <CardBody>
               <div className="flex flex-wrap gap-6 items-center justify-between">
@@ -127,9 +204,9 @@ export default function PlayerProfilePage() {
                         Career Batting
                       </div>
                       <div className="font-semibold text-gray-900">
-                        AVG {battingCareer.career_avg} · OBP{" "}
-                        {battingCareer.career_obp} · SLG{" "}
-                        {battingCareer.career_slg}
+                        AVG {battingCareer.career_avg ?? "—"} · OBP{" "}
+                        {battingCareer.career_obp ?? "—"} · SLG{" "}
+                        {battingCareer.career_slg ?? "—"}
                       </div>
                       <div className="text-xs text-gray-600 mt-1">
                         GP {battingCareer.total_gp || 0}, AB{" "}
@@ -147,7 +224,7 @@ export default function PlayerProfilePage() {
                         Career Pitching
                       </div>
                       <div className="font-semibold text-gray-900">
-                        ERA {pitchingCareer.career_era} · W{" "}
+                        ERA {pitchingCareer.career_era ?? "—"} · W{" "}
                         {pitchingCareer.total_w || 0} · L{" "}
                         {pitchingCareer.total_l || 0} · SV{" "}
                         {pitchingCareer.total_sv || 0}
@@ -164,7 +241,6 @@ export default function PlayerProfilePage() {
             </CardBody>
           </Card>
 
-          {/* Teams played for */}
           {teams.length > 0 && (
             <Card>
               <CardBody>
@@ -174,24 +250,27 @@ export default function PlayerProfilePage() {
                 <ul className="grid gap-2 md:grid-cols-2 lg:grid-cols-3 text-sm">
                   {teams.map((t, idx) => (
                     <li
-                      key={`${t.name}-${idx}`}
+                      key={`${t.name || "team"}-${idx}`}
                       className="border border-gray-200 rounded-lg px-3 py-2"
                     >
                       <div className="font-semibold text-gray-900">
-                        {t.name}
+                        {t.name || "—"}
                       </div>
                       <div className="text-xs text-gray-600">
-                        {t.city}, {t.state}
+                        {t.city || "—"}
+                        {t.state ? `, ${t.state}` : ""}
                       </div>
                       <div className="mt-1 text-xs text-gray-500">
-                        {t.batting_years?.length > 0 && (
-                          <span className="mr-2">
-                            Batting: {t.batting_years.join(", ")}
-                          </span>
-                        )}
-                        {t.pitching_years?.length > 0 && (
-                          <span>Pitching: {t.pitching_years.join(", ")}</span>
-                        )}
+                        {Array.isArray(t.batting_years) &&
+                          t.batting_years.length > 0 && (
+                            <span className="mr-2">
+                              Batting: {t.batting_years.join(", ")}
+                            </span>
+                          )}
+                        {Array.isArray(t.pitching_years) &&
+                          t.pitching_years.length > 0 && (
+                            <span>Pitching: {t.pitching_years.join(", ")}</span>
+                          )}
                       </div>
                     </li>
                   ))}
@@ -200,7 +279,6 @@ export default function PlayerProfilePage() {
             </Card>
           )}
 
-          {/* Season-by-season batting */}
           {battingStats.length > 0 && (
             <Card>
               <CardBody>
@@ -264,12 +342,15 @@ export default function PlayerProfilePage() {
                     <tbody className="divide-y divide-gray-100">
                       {battingStats.map((row, idx) => (
                         <tr
-                          key={`${row.year}-${row.team_name}-${idx}`}
+                          key={`${row.year || "y"}-${row.team_name || "t"}-${idx}`}
                           className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
                         >
-                          <td className="px-3 py-1.5">{row.year}</td>
+                          <td className="px-3 py-1.5">{row.year ?? "—"}</td>
                           <td className="px-3 py-1.5">
-                            {row.team_name} ({row.city}, {row.state})
+                            {row.team_name || "—"}
+                            {row.city || row.state
+                              ? ` (${row.city || "—"}${row.state ? `, ${row.state}` : ""})`
+                              : ""}
                           </td>
                           <td className="px-2 py-1.5 text-center">
                             {row.jersey_num || "—"}
@@ -322,7 +403,6 @@ export default function PlayerProfilePage() {
             </Card>
           )}
 
-          {/* Season-by-season pitching */}
           {pitchingStats.length > 0 && (
             <Card>
               <CardBody>
@@ -386,12 +466,15 @@ export default function PlayerProfilePage() {
                     <tbody className="divide-y divide-gray-100">
                       {pitchingStats.map((row, idx) => (
                         <tr
-                          key={`${row.year}-${row.team_name}-${idx}`}
+                          key={`${row.year || "y"}-${row.team_name || "t"}-${idx}`}
                           className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
                         >
-                          <td className="px-3 py-1.5">{row.year}</td>
+                          <td className="px-3 py-1.5">{row.year ?? "—"}</td>
                           <td className="px-3 py-1.5">
-                            {row.team_name} ({row.city}, {row.state})
+                            {row.team_name || "—"}
+                            {row.city || row.state
+                              ? ` (${row.city || "—"}${row.state ? `, ${row.state}` : ""})`
+                              : ""}
                           </td>
                           <td className="px-2 py-1.5 text-center">
                             {row.jersey_num || "—"}

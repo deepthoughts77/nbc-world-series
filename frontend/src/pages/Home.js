@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+// frontend/src/pages/Home.js
+import React, { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import {
   Trophy,
@@ -19,10 +20,31 @@ import { Card, CardBody } from "../components/common/Card";
 import { BannerError } from "../components/common/BannerError";
 import { Skeleton } from "../components/common/Skeleton";
 
-// This is the clean page component
 export default function Home() {
   // Data from our hook
   const { stats, recent, loading, err } = useHome();
+
+  // NEW: records overview (so Home matches Records page)
+  const [recordsOverview, setRecordsOverview] = useState(null);
+  const [recordsErr, setRecordsErr] = useState("");
+
+  useEffect(() => {
+    let stop = false;
+
+    API.get("/records/overview")
+      .then((r) => {
+        if (stop) return;
+        setRecordsOverview(r.data);
+      })
+      .catch((e) => {
+        console.error("[Home] Failed to load /records/overview", e);
+        if (!stop) setRecordsErr("Could not load records overview.");
+      });
+
+    return () => {
+      stop = true;
+    };
+  }, []);
 
   // Local view state
   const [searchQuery, setSearchQuery] = useState("");
@@ -63,7 +85,14 @@ export default function Home() {
   const currentYear = new Date().getFullYear();
   const nextTournament = currentYear + 1;
 
-  // Render
+  // Use recordsOverview for "Most championships" so it matches Records page
+  const mostChampsCount =
+    recordsOverview?.most_championships?.championships != null
+      ? `${recordsOverview.most_championships.championships}x`
+      : null;
+
+  const mostChampsName = recordsOverview?.most_championships?.name ?? null;
+
   return (
     <>
       {/* Hero Section */}
@@ -76,12 +105,14 @@ export default function Home() {
             }}
           />
         </div>
+
         <Container className="py-20 relative z-10">
           <div className="text-center max-w-4xl mx-auto">
             <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-semibold mb-6 border border-white/20">
               <Trophy size={18} className="text-yellow-300" />
               <span>Since 1935 • Wichita, Kansas</span>
             </div>
+
             <h1 className="text-5xl md:text-7xl font-black tracking-tight text-white mb-6 leading-none">
               91 Years of
               <br />
@@ -89,11 +120,13 @@ export default function Home() {
                 Championship Baseball
               </span>
             </h1>
+
             <p className="text-xl md:text-2xl text-blue-100 mb-8 leading-relaxed">
               America's premier amateur baseball tournament.
               <br className="hidden md:block" />
               Where legends are made and champions are crowned.
             </p>
+
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <NavLink
                 to="/championships"
@@ -102,6 +135,7 @@ export default function Home() {
                 <Trophy size={20} />
                 View All Champions
               </NavLink>
+
               <NavLink
                 to="/teams"
                 className="px-8 py-4 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white font-bold rounded-xl text-lg border-2 border-white/30 hover:border-white/50 transition-all inline-flex items-center gap-2"
@@ -112,6 +146,7 @@ export default function Home() {
             </div>
           </div>
         </Container>
+
         <div className="absolute bottom-0 left-0 right-0">
           <svg
             viewBox="0 0 1440 120"
@@ -158,6 +193,7 @@ export default function Home() {
                     </div>
                   </CardBody>
                 </Card>
+
                 <Card className="hover:shadow-xl transition-shadow border-l-4 border-l-green-500">
                   <CardBody className="flex items-start gap-4">
                     <div className="w-14 h-14 rounded-2xl bg-green-100 flex items-center justify-center flex-shrink-0">
@@ -176,6 +212,7 @@ export default function Home() {
                     </div>
                   </CardBody>
                 </Card>
+
                 <Card className="hover:shadow-xl transition-shadow border-l-4 border-l-blue-500">
                   <CardBody className="flex items-start gap-4">
                     <div className="w-14 h-14 rounded-2xl bg-blue-100 flex items-center justify-center flex-shrink-0">
@@ -194,17 +231,19 @@ export default function Home() {
                     </div>
                   </CardBody>
                 </Card>
+
+                {/* FIXED: Most championships now comes from /records/overview */}
                 <Card className="hover:shadow-xl transition-shadow border-l-4 border-l-purple-500">
                   <CardBody className="flex items-start gap-4">
                     <div className="w-14 h-14 rounded-2xl bg-purple-100 flex items-center justify-center flex-shrink-0">
                       <Award className="w-7 h-7 text-purple-600" />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <div className="text-2xl font-black text-gray-900">
-                        {stats?.most_successful_team?.championships || 10}x
+                        {mostChampsCount ?? "—"}
                       </div>
                       <div className="text-sm font-medium text-gray-600 mt-1 truncate">
-                        {stats?.most_successful_team?.name || "Santa Barbara"}
+                        {mostChampsName ?? "—"}
                       </div>
                       <div className="text-xs text-gray-500 mt-1">
                         Most championships
@@ -215,9 +254,10 @@ export default function Home() {
               </>
             )}
           </div>
-          {err && (
+
+          {(err || recordsErr) && (
             <div className="mt-6">
-              <BannerError message={err} />
+              <BannerError message={err || recordsErr} />
             </div>
           )}
         </Container>
@@ -238,6 +278,7 @@ export default function Home() {
               tournaments
             </p>
           </div>
+
           {loading ? (
             <div className="grid md:grid-cols-3 gap-6">
               <Skeleton className="h-64" />
@@ -246,7 +287,7 @@ export default function Home() {
             </div>
           ) : (
             <div className="grid md:grid-cols-3 gap-6">
-              {recent.map((r, idx) => (
+              {recent.map((r) => (
                 <Card
                   key={r.year}
                   className="group hover:shadow-2xl transition-all hover:-translate-y-2 relative overflow-hidden"
@@ -256,20 +297,25 @@ export default function Home() {
                       {r.year}
                     </span>
                   </div>
+
                   <CardBody className="pt-24">
                     <div className="w-16 h-16 rounded-2xl bg-yellow-100 flex items-center justify-center mb-4 mx-auto">
                       <Trophy className="w-8 h-8 text-yellow-600" />
                     </div>
+
                     <h3 className="text-xl font-bold text-gray-900 text-center mb-2">
                       {r.champion_name || r.champion}
                     </h3>
+
                     {(r.champion_city || r.city) && (
                       <p className="text-sm text-gray-600 text-center mb-4">
                         {r.champion_city || r.city},{" "}
                         {r.champion_state || r.state}
                       </p>
                     )}
+
                     <div className="border-t border-gray-200 my-4" />
+
                     <div className="space-y-2 text-sm">
                       {(r.runner_up_name || r.runner_up) && (
                         <div className="flex items-start gap-2">
@@ -284,6 +330,7 @@ export default function Home() {
                           </div>
                         </div>
                       )}
+
                       {r.mvp && (
                         <div className="flex items-start gap-2">
                           <Award className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" />
@@ -294,6 +341,7 @@ export default function Home() {
                         </div>
                       )}
                     </div>
+
                     <NavLink
                       to={`/championships/${r.year}`}
                       className="mt-6 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors text-sm"
@@ -304,6 +352,7 @@ export default function Home() {
                   </CardBody>
                 </Card>
               ))}
+
               {!recent.length && (
                 <div className="col-span-3 text-center text-gray-600 py-12">
                   No recent results available.
@@ -311,6 +360,7 @@ export default function Home() {
               )}
             </div>
           )}
+
           <div className="text-center mt-10">
             <NavLink
               to="/championships"
@@ -385,6 +435,7 @@ export default function Home() {
                 </div>
               </div>
             </div>
+
             <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-8 border border-white/10">
               <h3 className="text-2xl font-bold mb-6">Tournament Legacy</h3>
               <div className="space-y-6">
@@ -431,6 +482,7 @@ export default function Home() {
                 Query 91 years of tournament data, records, and statistics
               </p>
             </div>
+
             <Card className="shadow-xl border-2 border-gray-300">
               <CardBody>
                 <form onSubmit={handleSearch} className="space-y-4">
@@ -448,6 +500,7 @@ export default function Home() {
                       disabled={searching}
                     />
                   </div>
+
                   <button
                     type="submit"
                     disabled={searching || !searchQuery.trim()}
@@ -487,293 +540,113 @@ export default function Home() {
                 )}
 
                 {searchResults && searchResults.answer && (
-                  <>
-                    <div className="mt-6 p-6 bg-white border-2 border-green-200 rounded-lg">
-                      <div className="flex items-start gap-3 mb-4">
-                        <div className="flex-shrink-0 w-10 h-10 rounded-md bg-green-600 flex items-center justify-center">
-                          <Trophy className="text-white" size={20} />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-bold text-gray-900 text-lg">
-                            Search Results
-                          </h3>
-                          <p className="text-sm text-gray-700 mt-2">
-                            {searchResults.answer}
-                          </p>
-                        </div>
+                  <div className="mt-6 p-6 bg-white border-2 border-green-200 rounded-lg">
+                    <div className="flex items-start gap-3 mb-4">
+                      <div className="flex-shrink-0 w-10 h-10 rounded-md bg-green-600 flex items-center justify-center">
+                        <Trophy className="text-white" size={20} />
                       </div>
+                      <div className="flex-1">
+                        <h3 className="font-bold text-gray-900 text-lg">
+                          Search Results
+                        </h3>
+                        <p className="text-sm text-gray-700 mt-2">
+                          {searchResults.answer}
+                        </p>
+                      </div>
+                    </div>
 
-                      {/* Championship Details */}
-                      {searchResults.data &&
-                        !Array.isArray(searchResults.data) &&
-                        searchResults.data.champion_name && (
-                          <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                            <div className="grid md:grid-cols-2 gap-4">
+                    {/* Championship Details */}
+                    {searchResults.data &&
+                      !Array.isArray(searchResults.data) &&
+                      searchResults.data.champion_name && (
+                        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                          <div className="grid md:grid-cols-2 gap-4">
+                            <div>
+                              <div className="text-xs text-gray-500 mb-1">
+                                Champion
+                              </div>
+                              <div className="font-bold text-lg text-gray-900">
+                                {searchResults.data.champion_name}
+                              </div>
+                              {searchResults.data.champion_city && (
+                                <div className="text-sm text-gray-600">
+                                  {searchResults.data.champion_city},{" "}
+                                  {searchResults.data.champion_state}
+                                </div>
+                              )}
+                            </div>
+
+                            {searchResults.data.runner_up_name && (
                               <div>
                                 <div className="text-xs text-gray-500 mb-1">
-                                  Champion
+                                  Runner-up
                                 </div>
-                                <div className="font-bold text-lg text-gray-900">
-                                  {searchResults.data.champion_name}
-                                </div>
-                                {searchResults.data.champion_city && (
-                                  <div className="text-sm text-gray-600">
-                                    {searchResults.data.champion_city},{" "}
-                                    {searchResults.data.champion_state}
-                                  </div>
-                                )}
-                              </div>
-                              {searchResults.data.runner_up_name && (
-                                <div>
-                                  <div className="text-xs text-gray-500 mb-1">
-                                    Runner-up
-                                  </div>
-                                  <div className="font-semibold text-gray-900">
-                                    {searchResults.data.runner_up_name}
-                                  </div>
-                                </div>
-                              )}
-                              {searchResults.data.mvp && (
-                                <div>
-                                  <div className="text-xs text-gray-500 mb-1">
-                                    MVP
-                                  </div>
-                                  <div className="font-semibold text-gray-900">
-                                    {searchResults.data.mvp}
-                                  </div>
-                                </div>
-                              )}
-                              {searchResults.data.championship_score && (
-                                <div>
-                                  <div className="text-xs text-gray-500 mb-1">
-                                    Final Score
-                                  </div>
-                                  <div className="font-semibold text-gray-900">
-                                    {searchResults.data.championship_score}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                      {/* Player Stats Display */}
-                      {searchResults.data &&
-                        !Array.isArray(searchResults.data) &&
-                        searchResults.data.first_name && (
-                          <div className="mt-4 p-6 bg-gray-50 rounded-lg">
-                            <div className="mb-4">
-                              <h4 className="text-xl font-bold text-gray-900">
-                                {searchResults.data.first_name}{" "}
-                                {searchResults.data.last_name}
-                              </h4>
-                              <p className="text-sm text-gray-600">
-                                {searchResults.data.team_name || "Unknown Team"}{" "}
-                                - 2025 Season
-                              </p>
-                            </div>
-
-                            {searchResults.data.avg !== null && (
-                              <div className="mb-6">
-                                <h5 className="text-sm font-semibold text-gray-700 uppercase mb-3">
-                                  ⚾ Batting Statistics
-                                </h5>
-                                <div className="grid grid-cols-4 md:grid-cols-7 gap-3">
-                                  <div className="text-center p-2 bg-white rounded shadow-sm">
-                                    <div className="text-xs text-gray-500 mb-1">
-                                      AVG
-                                    </div>
-                                    <div className="text-lg font-bold text-blue-600">
-                                      {searchResults.data.avg
-                                        ? `.${Math.round(
-                                            searchResults.data.avg * 1000
-                                          )
-                                            .toString()
-                                            .padStart(3, "0")}`
-                                        : ".000"}
-                                    </div>
-                                  </div>
-                                  <div className="text-center p-2 bg-white rounded shadow-sm">
-                                    <div className="text-xs text-gray-500 mb-1">
-                                      HR
-                                    </div>
-                                    <div className="text-lg font-bold text-blue-600">
-                                      {searchResults.data.hr || 0}
-                                    </div>
-                                  </div>
-                                  <div className="text-center p-2 bg-white rounded shadow-sm">
-                                    <div className="text-xs text-gray-500 mb-1">
-                                      RBI
-                                    </div>
-                                    <div className="text-lg font-bold text-blue-600">
-                                      {searchResults.data.rbi || 0}
-                                    </div>
-                                  </div>
-                                  <div className="text-center p-2 bg-white rounded shadow-sm">
-                                    <div className="text-xs text-gray-500 mb-1">
-                                      H
-                                    </div>
-                                    <div className="text-lg font-bold text-blue-600">
-                                      {searchResults.data.h || 0}
-                                    </div>
-                                  </div>
-                                  <div className="text-center p-2 bg-white rounded shadow-sm">
-                                    <div className="text-xs text-gray-500 mb-1">
-                                      R
-                                    </div>
-                                    <div className="text-lg font-bold text-blue-600">
-                                      {searchResults.data.r || 0}
-                                    </div>
-                                  </div>
-                                  <div className="text-center p-2 bg-white rounded shadow-sm">
-                                    <div className="text-xs text-gray-500 mb-1">
-                                      AB
-                                    </div>
-                                    <div className="text-lg font-bold text-blue-600">
-                                      {searchResults.data.ab || 0}
-                                    </div>
-                                  </div>
-                                  <div className="text-center p-2 bg-white rounded shadow-sm">
-                                    <div className="text-xs text-gray-500 mb-1">
-                                      OBP
-                                    </div>
-                                    <div className="text-lg font-bold text-blue-600">
-                                      {searchResults.data.obp
-                                        ? `.${Math.round(
-                                            searchResults.data.obp * 1000
-                                          )
-                                            .toString()
-                                            .padStart(3, "0")}`
-                                        : ".000"}
-                                    </div>
-                                  </div>
+                                <div className="font-semibold text-gray-900">
+                                  {searchResults.data.runner_up_name}
                                 </div>
                               </div>
                             )}
 
-                            {searchResults.data.era !== null && (
+                            {searchResults.data.mvp && (
                               <div>
-                                <h5 className="text-sm font-semibold text-gray-700 uppercase mb-3">
-                                  🥎 Pitching Statistics
-                                </h5>
-                                <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
-                                  <div className="text-center p-2 bg-white rounded shadow-sm">
-                                    <div className="text-xs text-gray-500 mb-1">
-                                      ERA
-                                    </div>
-                                    <div className="text-lg font-bold text-blue-600">
-                                      {searchResults.data.era
-                                        ? parseFloat(
-                                            searchResults.data.era
-                                          ).toFixed(2)
-                                        : "0.00"}
-                                    </div>
-                                  </div>
-                                  <div className="text-center p-2 bg-white rounded shadow-sm">
-                                    <div className="text-xs text-gray-500 mb-1">
-                                      W
-                                    </div>
-                                    <div className="text-lg font-bold text-blue-600">
-                                      {searchResults.data.w || 0}
-                                    </div>
-                                  </div>
-                                  <div className="text-center p-2 bg-white rounded shadow-sm">
-                                    <div className="text-xs text-gray-500 mb-1">
-                                      L
-                                    </div>
-                                    <div className="text-lg font-bold text-blue-600">
-                                      {searchResults.data.l || 0}
-                                    </div>
-                                  </div>
-                                  <div className="text-center p-2 bg-white rounded shadow-sm">
-                                    <div className="text-xs text-gray-500 mb-1">
-                                      SV
-                                    </div>
-                                    <div className="text-lg font-bold text-blue-600">
-                                      {searchResults.data.sv || 0}
-                                    </div>
-                                  </div>
-                                  <div className="text-center p-2 bg-white rounded shadow-sm">
-                                    <div className="text-xs text-gray-500 mb-1">
-                                      IP
-                                    </div>
-                                    <div className="text-lg font-bold text-blue-600">
-                                      {searchResults.data.ip || 0}
-                                    </div>
-                                  </div>
-                                  <div className="text-center p-2 bg-white rounded shadow-sm">
-                                    <div className="text-xs text-gray-500 mb-1">
-                                      SO
-                                    </div>
-                                    <div className="text-lg font-bold text-blue-600">
-                                      {searchResults.data.p_so || 0}
-                                    </div>
-                                  </div>
+                                <div className="text-xs text-gray-500 mb-1">
+                                  MVP
+                                </div>
+                                <div className="font-semibold text-gray-900">
+                                  {searchResults.data.mvp}
+                                </div>
+                              </div>
+                            )}
+
+                            {searchResults.data.championship_score && (
+                              <div>
+                                <div className="text-xs text-gray-500 mb-1">
+                                  Final Score
+                                </div>
+                                <div className="font-semibold text-gray-900">
+                                  {searchResults.data.championship_score}
                                 </div>
                               </div>
                             )}
                           </div>
-                        )}
+                        </div>
+                      )}
 
-                      {/* Leaderboard Results */}
-                      {searchResults.results &&
-                        Array.isArray(searchResults.results) &&
-                        searchResults.results.length > 0 && (
-                          <div className="mt-4">
-                            <h4 className="font-semibold text-gray-900 mb-3">
-                              {searchResults.message}
-                            </h4>
-                            <div className="space-y-2">
-                              {searchResults.results.map((player, idx) => (
-                                <div
-                                  key={idx}
-                                  className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
-                                >
-                                  <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
-                                    {idx + 1}
+                    {/* Leaderboard Results */}
+                    {searchResults.results &&
+                      Array.isArray(searchResults.results) &&
+                      searchResults.results.length > 0 && (
+                        <div className="mt-4">
+                          <h4 className="font-semibold text-gray-900 mb-3">
+                            {searchResults.message}
+                          </h4>
+                          <div className="space-y-2">
+                            {searchResults.results.map((player, idx) => (
+                              <div
+                                key={idx}
+                                className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+                              >
+                                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
+                                  {idx + 1}
+                                </div>
+                                <div className="flex-1">
+                                  <div className="font-semibold text-gray-900">
+                                    {player.first_name} {player.last_name}
                                   </div>
-                                  <div className="flex-1">
-                                    <div className="font-semibold text-gray-900">
-                                      {player.first_name} {player.last_name}
-                                    </div>
-                                    <div className="text-xs text-gray-600">
-                                      {player.team_name}
-                                    </div>
-                                  </div>
-                                  <div className="text-right">
-                                    {player.avg !== undefined && (
-                                      <div className="text-lg font-bold text-blue-600">
-                                        {player.avg
-                                          ? `.${Math.round(player.avg * 1000)
-                                              .toString()
-                                              .padStart(3, "0")}`
-                                          : ".000"}
-                                      </div>
-                                    )}
-                                    {player.hr !== undefined &&
-                                      player.avg === undefined && (
-                                        <div className="text-lg font-bold text-blue-600">
-                                          {player.hr}
-                                        </div>
-                                      )}
-                                    {player.era !== undefined && (
-                                      <div className="text-lg font-bold text-blue-600">
-                                        {player.era
-                                          ? parseFloat(player.era).toFixed(2)
-                                          : "0.00"}
-                                      </div>
-                                    )}
+                                  <div className="text-xs text-gray-600">
+                                    {player.team_name}
                                   </div>
                                 </div>
-                              ))}
-                            </div>
+                              </div>
+                            ))}
                           </div>
-                        )}
-                    </div>
-                  </>
+                        </div>
+                      )}
+                  </div>
                 )}
               </CardBody>
             </Card>
+
             <div className="mt-8 grid grid-cols-3 gap-4">
               <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-200 text-center">
                 <div className="text-2xl font-bold text-blue-600">90+</div>
@@ -794,6 +667,7 @@ export default function Home() {
                 </div>
               </div>
             </div>
+
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-500">
                 Search through championship records, player statistics, team
