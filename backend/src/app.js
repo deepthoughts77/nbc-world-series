@@ -25,6 +25,7 @@ app.use((req, _res, next) => {
 });
 
 // CORS
+// backend/src/app.js (CORS)
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   process.env.FRONTEND_DEV_URL,
@@ -32,16 +33,19 @@ const allowedOrigins = [
   process.env.FRONTEND_ADMIN_URL,
   process.env.FRONTEND_ADMIN_DEV_URL,
   process.env.FRONTEND_ADMIN_PROD_URL,
-  "http://localhost:3000",
 ].filter(Boolean);
 
 app.use(
   cors({
     origin: (origin, cb) => {
-      // allow server-to-server / curl / Render health checks (no origin)
+      // allow server-to-server / curl / render health checks
       if (!origin) return cb(null, true);
 
+      // exact match env allowlist
       if (allowedOrigins.includes(origin)) return cb(null, true);
+
+      // allow any Vercel preview domains (optional)
+      if (/^https:\/\/.*\.vercel\.app$/.test(origin)) return cb(null, true);
 
       return cb(new Error(`CORS blocked origin: ${origin}`));
     },
