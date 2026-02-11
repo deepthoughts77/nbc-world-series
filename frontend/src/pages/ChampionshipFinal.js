@@ -6,7 +6,6 @@ import { Card, CardBody } from "../components/common/Card";
 import { SectionTitle } from "../components/common/SectionTitle";
 import { BannerError } from "../components/common/BannerError";
 import { Skeleton } from "../components/common/Skeleton";
-
 import { API } from "../api/apiClient";
 
 function BattingTable({ rows }) {
@@ -78,7 +77,7 @@ function PitchingTable({ rows }) {
 export default function ChampionshipFinal() {
   const { year } = useParams();
   const [params] = useSearchParams();
-  const teamMode = params.get("team"); // "runner_up" or null
+  const teamMode = (params.get("team") || "").toLowerCase(); // "runner_up" or ""
 
   const [payload, setPayload] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -101,12 +100,11 @@ export default function ChampionshipFinal() {
           headers: { "Cache-Control": "no-store" },
         });
 
-        const json = res.data;
-        if (!json?.success) {
-          throw new Error(json?.error || "Failed to load final stats");
+        if (!res.data?.success) {
+          throw new Error(res.data?.error || "Failed to load final stats");
         }
 
-        if (!ignore) setPayload(json);
+        if (!ignore) setPayload(res.data);
       } catch (e) {
         if (!ignore) setErr(e?.message || "Failed to load final stats");
       } finally {

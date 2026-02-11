@@ -6,13 +6,11 @@ import { Card, CardBody } from "../components/common/Card";
 import { SectionTitle } from "../components/common/SectionTitle";
 import { BannerError } from "../components/common/BannerError";
 import { Skeleton } from "../components/common/Skeleton";
-
 import { API } from "../api/apiClient";
 
 function MvpBattingTable({ rows }) {
-  if (!rows?.length) {
+  if (!rows?.length)
     return <p className="text-sm text-gray-600">No batting lines found.</p>;
-  }
 
   return (
     <div className="overflow-auto">
@@ -49,9 +47,8 @@ function MvpBattingTable({ rows }) {
 }
 
 function MvpPitchingTable({ rows }) {
-  if (!rows?.length) {
+  if (!rows?.length)
     return <p className="text-sm text-gray-600">No pitching lines found.</p>;
-  }
 
   return (
     <div className="overflow-auto">
@@ -106,12 +103,11 @@ export default function ChampionshipMvp() {
           headers: { "Cache-Control": "no-store" },
         });
 
-        const json = res.data;
-        if (!json?.success) {
-          throw new Error(json?.error || "Failed to load MVP stats");
+        if (!res.data?.success) {
+          throw new Error(res.data?.error || "Failed to load MVP stats");
         }
 
-        if (!ignore) setPayload(json);
+        if (!ignore) setPayload(res.data);
       } catch (e) {
         if (!ignore) setErr(e?.message || "Failed to load MVP stats");
       } finally {
