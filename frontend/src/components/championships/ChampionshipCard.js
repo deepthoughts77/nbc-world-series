@@ -21,12 +21,12 @@ export default function ChampionshipCard({ item }) {
           ) : null}
         </div>
 
-        {/* Optional: quick "View Finals" */}
+        {/* Quick link to finals page */}
         <Link
           to={`/championships/${year}/final`}
-          className="text-base font-bold text-gray-900 hover:underline"
+          className="text-sm text-blue-600 hover:underline"
         >
-          {item.champion_name}
+          View final →
         </Link>
       </div>
 
@@ -39,7 +39,7 @@ export default function ChampionshipCard({ item }) {
 
           {item.champion_name ? (
             <Link
-              to={`/championships/${year}/finals`}
+              to={`/championships/${year}/final`}
               className="text-base font-bold text-gray-900 hover:underline"
             >
               {item.champion_name}
@@ -56,19 +56,12 @@ export default function ChampionshipCard({ item }) {
           </div>
 
           {item.runner_up_name ? (
-            item.runner_up_team_id ? (
-              <Link
-                to={`/championships/${year}/finals/team/${item.runner_up_team_id}`}
-                className="text-base font-semibold text-gray-700 hover:underline"
-              >
-                {item.runner_up_name}
-              </Link>
-            ) : (
-              // If team_id is missing for some reason, still show name
-              <div className="text-base font-semibold text-gray-700">
-                {item.runner_up_name}
-              </div>
-            )
+            <Link
+              to={`/championships/${year}/final?team=runner_up`}
+              className="text-base font-semibold text-gray-700 hover:underline"
+            >
+              {item.runner_up_name}
+            </Link>
           ) : (
             <div className="text-gray-400">—</div>
           )}
