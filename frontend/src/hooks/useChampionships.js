@@ -1,6 +1,6 @@
 // frontend/src/hooks/useChampionships.js
 import { useEffect, useState } from "react";
-import axios from "axios";
+import { API } from "../api/apiClient";
 
 // helper: supports both array responses and { data: [...] } wrappers
 function pickArray(payload) {
@@ -25,9 +25,9 @@ export function useChampionships() {
       setError(null);
 
       try {
-        // If you have a proxy set in frontend package.json, you can use "/api/championships"
-        // Otherwise, keep the full backend URL:
-        const res = await axios.get("http://localhost:5000/api/championships");
+        // IMPORTANT:
+        // If API baseURL is already ".../api", use "/championships" (NOT "/api/championships")
+        const res = await API.get("/championships");
         const arr = pickArray(res.data);
 
         if (!alive) return;

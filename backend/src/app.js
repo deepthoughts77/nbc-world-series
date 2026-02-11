@@ -25,25 +25,25 @@ app.use((req, _res, next) => {
 });
 
 // CORS
-const allowedOrigins = new Set(
-  [
-    process.env.FRONTEND_URL,
-    process.env.FRONTEND_DEV_URL,
-    process.env.FRONTEND_PROD_URL,
-    process.env.FRONTEND_ADMIN_URL,
-    process.env.FRONTEND_ADMIN_DEV_URL,
-    process.env.FRONTEND_ADMIN_PROD_URL,
-    "http://localhost:3000", // local frontend
-  ].filter(Boolean),
-);
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  process.env.FRONTEND_DEV_URL,
+  process.env.FRONTEND_PROD_URL,
+  process.env.FRONTEND_ADMIN_URL,
+  process.env.FRONTEND_ADMIN_DEV_URL,
+  process.env.FRONTEND_ADMIN_PROD_URL,
+  "http://localhost:3000",
+].filter(Boolean);
 
 app.use(
   cors({
     origin: (origin, cb) => {
-      // allow requests with no origin (curl, server-to-server, render health check)
+      // allow server-to-server / curl / Render health checks (no origin)
       if (!origin) return cb(null, true);
-      if (allowedOrigins.has(origin)) return cb(null, true);
-      return cb(new Error(`CORS blocked for origin: ${origin}`), false);
+
+      if (allowedOrigins.includes(origin)) return cb(null, true);
+
+      return cb(new Error(`CORS blocked origin: ${origin}`));
     },
     credentials: true,
   }),
