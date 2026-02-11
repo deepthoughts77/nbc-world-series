@@ -21,7 +21,6 @@ export default function ChampionshipCard({ item }) {
           ) : null}
         </div>
 
-        {/* Goes to the FINAL stats page for that year */}
         <Link
           to={`/championships/${year}/final`}
           className="text-sm text-blue-600 hover:underline"
