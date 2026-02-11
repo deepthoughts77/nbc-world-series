@@ -2,49 +2,36 @@
 import axios from "axios";
 
 function computeBaseUrl() {
-  // 1) If env var is set at build-time, use it
+  // Preferred: explicit build-time env var
   if (process.env.REACT_APP_API_URL) {
-    return process.env.REACT_APP_API_URL;
+    return process.env.REACT_APP_API_URL.replace(/\/+$/, "");
   }
 
-  // 2) If we're in the browser, decide based on current origin
+  // Browser runtime fallback
   if (typeof window !== "undefined") {
     const origin = window.location.origin;
 
-    // Local development cases
+    // Local dev: frontend on 3000, backend on 5000
     if (origin.includes("localhost") || origin.includes("127.0.0.1")) {
-      // Our backend dev server is on 5000
-      // inside computeBaseUrl()
-
-      // Production fallback (Render backend service)
-      return "https://nbc-world-series.onrender.com/api";
+      return "http://localhost:5000/api";
     }
 
-    // 3) Production: frontend and backend share the same origin on Render
-    // e.g. https://nbc-world-series.onrender.com/api
-    return "https://nbc-world-series.onrender.com/api";
+    // Production: assume backend is same origin + /api
+    return `${origin}/api`;
   }
 
-  // 4) Fallback (SSR / tests)
-  // inside computeBaseUrl()
-
-  // Production fallback (Render backend service)
-  return "https://nbc-world-series.onrender.com/api";
+  return "http://localhost:5000/api";
 }
 
-// Base URL for your backend API
 export const BASE_URL = computeBaseUrl();
 
-// Create a dedicated axios instance
 export const API = axios.create({
   baseURL: BASE_URL,
-  timeout: 15000, // a bit higher than 10s to give Render time to wake
+  timeout: 15000,
 });
 
-// ---- Auth token helpers ----------------------------------------------------
 const TOKEN_STORAGE_KEY = "auth_token";
 
-/** Read token from localStorage (if present). */
 export function getAuthToken() {
   try {
     return localStorage.getItem(TOKEN_STORAGE_KEY) || null;
@@ -53,7 +40,6 @@ export function getAuthToken() {
   }
 }
 
-/** Set/replace the token and update axios default header. */
 export function setAuthToken(token) {
   try {
     if (token) {
@@ -63,56 +49,36 @@ export function setAuthToken(token) {
       clearAuthToken();
     }
   } catch {
-    // ignore storage errors (e.g., disabled storage)
+    // ignore
   }
 }
 
-/** Remove token and header. */
 export function clearAuthToken() {
   try {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
   } catch {
-    /* ignore */
+    // ignore
   }
   delete API.defaults.headers.common.Authorization;
 }
 
-// Initialize header from any persisted token on first load
+// init from storage
 const initialToken = getAuthToken();
 if (initialToken) {
   API.defaults.headers.common.Authorization = `Bearer ${initialToken}`;
 }
 
-// ---- Interceptors ----------------------------------------------------------
-
-// Always attach the freshest token before each request
 API.interceptors.request.use(
   (config) => {
     const token = getAuthToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    } else {
-      delete config.headers.Authorization;
-    }
+    if (token) config.headers.Authorization = `Bearer ${token}`;
+    else delete config.headers.Authorization;
     return config;
   },
   (error) => Promise.reject(error),
 );
 
-// Optionally standardize/network error messages
 API.interceptors.response.use(
   (response) => response,
-  (error) => {
-    return Promise.reject(error);
-  },
+  (error) => Promise.reject(error),
 );
-
-// Convenience: quick health check (hits /health at the same host)
-export async function healthCheck() {
-  // If BASE_URL ends with /api, strip it to hit /health
-  const root = BASE_URL.replace(/\/api\/?$/, "");
-  const url = `${root}/health`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Health check failed: ${res.status}`);
-  return res.json();
-}

@@ -25,8 +25,6 @@ export function useChampionships() {
       setError(null);
 
       try {
-        // IMPORTANT:
-        // If API baseURL is already ".../api", use "/championships" (NOT "/api/championships")
         const res = await API.get("/championships");
         const arr = pickArray(res.data);
 

@@ -5,5 +5,4 @@ export {
   getAuthToken,
   setAuthToken,
   clearAuthToken,
-  healthCheck,
 } from "../api";

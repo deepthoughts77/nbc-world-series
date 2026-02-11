@@ -92,14 +92,16 @@ export default function ChampionshipFinal() {
       setErr(null);
 
       try {
-        const path =
+        const url =
           teamMode === "runner_up"
             ? `/championships/${year}/final?team=runner_up`
             : `/championships/${year}/final`;
 
-        const res = await API.get(path);
-        const json = res.data;
+        const res = await API.get(url, {
+          headers: { "Cache-Control": "no-store" },
+        });
 
+        const json = res.data;
         if (!json?.success) {
           throw new Error(json?.error || "Failed to load final stats");
         }

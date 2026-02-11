@@ -12,9 +12,11 @@ export const getAllChampionships = async (req, res) => {
         c.id,
         c.year,
         c.championship_score,
+        ct.id    AS champion_team_id,
         ct.name  AS champion_name,
         ct.city  AS champion_city,
         ct.state AS champion_state,
+        rt.id    AS runner_up_team_id,
         rt.name  AS runner_up_name,
         rt.city  AS runner_up_city,
         rt.state AS runner_up_state,
@@ -62,9 +64,11 @@ export const getChampionshipByYear = async (req, res) => {
         c.id,
         c.year,
         c.championship_score,
+        ct.id    AS champion_team_id,
         ct.name  AS champion_name,
         ct.city  AS champion_city,
         ct.state AS champion_state,
+        rt.id    AS runner_up_team_id,
         rt.name  AS runner_up_name,
         rt.city  AS runner_up_city,
         rt.state AS runner_up_state,
@@ -151,6 +155,7 @@ export const getChampionshipFinalStats = async (req, res) => {
         ? [champ.runner_up_team_id]
         : [champ.champion_team_id, champ.runner_up_team_id];
 
+    // ✅ IMPORTANT: Use championship_id (NOT year) so Neon schema works
     const battingRes = await pool.query(
       `
       SELECT
@@ -160,10 +165,11 @@ export const getChampionshipFinalStats = async (req, res) => {
         b.ab, b.r, b.h, b.rbi, b.bb, b.so, b.po, b.a, b.lob
       FROM championship_final_batting b
       JOIN teams t ON t.id = b.team_id
-      WHERE b.year = $1 AND b.team_id = ANY($2::int[])
+      WHERE b.championship_id = $1
+        AND b.team_id = ANY($2::int[])
       ORDER BY t.name, b.player_name
       `,
-      [year, teamIds],
+      [champ.championship_id, teamIds],
     );
 
     const pitchingRes = await pool.query(
@@ -175,10 +181,11 @@ export const getChampionshipFinalStats = async (req, res) => {
         p.ip, p.h, p.r, p.er, p.bb, p.so, p.bf, p.hbp, p.wp, p.bk, p.rbi
       FROM championship_final_pitching p
       JOIN teams t ON t.id = p.team_id
-      WHERE p.year = $1 AND p.team_id = ANY($2::int[])
+      WHERE p.championship_id = $1
+        AND p.team_id = ANY($2::int[])
       ORDER BY t.name, p.player_name
       `,
-      [year, teamIds],
+      [champ.championship_id, teamIds],
     );
 
     const byTeam = new Map();
@@ -295,16 +302,18 @@ export const getChampionshipMvpStats = async (req, res) => {
 
     const name = champ.mvp_name;
 
+    // ✅ IMPORTANT: Use championship_id (NOT year) so Neon schema works
     const batRes = await pool.query(
       `
       SELECT b.*, t.name AS team_name
       FROM championship_final_batting b
       JOIN teams t ON t.id = b.team_id
-      WHERE b.year = $1 AND b.player_name ILIKE $2
+      WHERE b.championship_id = $1
+        AND b.player_name ILIKE $2
       ORDER BY t.name, b.player_name
       LIMIT 10
       `,
-      [year, `%${name}%`],
+      [champ.championship_id, `%${name}%`],
     );
 
     const pitRes = await pool.query(
@@ -312,11 +321,12 @@ export const getChampionshipMvpStats = async (req, res) => {
       SELECT p.*, t.name AS team_name
       FROM championship_final_pitching p
       JOIN teams t ON t.id = p.team_id
-      WHERE p.year = $1 AND p.player_name ILIKE $2
+      WHERE p.championship_id = $1
+        AND p.player_name ILIKE $2
       ORDER BY t.name, p.player_name
       LIMIT 10
       `,
-      [year, `%${name}%`],
+      [champ.championship_id, `%${name}%`],
     );
 
     res.json({

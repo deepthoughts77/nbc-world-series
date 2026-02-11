@@ -1,4 +1,4 @@
-// src/components/championships/ChampionshipCard.js
+// frontend/src/components/championships/ChampionshipCard.js
 import React from "react";
 import { Link } from "react-router-dom";
 
@@ -21,7 +21,6 @@ export default function ChampionshipCard({ item }) {
           ) : null}
         </div>
 
-        {/* Quick link to finals page */}
         <Link
           to={`/championships/${year}/final`}
           className="text-sm text-blue-600 hover:underline"

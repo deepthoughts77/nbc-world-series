@@ -1,4 +1,4 @@
-//backend/src/app.js
+// backend/src/app.js
 import express from "express";
 import cors from "cors";
 import morgan from "morgan";
@@ -6,17 +6,13 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// Import your new main API router
 import apiRouter from "./routes/index.js";
 import errorHandler from "./utils/errorHandler.js";
 
-// __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-
-// --- Top-Level Middleware ---
 
 // Basic request tracer
 app.use((req, _res, next) => {
@@ -25,7 +21,6 @@ app.use((req, _res, next) => {
 });
 
 // CORS
-// backend/src/app.js (CORS)
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   process.env.FRONTEND_DEV_URL,
@@ -38,14 +33,14 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, cb) => {
-      // allow server-to-server / curl / render health checks
+      // allow server-to-server, curl, Postman
       if (!origin) return cb(null, true);
 
-      // exact match env allowlist
+      // allow anything in allowed list
       if (allowedOrigins.includes(origin)) return cb(null, true);
 
-      // allow any Vercel preview domains (optional)
-      if (/^https:\/\/.*\.vercel\.app$/.test(origin)) return cb(null, true);
+      // allow any onrender.com subdomain (handy if you redeploy)
+      if (origin.endsWith(".onrender.com")) return cb(null, true);
 
       return cb(new Error(`CORS blocked origin: ${origin}`));
     },
@@ -53,31 +48,27 @@ app.use(
   }),
 );
 
-app.use(express.json()); // Body parser
-app.use(morgan("dev")); // HTTP request logger
+app.use(express.json());
+app.use(morgan("dev"));
 
-// Preflight for all routes (safe in Express 5 + path-to-regexp updates)
-app.use((req, res, next) => {
-  if (req.method === "OPTIONS") return res.sendStatus(204);
-  next();
-});
-
-// --- API Routes ---
-// All API routes are now handled in the /routes/index.js file
+// API routes
 app.use("/api", apiRouter);
 
-// --- Serve React Build (Frontend) ---
-// This serves your built frontend *after* all API routes
+// error handler (if you use it in your project)
+app.use(errorHandler);
+
+// Serve React build if present
 const frontendBuild = path.resolve(__dirname, "..", "..", "frontend", "build");
 const indexHtml = path.join(frontendBuild, "index.html");
 
 if (fs.existsSync(indexHtml)) {
   app.use(express.static(frontendBuild));
 
-  // For any route that is NOT an API route, send the React app
+  // Any route NOT starting with /api -> React
   app.get(/^\/(?!api).*/, (_req, res) => {
     res.sendFile(indexHtml);
   });
+
   console.log(` Serving frontend from: ${frontendBuild}`);
 } else {
   console.warn(` Frontend build not found at: ${frontendBuild}`);
