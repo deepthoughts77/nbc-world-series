@@ -100,17 +100,16 @@ export default function ChampionshipMvp() {
       setErr(null);
 
       try {
-        const res = await fetch(`${API}/championships/${year}/mvp`, {
-          cache: "no-store",
-        });
+        const res = await API.get(`/championships/${year}/mvp`);
+        const json = res.data;
 
-        const json = await res.json();
-        if (!json.success)
-          throw new Error(json.error || "Failed to load MVP stats");
+        if (!json?.success) {
+          throw new Error(json?.error || "Failed to load MVP stats");
+        }
 
         if (!ignore) setPayload(json);
       } catch (e) {
-        if (!ignore) setErr(e.message);
+        if (!ignore) setErr(e?.message || "Failed to load MVP stats");
       } finally {
         if (!ignore) setIsLoading(false);
       }

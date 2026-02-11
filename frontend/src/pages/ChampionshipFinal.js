@@ -92,20 +92,21 @@ export default function ChampionshipFinal() {
       setErr(null);
 
       try {
-        const url =
+        const path =
           teamMode === "runner_up"
-            ? `${API}/championships/${year}/final?team=runner_up`
-            : `${API}/championships/${year}/final`;
+            ? `/championships/${year}/final?team=runner_up`
+            : `/championships/${year}/final`;
 
-        const res = await fetch(url, { cache: "no-store" });
-        const json = await res.json();
+        const res = await API.get(path);
+        const json = res.data;
 
-        if (!json.success)
-          throw new Error(json.error || "Failed to load final stats");
+        if (!json?.success) {
+          throw new Error(json?.error || "Failed to load final stats");
+        }
 
         if (!ignore) setPayload(json);
       } catch (e) {
-        if (!ignore) setErr(e.message);
+        if (!ignore) setErr(e?.message || "Failed to load final stats");
       } finally {
         if (!ignore) setIsLoading(false);
       }
