@@ -1,13 +1,9 @@
 // src/components/SearchResults.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
 import { Trophy, Star } from "lucide-react";
 
 // ---- local API helper (same as App.js) ----
-const API = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || "http://localhost:5000/api",
-  timeout: 10000,
-});
+import { API } from "../api/apiClient";
 
 // ---- tiny UI bits to match your design system ----
 function Card({ children, className = "" }) {
@@ -170,7 +166,7 @@ export default function SearchResults({ searchResults }) {
                 safeAnswer
                   .split("**")
                   .map((part, i) =>
-                    i % 2 === 0 ? part : <strong key={i}>{part}</strong>
+                    i % 2 === 0 ? part : <strong key={i}>{part}</strong>,
                   )
               }
             </div>
@@ -284,9 +280,9 @@ export default function SearchResults({ searchResults }) {
                       data.player_stats?.losses !== undefined
                         ? `${data.player_stats.wins}-${data.player_stats.losses}`
                         : mvpStats?.wins !== undefined &&
-                          mvpStats?.losses !== undefined
-                        ? `${mvpStats.wins}-${mvpStats.losses}`
-                        : ""
+                            mvpStats?.losses !== undefined
+                          ? `${mvpStats.wins}-${mvpStats.losses}`
+                          : ""
                     }
                     sv={(data.player_stats?.saves ?? mvpStats?.saves) || ""}
                   />
@@ -473,9 +469,9 @@ export default function SearchResults({ searchResults }) {
                             data.mvp_stats?.losses !== undefined
                               ? `${data.mvp_stats.wins}-${data.mvp_stats.losses}`
                               : data.player_stats?.wins !== undefined &&
-                                data.player_stats?.losses !== undefined
-                              ? `${data.player_stats.wins}-${data.player_stats.losses}`
-                              : ""
+                                  data.player_stats?.losses !== undefined
+                                ? `${data.player_stats.wins}-${data.player_stats.losses}`
+                                : ""
                           }
                           sv={data.mvp_stats?.saves || data.player_stats?.saves}
                         />
@@ -509,7 +505,7 @@ export default function SearchResults({ searchResults }) {
                         </span>
                         <span className="ml-2 font-medium">{v}</span>
                       </div>
-                    ) : null
+                    ) : null,
                   )}
                 </div>
               </div>

@@ -14,16 +14,22 @@ function computeBaseUrl() {
     // Local development cases
     if (origin.includes("localhost") || origin.includes("127.0.0.1")) {
       // Our backend dev server is on 5000
-      return "http://localhost:5000/api";
+      // inside computeBaseUrl()
+
+      // Production fallback (Render backend service)
+      return "https://nbc-world-series.onrender.com/api";
     }
 
     // 3) Production: frontend and backend share the same origin on Render
     // e.g. https://nbc-world-series.onrender.com/api
-    return `${origin}/api`;
+    return "https://nbc-world-series.onrender.com/api";
   }
 
   // 4) Fallback (SSR / tests)
-  return "http://localhost:5000/api";
+  // inside computeBaseUrl()
+
+  // Production fallback (Render backend service)
+  return "https://nbc-world-series.onrender.com/api";
 }
 
 // Base URL for your backend API
@@ -90,7 +96,7 @@ API.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 // Optionally standardize/network error messages
@@ -98,7 +104,7 @@ API.interceptors.response.use(
   (response) => response,
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Convenience: quick health check (hits /health at the same host)

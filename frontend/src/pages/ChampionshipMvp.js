@@ -7,7 +7,7 @@ import { SectionTitle } from "../components/common/SectionTitle";
 import { BannerError } from "../components/common/BannerError";
 import { Skeleton } from "../components/common/Skeleton";
 
-const API = "http://localhost:5000/api";
+import { API } from "../api/apiClient";
 
 function MvpBattingTable({ rows }) {
   if (!rows?.length)
