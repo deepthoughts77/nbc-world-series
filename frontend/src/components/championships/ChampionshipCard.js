@@ -1,3 +1,4 @@
+// src/components/championships/ChampionshipCard.js
 import React from "react";
 import { Link } from "react-router-dom";
 
@@ -22,10 +23,10 @@ export default function ChampionshipCard({ item }) {
 
         {/* Optional: quick "View Finals" */}
         <Link
-          to={`/championships/${year}/finals`}
-          className="text-sm text-blue-600 hover:underline"
+          to={`/championships/${year}/final`}
+          className="text-base font-bold text-gray-900 hover:underline"
         >
-          View finals →
+          {item.champion_name}
         </Link>
       </div>
 
