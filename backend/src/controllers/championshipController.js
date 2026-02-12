@@ -100,21 +100,6 @@ export const getChampionshipByYear = async (req, res) => {
 };
 
 /**
- * Helper function to check if a column exists in a table
- */
-async function columnExists(tableName, columnName) {
-  const result = await pool.query(
-    `SELECT column_name 
-     FROM information_schema.columns 
-     WHERE table_schema = 'public' 
-     AND table_name = $1 
-     AND column_name = $2`,
-    [tableName, columnName],
-  );
-  return result.rows.length > 0;
-}
-
-/**
  * @description Get championship final stats (batting + pitching)
  * @route GET /api/championships/:year/final
  * Query:
@@ -213,7 +198,7 @@ export const getChampionshipFinalStats = async (req, res) => {
           p.team_id,
           t.name AS team_name,
           p.player_name,
-          p.ip, p.h, p.r, p.er, p.bb, p.so, p.bf, p.hbp, p.wp, p.bk, p.rbi
+          p.ip, p.h, p.r, p.er, p.bb, p.so
         FROM championship_final_pitching p
         JOIN teams t ON t.id = p.team_id
         WHERE p.final_id = $1 AND p.team_id = ANY($2::int[])
