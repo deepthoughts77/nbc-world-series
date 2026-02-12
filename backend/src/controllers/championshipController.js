@@ -105,6 +105,10 @@ export const getChampionshipByYear = async (req, res) => {
  * Query:
  *   ?team=runner_up  -> runner-up only
  *   default -> champion + runner-up
+ *
+ * NOTE:
+ * Your tables championship_final_batting / championship_final_pitching are keyed by YEAR
+ * (they have columns: id, year, team_id, ...). There is NO final_id column.
  */
 export const getChampionshipFinalStats = async (req, res) => {
   try {
@@ -117,7 +121,9 @@ export const getChampionshipFinalStats = async (req, res) => {
         .json({ success: false, error: "Year must be a 4-digit number" });
     }
 
-    // Get championship info
+    const yearInt = Number(year);
+
+    // Get championship info (for team ids + names)
     const champRes = await pool.query(
       `
       SELECT
@@ -136,7 +142,7 @@ export const getChampionshipFinalStats = async (req, res) => {
       WHERE c.year = $1
       LIMIT 1
       `,
-      [year],
+      [yearInt],
     );
 
     if (champRes.rows.length === 0) {
@@ -152,7 +158,7 @@ export const getChampionshipFinalStats = async (req, res) => {
         ? [champ.runner_up_team_id]
         : [champ.champion_team_id, champ.runner_up_team_id];
 
-    // Get batting stats using final_id
+    // Batting: filter by YEAR (not final_id)
     const battingRes = await pool.query(
       `
       SELECT
@@ -162,13 +168,13 @@ export const getChampionshipFinalStats = async (req, res) => {
         b.ab, b.r, b.h, b.rbi, b.bb, b.so, b.po, b.a, b.lob
       FROM championship_final_batting b
       LEFT JOIN teams t ON t.id = b.team_id
-      WHERE b.final_id = $1 AND b.team_id = ANY($2::int[])
+      WHERE b.year = $1 AND b.team_id = ANY($2::int[])
       ORDER BY t.name, b.player_name
       `,
-      [champ.championship_id, teamIds],
+      [yearInt, teamIds],
     );
 
-    // Get pitching stats using final_id (simplified columns only)
+    // Pitching: filter by YEAR (not final_id)
     const pitchingRes = await pool.query(
       `
       SELECT
@@ -178,10 +184,10 @@ export const getChampionshipFinalStats = async (req, res) => {
         p.ip, p.h, p.r, p.er, p.bb, p.so
       FROM championship_final_pitching p
       LEFT JOIN teams t ON t.id = p.team_id
-      WHERE p.final_id = $1 AND p.team_id = ANY($2::int[])
+      WHERE p.year = $1 AND p.team_id = ANY($2::int[])
       ORDER BY t.name, p.player_name
       `,
-      [champ.championship_id, teamIds],
+      [yearInt, teamIds],
     );
 
     // Group by team
@@ -191,7 +197,7 @@ export const getChampionshipFinalStats = async (req, res) => {
       if (!byTeam.has(team_id)) {
         byTeam.set(team_id, {
           team_id,
-          team_name: team_name || `Team ${team_id}`, // Fallback if team not found
+          team_name: team_name || `Team ${team_id}`,
           batting: [],
           pitching: [],
         });
@@ -239,6 +245,9 @@ export const getChampionshipFinalStats = async (req, res) => {
  * Behavior:
  * 1) If championship_mvp_stats.stats_snapshot exists -> return it
  * 2) Else try to locate MVP in final batting/pitching tables
+ *
+ * NOTE:
+ * Final tables are keyed by YEAR, so we search by b.year / p.year.
  */
 export const getChampionshipMvpStats = async (req, res) => {
   try {
@@ -249,6 +258,8 @@ export const getChampionshipMvpStats = async (req, res) => {
         .status(400)
         .json({ success: false, error: "Year must be a 4-digit number" });
     }
+
+    const yearInt = Number(year);
 
     const champRes = await pool.query(
       `
@@ -261,7 +272,7 @@ export const getChampionshipMvpStats = async (req, res) => {
       WHERE c.year = $1
       LIMIT 1
       `,
-      [year],
+      [yearInt],
     );
 
     if (champRes.rows.length === 0) {
@@ -276,18 +287,18 @@ export const getChampionshipMvpStats = async (req, res) => {
       return res.json({ success: true, data: null, note: "No MVP awarded" });
     }
 
-    // Check if championship_mvp_stats table exists and has snapshot
+    // If you have snapshot table, use it when available
     const snapRes = await pool
       .query(
         `
-      SELECT stats_snapshot, stats_source
-      FROM championship_mvp_stats
-      WHERE championship_id = $1
-      LIMIT 1
-      `,
+        SELECT stats_snapshot, stats_source
+        FROM championship_mvp_stats
+        WHERE championship_id = $1
+        LIMIT 1
+        `,
         [champ.championship_id],
       )
-      .catch(() => ({ rows: [] })); // Handle if table doesn't exist
+      .catch(() => ({ rows: [] }));
 
     if (snapRes.rows.length > 0 && snapRes.rows[0].stats_snapshot) {
       return res.json({
@@ -300,34 +311,34 @@ export const getChampionshipMvpStats = async (req, res) => {
       });
     }
 
-    // Try to find MVP in final stats using final_id
+    // Best-effort: search in final stats by YEAR + name
     const name = champ.mvp_name;
 
     const batRes = await pool
       .query(
         `
-      SELECT b.*, t.name AS team_name
-      FROM championship_final_batting b
-      LEFT JOIN teams t ON t.id = b.team_id
-      WHERE b.final_id = $1 AND b.player_name ILIKE $2
-      ORDER BY t.name, b.player_name
-      LIMIT 10
-      `,
-        [champ.championship_id, `%${name}%`],
+        SELECT b.*, t.name AS team_name
+        FROM championship_final_batting b
+        LEFT JOIN teams t ON t.id = b.team_id
+        WHERE b.year = $1 AND b.player_name ILIKE $2
+        ORDER BY t.name, b.player_name
+        LIMIT 10
+        `,
+        [yearInt, `%${name}%`],
       )
       .catch(() => ({ rows: [] }));
 
     const pitRes = await pool
       .query(
         `
-      SELECT p.*, t.name AS team_name
-      FROM championship_final_pitching p
-      LEFT JOIN teams t ON t.id = p.team_id
-      WHERE p.final_id = $1 AND p.player_name ILIKE $2
-      ORDER BY t.name, p.player_name
-      LIMIT 10
-      `,
-        [champ.championship_id, `%${name}%`],
+        SELECT p.*, t.name AS team_name
+        FROM championship_final_pitching p
+        LEFT JOIN teams t ON t.id = p.team_id
+        WHERE p.year = $1 AND p.player_name ILIKE $2
+        ORDER BY t.name, p.player_name
+        LIMIT 10
+        `,
+        [yearInt, `%${name}%`],
       )
       .catch(() => ({ rows: [] }));
 
