@@ -21,12 +21,11 @@ export default function ChampionshipCard({ item }) {
           ) : null}
         </div>
 
-        {/* Quick link to finals page */}
         <Link
           to={`/championships/${year}/final`}
-          className="text-base font-bold text-gray-900 hover:underline"
+          className="text-sm text-blue-600 hover:underline"
         >
-          {item.champion_name}
+          View final →
         </Link>
       </div>
 
