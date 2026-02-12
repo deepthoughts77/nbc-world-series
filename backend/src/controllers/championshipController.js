@@ -2,49 +2,13 @@
 import { pool } from "../db.js";
 
 /**
- * Helpers
- */
-async function tableExists(tableName) {
-  const result = await pool.query(
-    `
-    SELECT EXISTS (
-      SELECT FROM information_schema.tables
-      WHERE table_schema = 'public'
-      AND table_name = $1
-    ) AS exists
-    `,
-    [tableName],
-  );
-  return !!result.rows?.[0]?.exists;
-}
-
-async function getTableColumns(tableName) {
-  const result = await pool.query(
-    `
-    SELECT column_name
-    FROM information_schema.columns
-    WHERE table_schema = 'public'
-    AND table_name = $1
-    `,
-    [tableName],
-  );
-  return new Set(result.rows.map((r) => r.column_name));
-}
-
-function pick(obj, keys) {
-  const out = {};
-  for (const k of keys) out[k] = obj[k] ?? null;
-  return out;
-}
-
-/**
  * @description Get all championships
  * @route GET /api/championships
  */
 export const getAllChampionships = async (req, res) => {
   try {
     const query = `
-      SELECT
+      SELECT 
         c.id,
         c.year,
         c.championship_score,
@@ -94,7 +58,7 @@ export const getChampionshipByYear = async (req, res) => {
     }
 
     const query = `
-      SELECT
+      SELECT 
         c.id,
         c.year,
         c.championship_score,
@@ -140,13 +104,12 @@ export const getChampionshipByYear = async (req, res) => {
  * @route GET /api/championships/:year/final
  * Query:
  *   ?team=runner_up  -> runner-up only
- *   ?team=champion   -> champion only
- *   default -> both
+ *   default -> champion + runner-up
  */
 export const getChampionshipFinalStats = async (req, res) => {
   try {
     const { year } = req.params;
-    const teamMode = String(req.query.team || "both").toLowerCase();
+    const teamMode = String(req.query.team || "champion").toLowerCase();
 
     if (!/^\d{4}$/.test(year)) {
       return res
@@ -154,7 +117,7 @@ export const getChampionshipFinalStats = async (req, res) => {
         .json({ success: false, error: "Year must be a 4-digit number" });
     }
 
-    // 1) Get championship + team ids
+    // Get championship info
     const champRes = await pool.query(
       `
       SELECT
@@ -164,6 +127,7 @@ export const getChampionshipFinalStats = async (req, res) => {
         c.runner_up_team_id,
         ct.name AS champion_name,
         rt.name AS runner_up_name,
+        c.mvp_player_id,
         CONCAT(p.first_name, ' ', p.last_name) as mvp_name
       FROM championships c
       LEFT JOIN teams ct ON c.champion_team_id = ct.id
@@ -183,175 +147,51 @@ export const getChampionshipFinalStats = async (req, res) => {
 
     const champ = champRes.rows[0];
 
-    let teamIds;
-    if (teamMode === "runner_up") teamIds = [champ.runner_up_team_id];
-    else if (teamMode === "champion") teamIds = [champ.champion_team_id];
-    else teamIds = [champ.champion_team_id, champ.runner_up_team_id];
+    const teamIds =
+      teamMode === "runner_up"
+        ? [champ.runner_up_team_id]
+        : [champ.champion_team_id, champ.runner_up_team_id];
 
-    // 2) Check tables + columns (production Neon schema uses final_id, not year)
-    const battingTable = "championship_final_batting";
-    const pitchingTable = "championship_final_pitching";
-
-    const battingExists = await tableExists(battingTable);
-    const pitchingExists = await tableExists(pitchingTable);
-
-    let battingCols = new Set();
-    let pitchingCols = new Set();
-
-    if (battingExists) battingCols = await getTableColumns(battingTable);
-    if (pitchingExists) pitchingCols = await getTableColumns(pitchingTable);
-
-    const hasBatFinalId = battingCols.has("final_id");
-    const hasPitFinalId = pitchingCols.has("final_id");
-
-    // 3) Figure out which final_id belongs to THIS championship year.
-    // Since Neon doesn't have year on these tables, we infer by the two teams involved.
-    let finalId = null;
-
-    // Try to find candidate final_id values for the involved team(s)
-    const candidates = new Set();
-
-    if (battingExists && hasBatFinalId) {
-      const r = await pool.query(
-        `
-        SELECT DISTINCT final_id
-        FROM ${battingTable}
-        WHERE team_id = ANY($1::int[])
-        `,
-        [teamIds],
-      );
-      r.rows.forEach((x) => candidates.add(Number(x.final_id)));
-    }
-
-    if (pitchingExists && hasPitFinalId) {
-      const r = await pool.query(
-        `
-        SELECT DISTINCT final_id
-        FROM ${pitchingTable}
-        WHERE team_id = ANY($1::int[])
-        `,
-        [teamIds],
-      );
-      r.rows.forEach((x) => candidates.add(Number(x.final_id)));
-    }
-
-    const candArr = Array.from(candidates).filter((n) => Number.isFinite(n));
-    if (candArr.length === 1) finalId = candArr[0];
-    else if (candArr.length > 1) finalId = Math.max(...candArr);
-
-    // If we still can't determine finalId, return empty but SUCCESS (so frontend shows "no stats")
-    if (!finalId) {
-      return res.json({
-        success: true,
-        meta: {
-          year: champ.year,
-          championship_id: champ.championship_id,
-          champion: {
-            team_id: champ.champion_team_id,
-            name: champ.champion_name,
-          },
-          runner_up: {
-            team_id: champ.runner_up_team_id,
-            name: champ.runner_up_name,
-          },
-          mvp: champ.mvp_name || null,
-          mode: teamMode,
-          final_id: null,
-          note: "Could not infer final_id for this championship from final tables.",
-        },
-        data: [],
-      });
-    }
-
-    // 4) Build SELECT lists safely (only columns that exist)
-    const battingWanted = [
-      "team_id",
-      "player_id",
-      "player_name",
-      "batting_order",
-      "position",
-      "ab",
-      "r",
-      "h",
-      "rbi",
-      "bb",
-      "so",
-      "po",
-      "a",
-      "lob",
-    ];
-
-    const pitchingWanted = [
-      "team_id",
-      "player_id",
-      "player_name",
-      "ip",
-      "h",
-      "r",
-      "er",
-      "bb",
-      "so",
-      "bf",
-      "hbp", // might not exist
-      "wp",
-      "bk",
-      "rbi",
-      "decision",
-      "ab",
-    ];
-
-    const battingSelectCols = battingWanted.filter((c) => battingCols.has(c));
-    const pitchingSelectCols = pitchingWanted.filter((c) =>
-      pitchingCols.has(c),
+    // Get batting stats using final_id
+    const battingRes = await pool.query(
+      `
+      SELECT
+        b.team_id,
+        t.name AS team_name,
+        b.player_name,
+        b.ab, b.r, b.h, b.rbi, b.bb, b.so, b.po, b.a, b.lob
+      FROM championship_final_batting b
+      LEFT JOIN teams t ON t.id = b.team_id
+      WHERE b.final_id = $1 AND b.team_id = ANY($2::int[])
+      ORDER BY t.name, b.player_name
+      `,
+      [champ.championship_id, teamIds],
     );
 
-    let battingRows = [];
-    let pitchingRows = [];
+    // Get pitching stats using final_id (simplified columns only)
+    const pitchingRes = await pool.query(
+      `
+      SELECT
+        p.team_id,
+        t.name AS team_name,
+        p.player_name,
+        p.ip, p.h, p.r, p.er, p.bb, p.so
+      FROM championship_final_pitching p
+      LEFT JOIN teams t ON t.id = p.team_id
+      WHERE p.final_id = $1 AND p.team_id = ANY($2::int[])
+      ORDER BY t.name, p.player_name
+      `,
+      [champ.championship_id, teamIds],
+    );
 
-    if (battingExists && hasBatFinalId && battingSelectCols.length > 0) {
-      const battingRes = await pool.query(
-        `
-        SELECT
-          b.team_id,
-          t.name AS team_name,
-          ${battingSelectCols.map((c) => `b.${c}`).join(", ")}
-        FROM ${battingTable} b
-        JOIN teams t ON t.id = b.team_id
-        WHERE b.final_id = $1
-          AND b.team_id = ANY($2::int[])
-        ORDER BY t.name, b.player_name
-        `,
-        [finalId, teamIds],
-      );
-      battingRows = battingRes.rows;
-    }
-
-    if (pitchingExists && hasPitFinalId && pitchingSelectCols.length > 0) {
-      const pitchingRes = await pool.query(
-        `
-        SELECT
-          p.team_id,
-          t.name AS team_name,
-          ${pitchingSelectCols.map((c) => `p.${c}`).join(", ")}
-        FROM ${pitchingTable} p
-        JOIN teams t ON t.id = p.team_id
-        WHERE p.final_id = $1
-          AND p.team_id = ANY($2::int[])
-        ORDER BY t.name, p.player_name
-        `,
-        [finalId, teamIds],
-      );
-      pitchingRows = pitchingRes.rows;
-    }
-
-    // 5) Group by team
+    // Group by team
     const byTeam = new Map();
 
     function ensureTeam(team_id, team_name) {
       if (!byTeam.has(team_id)) {
         byTeam.set(team_id, {
           team_id,
-          team_name,
+          team_name: team_name || `Team ${team_id}`, // Fallback if team not found
           batting: [],
           pitching: [],
         });
@@ -359,23 +199,11 @@ export const getChampionshipFinalStats = async (req, res) => {
       return byTeam.get(team_id);
     }
 
-    // Normalize keys so frontend always receives expected fields (null when missing)
-    for (const row of battingRows) {
-      const t = ensureTeam(row.team_id, row.team_name);
-      t.batting.push({
-        team_id: row.team_id,
-        team_name: row.team_name,
-        ...pick(row, battingWanted),
-      });
+    for (const row of battingRes.rows) {
+      ensureTeam(row.team_id, row.team_name).batting.push(row);
     }
-
-    for (const row of pitchingRows) {
-      const t = ensureTeam(row.team_id, row.team_name);
-      t.pitching.push({
-        team_id: row.team_id,
-        team_name: row.team_name,
-        ...pick(row, pitchingWanted),
-      });
+    for (const row of pitchingRes.rows) {
+      ensureTeam(row.team_id, row.team_name).pitching.push(row);
     }
 
     res.json({
@@ -383,7 +211,6 @@ export const getChampionshipFinalStats = async (req, res) => {
       meta: {
         year: champ.year,
         championship_id: champ.championship_id,
-        final_id: finalId,
         champion: {
           team_id: champ.champion_team_id,
           name: champ.champion_name,
@@ -410,8 +237,8 @@ export const getChampionshipFinalStats = async (req, res) => {
  * @route GET /api/championships/:year/mvp
  *
  * Behavior:
- * 1) If championship_mvp_stats exists and has snapshot -> return it
- * 2) Else try to locate MVP in final batting/pitching tables (best effort)
+ * 1) If championship_mvp_stats.stats_snapshot exists -> return it
+ * 2) Else try to locate MVP in final batting/pitching tables
  */
 export const getChampionshipMvpStats = async (req, res) => {
   try {
@@ -449,74 +276,60 @@ export const getChampionshipMvpStats = async (req, res) => {
       return res.json({ success: true, data: null, note: "No MVP awarded" });
     }
 
-    // Snapshot table optional
-    const snapTable = "championship_mvp_stats";
-    const snapExists = await tableExists(snapTable);
-
-    if (snapExists) {
-      const snapRes = await pool.query(
+    // Check if championship_mvp_stats table exists and has snapshot
+    const snapRes = await pool
+      .query(
         `
-        SELECT stats_snapshot, stats_source
-        FROM ${snapTable}
-        WHERE championship_id = $1
-        LIMIT 1
-        `,
+      SELECT stats_snapshot, stats_source
+      FROM championship_mvp_stats
+      WHERE championship_id = $1
+      LIMIT 1
+      `,
         [champ.championship_id],
-      );
+      )
+      .catch(() => ({ rows: [] })); // Handle if table doesn't exist
 
-      if (snapRes.rows.length > 0 && snapRes.rows[0].stats_snapshot) {
-        return res.json({
-          success: true,
-          data: {
-            mvp_name: champ.mvp_name,
-            source: snapRes.rows[0].stats_source || "snapshot",
-            snapshot: snapRes.rows[0].stats_snapshot,
-          },
-        });
-      }
+    if (snapRes.rows.length > 0 && snapRes.rows[0].stats_snapshot) {
+      return res.json({
+        success: true,
+        data: {
+          mvp_name: champ.mvp_name,
+          source: snapRes.rows[0].stats_source || "snapshot",
+          snapshot: snapRes.rows[0].stats_snapshot,
+        },
+      });
     }
 
-    // Best-effort: search MVP name inside final tables (works even if schema differs)
-    const battingTable = "championship_final_batting";
-    const pitchingTable = "championship_final_pitching";
+    // Try to find MVP in final stats using final_id
+    const name = champ.mvp_name;
 
-    const battingExists = await tableExists(battingTable);
-    const pitchingExists = await tableExists(pitchingTable);
+    const batRes = await pool
+      .query(
+        `
+      SELECT b.*, t.name AS team_name
+      FROM championship_final_batting b
+      LEFT JOIN teams t ON t.id = b.team_id
+      WHERE b.final_id = $1 AND b.player_name ILIKE $2
+      ORDER BY t.name, b.player_name
+      LIMIT 10
+      `,
+        [champ.championship_id, `%${name}%`],
+      )
+      .catch(() => ({ rows: [] }));
 
-    let batRes = { rows: [] };
-    let pitRes = { rows: [] };
-
-    if (battingExists) {
-      const cols = await getTableColumns(battingTable);
-      if (cols.has("player_name")) {
-        batRes = await pool.query(
-          `
-          SELECT b.*, t.name AS team_name
-          FROM ${battingTable} b
-          JOIN teams t ON t.id = b.team_id
-          WHERE b.player_name ILIKE $1
-          LIMIT 10
-          `,
-          [`%${champ.mvp_name}%`],
-        );
-      }
-    }
-
-    if (pitchingExists) {
-      const cols = await getTableColumns(pitchingTable);
-      if (cols.has("player_name")) {
-        pitRes = await pool.query(
-          `
-          SELECT p.*, t.name AS team_name
-          FROM ${pitchingTable} p
-          JOIN teams t ON t.id = p.team_id
-          WHERE p.player_name ILIKE $1
-          LIMIT 10
-          `,
-          [`%${champ.mvp_name}%`],
-        );
-      }
-    }
+    const pitRes = await pool
+      .query(
+        `
+      SELECT p.*, t.name AS team_name
+      FROM championship_final_pitching p
+      LEFT JOIN teams t ON t.id = p.team_id
+      WHERE p.final_id = $1 AND p.player_name ILIKE $2
+      ORDER BY t.name, p.player_name
+      LIMIT 10
+      `,
+        [champ.championship_id, `%${name}%`],
+      )
+      .catch(() => ({ rows: [] }));
 
     res.json({
       success: true,
@@ -529,8 +342,9 @@ export const getChampionshipMvpStats = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching MVP stats:", error);
-    res
-      .status(500)
-      .json({ success: false, error: "Failed to fetch MVP stats" });
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch MVP stats",
+    });
   }
 };
