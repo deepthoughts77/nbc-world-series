@@ -28,6 +28,23 @@ app.use("/api", (req, res, next) => {
   next();
 });
 
+/**
+ * ============================
+ * Render deploy verification
+ * ============================
+ * This tells you exactly which commit Render is running.
+ * After deploy, visit: /api/__version
+ */
+app.get("/api/__version", (req, res) => {
+  res.json({
+    commit: process.env.RENDER_GIT_COMMIT || null,
+    branch: process.env.RENDER_GIT_BRANCH || null,
+    service: process.env.RENDER_SERVICE_NAME || null,
+    repo: process.env.RENDER_GIT_REPO_SLUG || null,
+    node_env: process.env.NODE_ENV || null,
+  });
+});
+
 // For Vercel serverless - export the app
 export default app;
 
