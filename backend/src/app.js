@@ -33,15 +33,9 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, cb) => {
-      // allow server-to-server, curl, Postman
       if (!origin) return cb(null, true);
-
-      // allow anything in allowed list
       if (allowedOrigins.includes(origin)) return cb(null, true);
-
-      // allow any onrender.com subdomain (handy if you redeploy)
       if (origin.endsWith(".onrender.com")) return cb(null, true);
-
       return cb(new Error(`CORS blocked origin: ${origin}`));
     },
     credentials: true,
@@ -54,7 +48,24 @@ app.use(morgan("dev"));
 // API routes
 app.use("/api", apiRouter);
 
-// error handler (if you use it in your project)
+/**
+ * ============================
+ * Render deploy verification
+ * ============================
+ * Must be BEFORE errorHandler and catch-alls.
+ * Visit: /api/__version to confirm which commit Render is running.
+ */
+app.get("/api/__version", (req, res) => {
+  res.json({
+    commit: process.env.RENDER_GIT_COMMIT || null,
+    branch: process.env.RENDER_GIT_BRANCH || null,
+    service: process.env.RENDER_SERVICE_NAME || null,
+    repo: process.env.RENDER_GIT_REPO_SLUG || null,
+    node_env: process.env.NODE_ENV || null,
+  });
+});
+
+// Error handler
 app.use(errorHandler);
 
 // Serve React build if present
@@ -63,12 +74,9 @@ const indexHtml = path.join(frontendBuild, "index.html");
 
 if (fs.existsSync(indexHtml)) {
   app.use(express.static(frontendBuild));
-
-  // Any route NOT starting with /api -> React
   app.get(/^\/(?!api).*/, (_req, res) => {
     res.sendFile(indexHtml);
   });
-
   console.log(` Serving frontend from: ${frontendBuild}`);
 } else {
   console.warn(` Frontend build not found at: ${frontendBuild}`);

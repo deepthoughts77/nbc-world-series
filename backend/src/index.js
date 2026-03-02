@@ -1,17 +1,8 @@
 // backend/src/index.js
 import "dotenv/config";
-import app from "./app.js"; // Import the configured Express app
+import app from "./app.js";
 
 const PORT = process.env.PORT || 5000;
-
-/**
- * ============================
- * API caching / 304 fix
- * ============================
- * Express can return 304 (Not Modified) due to ETag caching.
- * That can cause fetch() to receive an empty body and break res.json().
- * We disable ETag and force no-store on all /api responses.
- */
 
 // Disable ETag so Express won't respond 304 for API calls
 app.disable("etag");
@@ -28,31 +19,7 @@ app.use("/api", (req, res, next) => {
   next();
 });
 
-/**
- * ============================
- * Render deploy verification
- * ============================
- * This tells you exactly which commit Render is running.
- * After deploy, visit: /api/__version
- */
-app.get("/api/__version", (req, res) => {
-  res.json({
-    commit: process.env.RENDER_GIT_COMMIT || null,
-    branch: process.env.RENDER_GIT_BRANCH || null,
-    service: process.env.RENDER_SERVICE_NAME || null,
-    repo: process.env.RENDER_GIT_REPO_SLUG || null,
-    node_env: process.env.NODE_ENV || null,
-  });
+app.listen(PORT, () => {
+  console.log(`\n API running on http://localhost:${PORT}`);
+  console.log(` Health check: http://localhost:${PORT}/api/health\n`);
 });
-
-// For Vercel serverless - export the app
-export default app;
-
-// Only start server if running locally (not on Vercel)
-// (Keeping your exact condition, just using strict comparison)
-if (process.env.NODE_ENV !== "1") {
-  app.listen(PORT, () => {
-    console.log(`\n API running on http://localhost:${PORT}`);
-    console.log(` Health check: http://localhost:${PORT}/api/health\n`);
-  });
-}
