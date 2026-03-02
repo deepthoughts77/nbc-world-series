@@ -25,6 +25,32 @@ function unwrapPayload(payload) {
   return payload;
 }
 
+// ---- Formatting helpers ----
+// Baseball style: ".333"
+function fmtAvg3(v) {
+  if (v === null || v === undefined || v === "") return "—";
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "—";
+  return n.toFixed(3).replace(/^0/, "");
+}
+
+// Fielding pct: ".975"
+function fmtPct3(v) {
+  if (v === null || v === undefined || v === "") return "—";
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "—";
+  return n.toFixed(3).replace(/^0/, "");
+}
+
+// 2-decimal numeric: "4.67"
+function fmt2(v) {
+  if (v === null || v === undefined || v === "") return "—";
+  if (typeof v === "string" && v.toLowerCase().includes("inf")) return "∞";
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "—";
+  return n.toFixed(2);
+}
+
 export default function PlayerProfilePage() {
   const { id } = useParams();
   const [data, setData] = useState(null); // normalized payload
@@ -204,9 +230,9 @@ export default function PlayerProfilePage() {
                         Career Batting
                       </div>
                       <div className="font-semibold text-gray-900">
-                        AVG {battingCareer.career_avg ?? "—"} · OBP{" "}
-                        {battingCareer.career_obp ?? "—"} · SLG{" "}
-                        {battingCareer.career_slg ?? "—"}
+                        AVG {fmtAvg3(battingCareer.career_avg)} · OBP{" "}
+                        {fmtAvg3(battingCareer.career_obp)} · SLG{" "}
+                        {fmtAvg3(battingCareer.career_slg)}
                       </div>
                       <div className="text-xs text-gray-600 mt-1">
                         GP {battingCareer.total_gp || 0}, AB{" "}
@@ -224,14 +250,14 @@ export default function PlayerProfilePage() {
                         Career Pitching
                       </div>
                       <div className="font-semibold text-gray-900">
-                        ERA {pitchingCareer.career_era ?? "—"} · W{" "}
+                        ERA {fmt2(pitchingCareer.career_era)} · W{" "}
                         {pitchingCareer.total_w || 0} · L{" "}
                         {pitchingCareer.total_l || 0} · SV{" "}
                         {pitchingCareer.total_sv || 0}
                       </div>
                       <div className="text-xs text-gray-600 mt-1">
                         APP {pitchingCareer.total_app || 0}, IP{" "}
-                        {pitchingCareer.total_ip || 0}, SO{" "}
+                        {fmt2(pitchingCareer.total_ip)}, SO{" "}
                         {pitchingCareer.total_so || 0}
                       </div>
                     </div>
@@ -286,7 +312,7 @@ export default function PlayerProfilePage() {
                   Season Batting Stats
                 </h3>
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[1100px] text-xs md:text-sm">
+                  <table className="w-full min-w-[1400px] text-xs md:text-sm">
                     <thead className="bg-gray-50">
                       <tr className="border-b border-gray-200 text-gray-700">
                         <th className="px-3 py-2 text-left font-semibold">
@@ -328,6 +354,24 @@ export default function PlayerProfilePage() {
                         <th className="px-2 py-2 text-right font-semibold">
                           SB
                         </th>
+
+                        {/* 1966 CSV columns */}
+                        <th className="px-2 py-2 text-right font-semibold">
+                          SH
+                        </th>
+                        <th className="px-2 py-2 text-right font-semibold">
+                          PO
+                        </th>
+                        <th className="px-2 py-2 text-right font-semibold">
+                          A
+                        </th>
+                        <th className="px-2 py-2 text-right font-semibold">
+                          E
+                        </th>
+                        <th className="px-2 py-2 text-right font-semibold">
+                          Pct
+                        </th>
+
                         <th className="px-2 py-2 text-right font-semibold">
                           AVG
                         </th>
@@ -339,6 +383,7 @@ export default function PlayerProfilePage() {
                         </th>
                       </tr>
                     </thead>
+
                     <tbody className="divide-y divide-gray-100">
                       {battingStats.map((row, idx) => (
                         <tr
@@ -346,18 +391,22 @@ export default function PlayerProfilePage() {
                           className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
                         >
                           <td className="px-3 py-1.5">{row.year ?? "—"}</td>
+
                           <td className="px-3 py-1.5">
                             {row.team_name || "—"}
                             {row.city || row.state
                               ? ` (${row.city || "—"}${row.state ? `, ${row.state}` : ""})`
                               : ""}
                           </td>
+
                           <td className="px-2 py-1.5 text-center">
                             {row.jersey_num || "—"}
                           </td>
+
                           <td className="px-2 py-1.5 text-center">
                             {row.position || "—"}
                           </td>
+
                           <td className="px-2 py-1.5 text-right">
                             {row.gp ?? "—"}
                           </td>
@@ -370,12 +419,14 @@ export default function PlayerProfilePage() {
                           <td className="px-2 py-1.5 text-right">
                             {row.h ?? "—"}
                           </td>
+
                           <td className="px-2 py-1.5 text-right">
                             {row.doubles ?? row["2b"] ?? "—"}
                           </td>
                           <td className="px-2 py-1.5 text-right">
                             {row.triples ?? row["3b"] ?? "—"}
                           </td>
+
                           <td className="px-2 py-1.5 text-right">
                             {row.hr ?? "—"}
                           </td>
@@ -385,14 +436,31 @@ export default function PlayerProfilePage() {
                           <td className="px-2 py-1.5 text-right">
                             {row.sb ?? "—"}
                           </td>
+
                           <td className="px-2 py-1.5 text-right">
-                            {row.avg ?? "—"}
+                            {row.sh ?? "—"}
                           </td>
                           <td className="px-2 py-1.5 text-right">
-                            {row.obp ?? "—"}
+                            {row.po ?? "—"}
                           </td>
                           <td className="px-2 py-1.5 text-right">
-                            {row.slg ?? "—"}
+                            {row.a ?? "—"}
+                          </td>
+                          <td className="px-2 py-1.5 text-right">
+                            {row.e ?? "—"}
+                          </td>
+                          <td className="px-2 py-1.5 text-right">
+                            {fmtPct3(row.fld)}
+                          </td>
+
+                          <td className="px-2 py-1.5 text-right">
+                            {fmtAvg3(row.avg)}
+                          </td>
+                          <td className="px-2 py-1.5 text-right">
+                            {fmtAvg3(row.obp)}
+                          </td>
+                          <td className="px-2 py-1.5 text-right">
+                            {fmtAvg3(row.slg)}
                           </td>
                         </tr>
                       ))}
@@ -440,9 +508,12 @@ export default function PlayerProfilePage() {
                         <th className="px-2 py-2 text-right font-semibold">
                           SV
                         </th>
+
+                        {/* ✅ IP is formatted to 2 decimals */}
                         <th className="px-2 py-2 text-right font-semibold">
                           IP
                         </th>
+
                         <th className="px-2 py-2 text-right font-semibold">
                           H
                         </th>
@@ -463,6 +534,7 @@ export default function PlayerProfilePage() {
                         </th>
                       </tr>
                     </thead>
+
                     <tbody className="divide-y divide-gray-100">
                       {pitchingStats.map((row, idx) => (
                         <tr
@@ -470,18 +542,22 @@ export default function PlayerProfilePage() {
                           className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
                         >
                           <td className="px-3 py-1.5">{row.year ?? "—"}</td>
+
                           <td className="px-3 py-1.5">
                             {row.team_name || "—"}
                             {row.city || row.state
                               ? ` (${row.city || "—"}${row.state ? `, ${row.state}` : ""})`
                               : ""}
                           </td>
+
                           <td className="px-2 py-1.5 text-center">
                             {row.jersey_num || "—"}
                           </td>
+
                           <td className="px-2 py-1.5 text-right font-medium">
-                            {row.era ?? "—"}
+                            {fmt2(row.era)}
                           </td>
+
                           <td className="px-2 py-1.5 text-right">
                             {row.w ?? "—"}
                           </td>
@@ -497,9 +573,12 @@ export default function PlayerProfilePage() {
                           <td className="px-2 py-1.5 text-right">
                             {row.sv ?? "—"}
                           </td>
+
+                          {/* ✅ IP formatted */}
                           <td className="px-2 py-1.5 text-right">
-                            {row.ip ?? "—"}
+                            {fmt2(row.ip)}
                           </td>
+
                           <td className="px-2 py-1.5 text-right">
                             {row.h ?? "—"}
                           </td>
@@ -515,8 +594,9 @@ export default function PlayerProfilePage() {
                           <td className="px-2 py-1.5 text-right">
                             {row.hr ?? "—"}
                           </td>
+
                           <td className="px-2 py-1.5 text-right">
-                            {row.b_avg ?? "—"}
+                            {fmtAvg3(row.b_avg)}
                           </td>
                         </tr>
                       ))}

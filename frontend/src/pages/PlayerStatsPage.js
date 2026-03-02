@@ -693,6 +693,7 @@ export default function PlayerStatsPage() {
                     <PlayerStatsTable
                       players={team.players}
                       onPlayerClick={resolveAndNavigateToPlayer}
+                      year={selectedYear}
                     />
 
                     {pitchers.length > 0 && (
@@ -791,6 +792,15 @@ export default function PlayerStatsPage() {
                                   return num.toFixed(2);
                                 };
 
+                                // ✅ NEW: format IP to 2 decimals
+                                const formatIp = (val) => {
+                                  if (val === null || val === undefined)
+                                    return "—";
+                                  const num = Number(val);
+                                  if (Number.isNaN(num)) return val;
+                                  return num.toFixed(2);
+                                };
+
                                 const safeDisplay = (val) => {
                                   if (val === null || val === undefined)
                                     return "—";
@@ -852,9 +862,12 @@ export default function PlayerStatsPage() {
                                     <td className="px-2 py-1.5 text-right">
                                       {safeDisplay(p.sv)}
                                     </td>
+
+                                    {/* ✅ IP formatted here */}
                                     <td className="px-2 py-1.5 text-right">
-                                      {safeDisplay(p.ip)}
+                                      {formatIp(p.ip)}
                                     </td>
+
                                     <td className="px-2 py-1.5 text-right">
                                       {safeDisplay(p.h)}
                                     </td>

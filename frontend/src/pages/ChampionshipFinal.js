@@ -6,7 +6,7 @@ import { Card, CardBody } from "../components/common/Card";
 import { SectionTitle } from "../components/common/SectionTitle";
 import { BannerError } from "../components/common/BannerError";
 import { Skeleton } from "../components/common/Skeleton";
-import { API } from "../api/apiClient";
+import { API } from "../api";
 
 function BattingTable({ rows }) {
   return (
@@ -96,6 +96,7 @@ export default function ChampionshipFinal() {
             ? `/championships/${year}/final?team=runner_up`
             : `/championships/${year}/final`;
 
+        // 1) final stats
         const res = await API.get(url, {
           headers: { "Cache-Control": "no-store" },
         });
@@ -104,7 +105,75 @@ export default function ChampionshipFinal() {
           throw new Error(res.data?.error || "Failed to load final stats");
         }
 
-        if (!ignore) setPayload(res.data);
+        // Runner-up mode: no sorting needed (usually one team returned)
+        if (teamMode === "runner_up") {
+          if (!ignore) setPayload(res.data);
+          return;
+        }
+
+        // 2) championship summary (to know champion)
+        let champTeamId = null;
+        let champTeamName = null;
+
+        try {
+          const champRes = await API.get(`/championships/${year}`, {
+            headers: { "Cache-Control": "no-store" },
+          });
+
+          const c = champRes.data?.data || champRes.data || {};
+          champTeamId =
+            c.champion_team_id ||
+            c.championTeamId ||
+            c.champion_team?.id ||
+            null;
+
+          champTeamName =
+            c.champion_name ||
+            c.champion_team_name ||
+            c.championTeamName ||
+            c.champion_team?.name ||
+            null;
+        } catch (e) {
+          // If this fails, we’ll just render in API order
+        }
+
+        const teams = Array.isArray(res.data?.data) ? [...res.data.data] : [];
+
+        // Sort champion first (by id if available, else by name)
+        if (teams.length >= 2 && (champTeamId || champTeamName)) {
+          const champNameLower = String(champTeamName || "")
+            .toLowerCase()
+            .trim();
+
+          teams.sort((a, b) => {
+            const aIsChamp =
+              (champTeamId != null &&
+                Number(a.team_id) === Number(champTeamId)) ||
+              (champNameLower &&
+                String(a.team_name || "")
+                  .toLowerCase()
+                  .trim() === champNameLower);
+
+            const bIsChamp =
+              (champTeamId != null &&
+                Number(b.team_id) === Number(champTeamId)) ||
+              (champNameLower &&
+                String(b.team_name || "")
+                  .toLowerCase()
+                  .trim() === champNameLower);
+
+            if (aIsChamp && !bIsChamp) return -1;
+            if (!aIsChamp && bIsChamp) return 1;
+            return 0;
+          });
+        }
+
+        const nextPayload = {
+          ...res.data,
+          data: teams,
+        };
+
+        if (!ignore) setPayload(nextPayload);
       } catch (e) {
         if (!ignore) setErr(e?.message || "Failed to load final stats");
       } finally {
@@ -172,7 +241,7 @@ export default function ChampionshipFinal() {
                     {team.team_name}
                   </h3>
                   <div className="text-xs text-gray-500">
-                    Year: {payload.meta?.year}
+                    Year: {payload.meta?.year ?? year}
                   </div>
                 </div>
 
