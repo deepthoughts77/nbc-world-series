@@ -1,15 +1,21 @@
+// frontend/src/components/common/Card.js
 import React from "react";
 
-export function Card({ children, className = "" }) {
+export function Card({ className = "", children, ...props }) {
   return (
     <div
-      className={`bg-white rounded-2xl shadow-sm ring-1 ring-gray-200 ${className}`}
+      className={`rounded-xl border border-gray-200 bg-white shadow-sm ${className}`}
+      {...props}
     >
       {children}
     </div>
   );
 }
 
-export function CardBody({ children, className = "" }) {
-  return <div className={`p-6 ${className}`}>{children}</div>;
+export function CardBody({ className = "", children, ...props }) {
+  return (
+    <div className={`p-5 ${className}`} {...props}>
+      {children}
+    </div>
+  );
 }

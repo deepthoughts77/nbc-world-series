@@ -1,18 +1,23 @@
-// backend/src/app.js
+//backend/src/app.js
 import express from "express";
 import cors from "cors";
 import morgan from "morgan";
 import fs from "fs";
 import path from "path";
+import championshipRoutes from "./routes/championshipRoutes.js";
 import { fileURLToPath } from "url";
 
+// Import your new main API router
 import apiRouter from "./routes/index.js";
 import errorHandler from "./utils/errorHandler.js";
 
+// __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+
+// --- Top-Level Middleware ---
 
 // Basic request tracer
 app.use((req, _res, next) => {
@@ -32,48 +37,27 @@ const allowedOrigins = [
 
 app.use(
   cors({
-    origin: (origin, cb) => {
-      if (!origin) return cb(null, true);
-      if (allowedOrigins.includes(origin)) return cb(null, true);
-      if (origin.endsWith(".onrender.com")) return cb(null, true);
-      return cb(new Error(`CORS blocked origin: ${origin}`));
-    },
+    origin: allowedOrigins,
     credentials: true,
-  }),
+  })
 );
 
-app.use(express.json());
-app.use(morgan("dev"));
+app.use(express.json()); // Body parser
+app.use(morgan("dev")); // HTTP request logger
 
-// API routes
+// --- API Routes ---
+// All API routes are now handled in the /routes/index.js file
 app.use("/api", apiRouter);
-
-/**
- * ============================
- * Render deploy verification
- * ============================
- * Must be BEFORE errorHandler and catch-alls.
- * Visit: /api/__version to confirm which commit Render is running.
- */
-app.get("/api/__version", (req, res) => {
-  res.json({
-    commit: process.env.RENDER_GIT_COMMIT || null,
-    branch: process.env.RENDER_GIT_BRANCH || null,
-    service: process.env.RENDER_SERVICE_NAME || null,
-    repo: process.env.RENDER_GIT_REPO_SLUG || null,
-    node_env: process.env.NODE_ENV || null,
-  });
-});
-
-// Error handler
-app.use(errorHandler);
-
-// Serve React build if present
+app.use("/api/championships", championshipRoutes);
+// --- Serve React Build (Frontend) ---
+// This serves your built frontend *after* all API routes
 const frontendBuild = path.resolve(__dirname, "..", "..", "frontend", "build");
 const indexHtml = path.join(frontendBuild, "index.html");
 
 if (fs.existsSync(indexHtml)) {
   app.use(express.static(frontendBuild));
+
+  // For any route that is NOT an API route, send the React app
   app.get(/^\/(?!api).*/, (_req, res) => {
     res.sendFile(indexHtml);
   });
