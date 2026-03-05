@@ -1,4 +1,3 @@
-// frontend/src/layout/PageShell.js
 import React from "react";
 import { Nav } from "./Nav";
 import { Footer } from "./Footer";
@@ -13,4 +12,5 @@ export function PageShell({ children }) {
   );
 }
 
+// Add this line to fix the "Attempted import error" in production builds
 export default PageShell;

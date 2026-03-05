@@ -22,13 +22,22 @@ const allowedOrigins = [
   process.env.FRONTEND_ADMIN_URL,
   process.env.FRONTEND_ADMIN_DEV_URL,
   process.env.FRONTEND_ADMIN_PROD_URL,
+  // Hardcoded Fallbacks for Production and Local Dev
+  "https://nbc-world-series.onrender.com",
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "http://127.0.0.1:3000",
 ].filter(Boolean);
 
 app.use(
   cors({
     origin(origin, cb) {
       // Allow server-to-server requests (no Origin header) and listed origins
-      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      if (!origin || allowedOrigins.includes(origin)) {
+        return cb(null, true);
+      }
+      // Log blocked origin to help debugging in Render logs
+      console.warn(`CORS blocked: ${origin}`);
       return cb(new Error(`CORS: origin not allowed — ${origin}`));
     },
     credentials: true,
@@ -41,8 +50,6 @@ app.use(morgan("dev"));
 
 // ── API routes ────────────────────────────────────────────────────────────
 // Single mount point. All sub-routes live in routes/index.js.
-// Do NOT add duplicate app.use("/api/championships", ...) here —
-// championshipRoutes is already mounted inside apiRouter.
 app.use("/api", apiRouter);
 
 // ── Serve React build ─────────────────────────────────────────────────────
