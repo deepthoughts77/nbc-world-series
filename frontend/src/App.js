@@ -15,6 +15,8 @@ const Championships = React.lazy(() => import("./pages/Championships"));
 const ChampionshipDetail = React.lazy(
   () => import("./pages/ChampionshipDetail"),
 );
+// Added ChampionshipFinal to match your filename and component
+const ChampionshipFinal = React.lazy(() => import("./pages/ChampionshipFinal"));
 const Teams = React.lazy(() => import("./pages/Teams"));
 const TeamDetail = React.lazy(() => import("./pages/TeamDetail"));
 const HallOfFame = React.lazy(() => import("./pages/HallOfFame"));
@@ -49,6 +51,11 @@ export default function App() {
             <Route path="/leaders/batting" element={<BattingLeadersPage />} />
 
             {/* Detail Pages */}
+            {/* Matches the link used in Championships.js row component */}
+            <Route
+              path="/championships/:year/final"
+              element={<ChampionshipFinal />}
+            />
             <Route
               path="/championships/:year"
               element={<ChampionshipDetail />}
