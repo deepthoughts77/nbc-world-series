@@ -1,3 +1,4 @@
+// frontend/src/layout/PageShell.js
 import React from "react";
 import { Nav } from "./Nav";
 import { Footer } from "./Footer";
@@ -11,3 +12,5 @@ export function PageShell({ children }) {
     </div>
   );
 }
+
+export default PageShell;
