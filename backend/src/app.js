@@ -24,7 +24,7 @@ const allowedOrigins = [
   process.env.FRONTEND_ADMIN_PROD_URL,
   // Specific Production URLs
   "https://nbc-world-series.onrender.com",
-  "https://nbc-world-series-frontend.onrender.com", // Added to fix the ERR_FAILED console error
+  "https://nbc-world-series-frontend.onrender.com",
   // Local Development Fallbacks
   "http://localhost:3000",
   "http://localhost:3001",
@@ -34,12 +34,9 @@ const allowedOrigins = [
 app.use(
   cors({
     origin(origin, cb) {
-      // Allow requests with no origin (like mobile apps or curl)
-      // or if the origin is in our allowed list
       if (!origin || allowedOrigins.includes(origin)) {
         return cb(null, true);
       }
-      // Helpful for debugging in Render logs
       console.warn(`CORS blocked: ${origin}`);
       return cb(new Error(`CORS: origin not allowed — ${origin}`));
     },
@@ -51,8 +48,19 @@ app.use(
 app.use(express.json());
 app.use(morgan("dev"));
 
+// ── DOUBLE API PREFIX REWRITER (Safety Net) ───────────────────────────────
+// This catches requests to /api/api/... and rewrites them to /api/...
+app.use((req, res, next) => {
+  if (req.url.startsWith("/api/api/")) {
+    console.log(
+      `[Rewriter] Fixing double prefix: ${req.url} -> ${req.url.replace("/api/api/", "/api/")}`,
+    );
+    req.url = req.url.replace("/api/api/", "/api/");
+  }
+  next();
+});
+
 // ── API routes ────────────────────────────────────────────────────────────
-// Single mount point. All sub-routes live in routes/index.js.
 app.use("/api", apiRouter);
 
 // ── Serve React build ─────────────────────────────────────────────────────
@@ -61,7 +69,6 @@ const indexHtml = path.join(frontendBuild, "index.html");
 
 if (fs.existsSync(indexHtml)) {
   app.use(express.static(frontendBuild));
-  // Any non-API path gets the React shell
   app.get(/^\/(?!api).*/, (_req, res) => res.sendFile(indexHtml));
   console.log(`Serving frontend from: ${frontendBuild}`);
 } else {
