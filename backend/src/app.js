@@ -22,8 +22,10 @@ const allowedOrigins = [
   process.env.FRONTEND_ADMIN_URL,
   process.env.FRONTEND_ADMIN_DEV_URL,
   process.env.FRONTEND_ADMIN_PROD_URL,
-  // Hardcoded Fallbacks for Production and Local Dev
+  // Specific Production URLs
   "https://nbc-world-series.onrender.com",
+  "https://nbc-world-series-frontend.onrender.com", // Added to fix the ERR_FAILED console error
+  // Local Development Fallbacks
   "http://localhost:3000",
   "http://localhost:3001",
   "http://127.0.0.1:3000",
@@ -32,11 +34,12 @@ const allowedOrigins = [
 app.use(
   cors({
     origin(origin, cb) {
-      // Allow server-to-server requests (no Origin header) and listed origins
+      // Allow requests with no origin (like mobile apps or curl)
+      // or if the origin is in our allowed list
       if (!origin || allowedOrigins.includes(origin)) {
         return cb(null, true);
       }
-      // Log blocked origin to help debugging in Render logs
+      // Helpful for debugging in Render logs
       console.warn(`CORS blocked: ${origin}`);
       return cb(new Error(`CORS: origin not allowed — ${origin}`));
     },
