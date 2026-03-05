@@ -1,18 +1,19 @@
 // frontend/src/App.js
 import React, { Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import PageShell from "./layout/PageShell";
+import { PageShell } from "./layout/PageShell";
 import { Container } from "./components/common/Container";
 import { Skeleton } from "./components/common/Skeleton";
 
 // IMPORTANT: normal import for BattingLeadersPage so it can't be undefined
 import BattingLeadersPage from "./pages/BattingLeadersPage";
+import TeamYearDetail from "./pages/TeamYearDetail";
 
 // Lazy load the rest
 const Home = React.lazy(() => import("./pages/Home"));
 const Championships = React.lazy(() => import("./pages/Championships"));
-const ChampionshipDetail = React.lazy(() =>
-  import("./pages/ChampionshipDetail")
+const ChampionshipDetail = React.lazy(
+  () => import("./pages/ChampionshipDetail"),
 );
 const Teams = React.lazy(() => import("./pages/Teams"));
 const TeamDetail = React.lazy(() => import("./pages/TeamDetail"));
@@ -53,6 +54,7 @@ export default function App() {
               element={<ChampionshipDetail />}
             />
             <Route path="/teams/:teamSlug" element={<TeamDetail />} />
+            <Route path="/teams/:teamSlug/:year" element={<TeamYearDetail />} />
             <Route path="/players/:id" element={<PlayerProfile />} />
 
             {/* 404 */}

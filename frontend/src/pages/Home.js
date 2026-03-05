@@ -19,64 +19,48 @@ import { Container } from "../components/common/Container";
 import { Card, CardBody } from "../components/common/Card";
 import { BannerError } from "../components/common/BannerError";
 import { Skeleton } from "../components/common/Skeleton";
+import SearchResults from "../components/SearchResults";
 
 export default function Home() {
-  // Data from our hook
   const { stats, recent, loading, err } = useHome();
 
-  // NEW: records overview (so Home matches Records page)
   const [recordsOverview, setRecordsOverview] = useState(null);
   const [recordsErr, setRecordsErr] = useState("");
 
   useEffect(() => {
     let stop = false;
-
     API.get("/records/overview")
       .then((r) => {
-        if (stop) return;
-        setRecordsOverview(r.data);
+        if (!stop) setRecordsOverview(r.data);
       })
       .catch((e) => {
-        console.error("[Home] Failed to load /records/overview", e);
+        console.error("[Home] /records/overview", e);
         if (!stop) setRecordsErr("Could not load records overview.");
       });
-
     return () => {
       stop = true;
     };
   }, []);
 
-  // Local view state
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState(null);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
 
-  // Local logic
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
-
     setSearching(true);
     setSearchError("");
     setSearchResults(null);
-
     try {
       const response = await API.post("/search/ask", { question: searchQuery });
       const payload = response?.data ?? {};
-
-      console.log("=== HOME.JS RECEIVED ===");
-      console.log("Full response:", payload);
-      console.log("Answer:", payload.answer);
-      console.log("Data:", payload.data);
-      console.log("Message:", payload.message);
-      console.log("Results:", payload.results);
-
+      console.log("=== HOME.JS RECEIVED ===", payload);
       setSearchResults(payload);
     } catch (error) {
       console.error("Search error:", error);
       setSearchError("Search failed. Please try again.");
-      setSearchResults(null);
     } finally {
       setSearching(false);
     }
@@ -84,18 +68,15 @@ export default function Home() {
 
   const currentYear = new Date().getFullYear();
   const nextTournament = currentYear + 1;
-
-  // Use recordsOverview for "Most championships" so it matches Records page
   const mostChampsCount =
     recordsOverview?.most_championships?.championships != null
       ? `${recordsOverview.most_championships.championships}x`
       : null;
-
   const mostChampsName = recordsOverview?.most_championships?.name ?? null;
 
   return (
     <>
-      {/* Hero Section */}
+      {/* ── Hero ───────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
         <div className="absolute inset-0 opacity-10">
           <div
@@ -135,7 +116,6 @@ export default function Home() {
                 <Trophy size={20} />
                 View All Champions
               </NavLink>
-
               <NavLink
                 to="/teams"
                 className="px-8 py-4 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white font-bold rounded-xl text-lg border-2 border-white/30 hover:border-white/50 transition-all inline-flex items-center gap-2"
@@ -162,7 +142,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Quick Stats Section */}
+      {/* ── Quick Stats ────────────────────────────────────────────────── */}
       <section className="py-16 bg-gray-50">
         <Container>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -232,7 +212,6 @@ export default function Home() {
                   </CardBody>
                 </Card>
 
-                {/* FIXED: Most championships now comes from /records/overview */}
                 <Card className="hover:shadow-xl transition-shadow border-l-4 border-l-purple-500">
                   <CardBody className="flex items-start gap-4">
                     <div className="w-14 h-14 rounded-2xl bg-purple-100 flex items-center justify-center flex-shrink-0">
@@ -263,7 +242,7 @@ export default function Home() {
         </Container>
       </section>
 
-      {/* Recent Champions */}
+      {/* ── Recent Champions ───────────────────────────────────────────── */}
       <section className="py-16">
         <Container>
           <div className="text-center mb-12">
@@ -287,71 +266,83 @@ export default function Home() {
             </div>
           ) : (
             <div className="grid md:grid-cols-3 gap-6">
-              {recent.map((r) => (
-                <Card
-                  key={r.year}
-                  className="group hover:shadow-2xl transition-all hover:-translate-y-2 relative overflow-hidden"
-                >
-                  <div className="absolute top-4 right-4 w-16 h-16 rounded-xl bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center shadow-lg">
-                    <span className="text-white font-black text-lg">
-                      {r.year}
-                    </span>
-                  </div>
+              {recent.map((r) => {
+                // mvp may be a string (old shape) or mvp_names array (new shape)
+                const mvpLabel =
+                  Array.isArray(r.mvp_names) && r.mvp_names.length > 0
+                    ? r.mvp_names.join(" & ")
+                    : r.mvp || null;
 
-                  <CardBody className="pt-24">
-                    <div className="w-16 h-16 rounded-2xl bg-yellow-100 flex items-center justify-center mb-4 mx-auto">
-                      <Trophy className="w-8 h-8 text-yellow-600" />
+                return (
+                  <Card
+                    key={r.year}
+                    className="group hover:shadow-2xl transition-all hover:-translate-y-2 relative overflow-hidden"
+                  >
+                    <div className="absolute top-4 right-4 w-16 h-16 rounded-xl bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center shadow-lg">
+                      <span className="text-white font-black text-lg">
+                        {r.year}
+                      </span>
                     </div>
 
-                    <h3 className="text-xl font-bold text-gray-900 text-center mb-2">
-                      {r.champion_name || r.champion}
-                    </h3>
+                    <CardBody className="pt-24">
+                      <div className="w-16 h-16 rounded-2xl bg-yellow-100 flex items-center justify-center mb-4 mx-auto">
+                        <Trophy className="w-8 h-8 text-yellow-600" />
+                      </div>
 
-                    {(r.champion_city || r.city) && (
-                      <p className="text-sm text-gray-600 text-center mb-4">
-                        {r.champion_city || r.city},{" "}
-                        {r.champion_state || r.state}
-                      </p>
-                    )}
+                      <h3 className="text-xl font-bold text-gray-900 text-center mb-2">
+                        {r.champion_name || r.champion}
+                      </h3>
 
-                    <div className="border-t border-gray-200 my-4" />
-
-                    <div className="space-y-2 text-sm">
-                      {(r.runner_up_name || r.runner_up) && (
-                        <div className="flex items-start gap-2">
-                          <Medal className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
-                          <div>
-                            <span className="text-gray-500 text-xs">
-                              Runner-up:
-                            </span>
-                            <p className="text-gray-700 font-medium">
-                              {r.runner_up_name || r.runner_up}
-                            </p>
-                          </div>
-                        </div>
+                      {(r.champion_city || r.city) && (
+                        <p className="text-sm text-gray-600 text-center mb-4">
+                          {r.champion_city || r.city},{" "}
+                          {r.champion_state || r.state}
+                        </p>
                       )}
 
-                      {r.mvp && (
-                        <div className="flex items-start gap-2">
-                          <Award className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" />
-                          <div>
-                            <span className="text-gray-500 text-xs">MVP:</span>
-                            <p className="text-gray-700 font-medium">{r.mvp}</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                      <div className="border-t border-gray-200 my-4" />
 
-                    <NavLink
-                      to={`/championships/${r.year}`}
-                      className="mt-6 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors text-sm"
-                    >
-                      View Full Details
-                      <ChevronRight size={16} />
-                    </NavLink>
-                  </CardBody>
-                </Card>
-              ))}
+                      <div className="space-y-2 text-sm">
+                        {(r.runner_up_name || r.runner_up) && (
+                          <div className="flex items-start gap-2">
+                            <Medal className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <span className="text-gray-500 text-xs">
+                                Runner-up:
+                              </span>
+                              <p className="text-gray-700 font-medium">
+                                {r.runner_up_name || r.runner_up}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {mvpLabel && (
+                          <div className="flex items-start gap-2">
+                            <Award className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <span className="text-gray-500 text-xs">
+                                MVP:
+                              </span>
+                              <p className="text-gray-700 font-medium">
+                                {mvpLabel}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <NavLink
+                        to={`/championships/${r.year}`}
+                        className="mt-6 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors text-sm"
+                      >
+                        View Full Details
+                        <ChevronRight size={16} />
+                      </NavLink>
+                    </CardBody>
+                  </Card>
+                );
+              })}
 
               {!recent.length && (
                 <div className="col-span-3 text-center text-gray-600 py-12">
@@ -376,7 +367,7 @@ export default function Home() {
         </Container>
       </section>
 
-      {/* Tournament Info Section */}
+      {/* ── Tournament Info ────────────────────────────────────────────── */}
       <section className="py-16 bg-gradient-to-br from-gray-900 to-gray-800 text-white">
         <Container>
           <div className="grid md:grid-cols-2 gap-12 items-center">
@@ -467,7 +458,7 @@ export default function Home() {
         </Container>
       </section>
 
-      {/* Search Section */}
+      {/* ── Search Section ─────────────────────────────────────────────── */}
       <section className="py-16 bg-gray-50">
         <Container>
           <div className="max-w-4xl mx-auto">
@@ -508,7 +499,7 @@ export default function Home() {
                   >
                     {searching ? (
                       <>
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                         Searching...
                       </>
                     ) : (
@@ -539,110 +530,12 @@ export default function Home() {
                   </div>
                 )}
 
-                {searchResults && searchResults.answer && (
-                  <div className="mt-6 p-6 bg-white border-2 border-green-200 rounded-lg">
-                    <div className="flex items-start gap-3 mb-4">
-                      <div className="flex-shrink-0 w-10 h-10 rounded-md bg-green-600 flex items-center justify-center">
-                        <Trophy className="text-white" size={20} />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-bold text-gray-900 text-lg">
-                          Search Results
-                        </h3>
-                        <p className="text-sm text-gray-700 mt-2">
-                          {searchResults.answer}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Championship Details */}
-                    {searchResults.data &&
-                      !Array.isArray(searchResults.data) &&
-                      searchResults.data.champion_name && (
-                        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                          <div className="grid md:grid-cols-2 gap-4">
-                            <div>
-                              <div className="text-xs text-gray-500 mb-1">
-                                Champion
-                              </div>
-                              <div className="font-bold text-lg text-gray-900">
-                                {searchResults.data.champion_name}
-                              </div>
-                              {searchResults.data.champion_city && (
-                                <div className="text-sm text-gray-600">
-                                  {searchResults.data.champion_city},{" "}
-                                  {searchResults.data.champion_state}
-                                </div>
-                              )}
-                            </div>
-
-                            {searchResults.data.runner_up_name && (
-                              <div>
-                                <div className="text-xs text-gray-500 mb-1">
-                                  Runner-up
-                                </div>
-                                <div className="font-semibold text-gray-900">
-                                  {searchResults.data.runner_up_name}
-                                </div>
-                              </div>
-                            )}
-
-                            {searchResults.data.mvp && (
-                              <div>
-                                <div className="text-xs text-gray-500 mb-1">
-                                  MVP
-                                </div>
-                                <div className="font-semibold text-gray-900">
-                                  {searchResults.data.mvp}
-                                </div>
-                              </div>
-                            )}
-
-                            {searchResults.data.championship_score && (
-                              <div>
-                                <div className="text-xs text-gray-500 mb-1">
-                                  Final Score
-                                </div>
-                                <div className="font-semibold text-gray-900">
-                                  {searchResults.data.championship_score}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                    {/* Leaderboard Results */}
-                    {searchResults.results &&
-                      Array.isArray(searchResults.results) &&
-                      searchResults.results.length > 0 && (
-                        <div className="mt-4">
-                          <h4 className="font-semibold text-gray-900 mb-3">
-                            {searchResults.message}
-                          </h4>
-                          <div className="space-y-2">
-                            {searchResults.results.map((player, idx) => (
-                              <div
-                                key={idx}
-                                className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
-                              >
-                                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
-                                  {idx + 1}
-                                </div>
-                                <div className="flex-1">
-                                  <div className="font-semibold text-gray-900">
-                                    {player.first_name} {player.last_name}
-                                  </div>
-                                  <div className="text-xs text-gray-600">
-                                    {player.team_name}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                  </div>
+                {/* ── Answer bubble + rich results via SearchResults ── */}
+                {searchResults && (
+                  <>
+                    {/* Rich results: leaderboards, champ details, rosters, etc. */}
+                    <SearchResults searchResults={searchResults} />
+                  </>
                 )}
               </CardBody>
             </Card>

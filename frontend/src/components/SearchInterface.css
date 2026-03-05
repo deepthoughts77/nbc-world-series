@@ -161,7 +161,9 @@
   padding: 20px;
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s, box-shadow 0.3s;
+  transition:
+    transform 0.3s,
+    box-shadow 0.3s;
 }
 
 .result-card:hover {
@@ -259,4 +261,17 @@
   font-size: 20px;
   font-weight: bold;
   color: #1a73e8;
+}
+
+.answer-box p {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #2c3e50;
+  line-height: 1.6;
+  white-space: pre-line; /* Keeps AI-generated line breaks */
+}
+
+/* Make bold text from AI stand out */
+.answer-box p strong {
+  color: #1b5e20; /* Darker green to match the success theme */
 }

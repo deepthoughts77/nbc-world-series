@@ -6,11 +6,13 @@ import {
 
 const router = express.Router();
 
-// Natural language search endpoint
-router.post("/natural", naturalLanguageSearch);
-router.post("/ask", naturalLanguageSearch); // ← ADD THIS LINE
+// Primary endpoint — used by Home.js, SearchInterface.jsx
+router.post("/ask", naturalLanguageSearch);
 
-// Get search suggestions
+// Alias — keeps any older callers working
+router.post("/natural", naturalLanguageSearch);
+
+// Suggestions chip data
 router.get("/suggestions", getSearchSuggestions);
 
 export default router;
