@@ -1,22 +1,28 @@
-// frontend/src/api.js
 import axios from "axios";
 
 function computeBaseUrl() {
-  // Preferred: explicit build-time env var
+  // 1. Check for explicit environment variable
   if (process.env.REACT_APP_API_URL) {
     return process.env.REACT_APP_API_URL.replace(/\/+$/, "");
   }
 
-  // Browser runtime fallback
+  // 2. Browser runtime logic
   if (typeof window !== "undefined") {
     const origin = window.location.origin;
 
-    // Local dev: frontend on 3000, backend on 5000
+    // Local Development
     if (origin.includes("localhost") || origin.includes("127.0.0.1")) {
       return "http://localhost:5000/api";
     }
 
-    // Production: assume backend is same origin + /api
+    // Production (Render)
+    // If your frontend is on 'nbc-world-series-frontend.onrender.com'
+    // and backend is on 'nbc-world-series.onrender.com',
+    // the 'origin' logic fails. We hardcode the backend URL here.
+    if (origin.includes("onrender.com")) {
+      return "https://nbc-world-series.onrender.com/api";
+    }
+
     return `${origin}/api`;
   }
 
@@ -28,6 +34,9 @@ export const BASE_URL = computeBaseUrl();
 export const API = axios.create({
   baseURL: BASE_URL,
   timeout: 15000,
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
 const TOKEN_STORAGE_KEY = "auth_token";
@@ -49,7 +58,7 @@ export function setAuthToken(token) {
       clearAuthToken();
     }
   } catch {
-    // ignore
+    /* ignore */
   }
 }
 
@@ -57,22 +66,23 @@ export function clearAuthToken() {
   try {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
   } catch {
-    // ignore
+    /* ignore */
   }
   delete API.defaults.headers.common.Authorization;
 }
 
-// init from storage
-const initialToken = getAuthToken();
-if (initialToken) {
-  API.defaults.headers.common.Authorization = `Bearer ${initialToken}`;
-}
-
+// Interceptors
 API.interceptors.request.use(
   (config) => {
     const token = getAuthToken();
     if (token) config.headers.Authorization = `Bearer ${token}`;
-    else delete config.headers.Authorization;
+
+    // DEBUG: This prevents the double /api/api issue
+    // If a developer accidentally passes '/api/teams', we strip the extra '/api'
+    if (config.url.startsWith("/api/")) {
+      config.url = config.url.replace("/api/", "/");
+    }
+
     return config;
   },
   (error) => Promise.reject(error),
