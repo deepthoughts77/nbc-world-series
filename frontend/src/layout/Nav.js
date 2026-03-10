@@ -1,3 +1,4 @@
+// src/layout/Nav.js
 import React, { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { Menu, X } from "lucide-react";
@@ -57,11 +58,16 @@ export function Nav() {
                   Player Stats
                 </NavLink>
               </li>
+              <li>
+                <NavLink to="/leaders/pitching" className={activeClass}>
+                  Leading Pitchers
+                </NavLink>
+              </li>
             </ul>
           </nav>
         </div>
 
-        {/* Mobile menu */}
+        {/* Mobile menu button */}
         <button
           onClick={() => setOpen((v) => !v)}
           className="md:hidden p-2 rounded-lg border border-gray-300"
@@ -142,6 +148,17 @@ export function Nav() {
                 onClick={() => setOpen(false)}
               >
                 Player Stats
+              </NavLink>
+              <NavLink
+                to="/leaders/pitching"
+                className={({ isActive }) =>
+                  `px-3 py-2 rounded-lg ${
+                    isActive ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"
+                  }`
+                }
+                onClick={() => setOpen(false)}
+              >
+                Leading Pitchers
               </NavLink>
             </nav>
           </Container>

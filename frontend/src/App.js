@@ -23,6 +23,7 @@ const HallOfFame = React.lazy(() => import("./pages/HallOfFame"));
 const Records = React.lazy(() => import("./pages/Records"));
 const PlayerStatsPage = React.lazy(() => import("./pages/PlayerStatsPage"));
 const PlayerProfile = React.lazy(() => import("./pages/PlayerProfile"));
+const LeadingPitchers = React.lazy(() => import("./pages/LeadingPitchers"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 
 function PageLoader() {
@@ -49,6 +50,7 @@ export default function App() {
 
             {/* Leaders */}
             <Route path="/leaders/batting" element={<BattingLeadersPage />} />
+            <Route path="/leaders/pitching" element={<LeadingPitchers />} />
 
             {/* Detail Pages */}
             <Route

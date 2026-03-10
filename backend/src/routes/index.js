@@ -14,6 +14,7 @@ import hofRoutes from "./hofRoutes.js";
 import recordsRoutes from "./recordsRoutes.js";
 import searchRoutes from "./searchRoutes.js"; // contains /natural and /ask
 import playerRoutes from "./playerRoutes.js";
+import leadingPitchersRoutes from "./leadingPitchers.js";
 import tournamentRoutes from "./tournamentRoutes.js";
 
 const router = Router();
@@ -33,6 +34,7 @@ router.use("/auth", authRoutes);
 
 // Data routes
 router.use("/alumni", mlbAlumniRoutes);
+router.use("/leading-pitchers", leadingPitchersRoutes);
 router.use("/championships", championshipRoutes);
 router.use("/teams", teamRoutes);
 router.use("/statistics", statsRoutes);
