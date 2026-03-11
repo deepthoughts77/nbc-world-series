@@ -1,7 +1,7 @@
 // frontend/src/components/player-stats/PlayerStatsTable.js
 import React, { useState, useMemo, useCallback } from "react";
 
-export function PlayerStatsTable({ players, onPlayerClick }) {
+export function PlayerStatsTable({ players, onPlayerClick, year }) {
   // Default sort: AVG, highest first
   const [sortField, setSortField] = useState("avg");
   const [sortDir, setSortDir] = useState("desc"); // "asc" | "desc"
@@ -20,6 +20,10 @@ export function PlayerStatsTable({ players, onPlayerClick }) {
       "bb",
       "so",
       "sb",
+      "sh",
+      "po",
+      "a",
+      "e",
       "avg",
       "obp",
       "slg",
@@ -38,10 +42,8 @@ export function PlayerStatsTable({ players, onPlayerClick }) {
         return p.player_name || "";
       case "jersey":
         return p.jersey_num;
-
       case "pos":
         return p.position || p.pos;
-
       case "g":
         return p.gp ?? p.g;
       case "ab":
@@ -64,14 +66,20 @@ export function PlayerStatsTable({ players, onPlayerClick }) {
         return p.so;
       case "sb":
         return p.sb;
-
+      case "sh":
+        return p.sh;
+      case "po":
+        return p.po;
+      case "a":
+        return p.a;
+      case "e":
+        return p.e;
       case "avg":
         return p.avg;
       case "obp":
         return p.obp;
       case "slg":
         return p.slg;
-
       default:
         return null;
     }
@@ -100,15 +108,13 @@ export function PlayerStatsTable({ players, onPlayerClick }) {
         bRaw === null || bRaw === undefined || bRaw === "" || bRaw === "—";
 
       if (aMissing && bMissing) return 0;
-      if (aMissing) return 1; // missing values go to bottom
+      if (aMissing) return 1;
       if (bMissing) return -1;
 
       let cmp;
-
       if (numeric) {
         const aNum = getNumeric(aRaw);
         const bNum = getNumeric(bRaw);
-
         if (Number.isNaN(aNum) && Number.isNaN(bNum)) cmp = 0;
         else if (Number.isNaN(aNum)) cmp = 1;
         else if (Number.isNaN(bNum)) cmp = -1;
@@ -128,7 +134,15 @@ export function PlayerStatsTable({ players, onPlayerClick }) {
       setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
     } else {
       setSortField(field);
-      setSortDir(isNumericField(field) ? "desc" : "asc");
+      // E (errors) is lower-is-better, sort asc by default
+      const lowerIsBetter = new Set(["e"]);
+      setSortDir(
+        isNumericField(field)
+          ? lowerIsBetter.has(field)
+            ? "asc"
+            : "desc"
+          : "asc",
+      );
     }
   };
 
@@ -141,7 +155,7 @@ export function PlayerStatsTable({ players, onPlayerClick }) {
     if (val === null || val === undefined) return "—";
     const num = typeof val === "number" ? val : parseFloat(val);
     if (Number.isNaN(num)) return val;
-    return num.toFixed(3).slice(1); // "345" for .345
+    return num.toFixed(3).slice(1); // ".345" → "345" displayed as .345
   };
 
   const safeInt = (val) => {
@@ -153,12 +167,44 @@ export function PlayerStatsTable({ players, onPlayerClick }) {
     return <p className="px-6 py-4 text-sm text-gray-500">No players found.</p>;
   }
 
+  // Columns definition — add/remove here to control what shows.
+  // Each entry: [sortKey, label, renderFn]
+  const columns = [
+    // --- Standard counting stats ---
+    ["g", "G", (p) => safeInt(p.gp ?? p.g)],
+    ["ab", "AB", (p) => safeInt(p.ab)],
+    ["r", "R", (p) => safeInt(p.r)],
+    ["h", "H", (p) => safeInt(p.h)],
+    ["doubles", "2B", (p) => safeInt(p.doubles ?? p["2b"])],
+    ["triples", "3B", (p) => safeInt(p.triples ?? p["3b"])],
+    ["hr", "HR", (p) => safeInt(p.hr)],
+    ["rbi", "RBI", (p) => safeInt(p.rbi)],
+    ["bb", "BB", (p) => safeInt(p.bb)],
+    ["so", "SO", (p) => safeInt(p.so)],
+    ["sb", "SB", (p) => safeInt(p.sb)],
+    ["sh", "SH", (p) => safeInt(p.sh)], // ← was missing
+    // --- Fielding stats ---
+    ["po", "PO", (p) => safeInt(p.po)],
+    ["a", "A", (p) => safeInt(p.a)], // ← was missing
+    ["e", "E", (p) => safeInt(p.e)], // ← was missing
+    // --- Rate stats ---
+    [
+      "avg",
+      "AVG",
+      (p) => (
+        <span className="font-semibold text-blue-600">{formatAvg(p.avg)}</span>
+      ),
+    ],
+    ["obp", "OBP", (p) => (p.obp != null ? formatAvg(p.obp) : "—")],
+    ["slg", "SLG", (p) => (p.slg != null ? formatAvg(p.slg) : "—")],
+  ];
+
   return (
-    // ✅ KEY FIX: allow horizontal scroll, and prevent column squeezing
     <div className="-mx-6 overflow-x-auto px-6">
       <table className="table-auto w-max min-w-full whitespace-nowrap text-xs md:text-sm">
         <thead className="bg-gray-50">
           <tr className="border-b border-gray-200 text-gray-700">
+            {/* Player name — sticky */}
             <th
               className="px-4 py-2 text-left font-semibold sticky left-0 bg-gray-50 z-10 cursor-pointer"
               onClick={() => handleSort("player")}
@@ -173,6 +219,7 @@ export function PlayerStatsTable({ players, onPlayerClick }) {
               </span>
             </th>
 
+            {/* Jersey No. */}
             <th
               className="px-2 py-2 text-center font-semibold cursor-pointer"
               onClick={() => handleSort("jersey")}
@@ -187,6 +234,7 @@ export function PlayerStatsTable({ players, onPlayerClick }) {
               </span>
             </th>
 
+            {/* Position */}
             <th
               className="px-2 py-2 text-center font-semibold cursor-pointer"
               onClick={() => handleSort("pos")}
@@ -199,177 +247,21 @@ export function PlayerStatsTable({ players, onPlayerClick }) {
               </span>
             </th>
 
-            <th
-              className="px-2 py-2 text-right font-semibold cursor-pointer"
-              onClick={() => handleSort("g")}
-            >
-              <span className="inline-flex items-center">
-                G{" "}
-                {sortArrow("g") && (
-                  <span className="ml-1 text-[10px]">{sortArrow("g")}</span>
-                )}
-              </span>
-            </th>
-
-            <th
-              className="px-2 py-2 text-right font-semibold cursor-pointer"
-              onClick={() => handleSort("ab")}
-            >
-              <span className="inline-flex items-center">
-                AB{" "}
-                {sortArrow("ab") && (
-                  <span className="ml-1 text-[10px]">{sortArrow("ab")}</span>
-                )}
-              </span>
-            </th>
-
-            <th
-              className="px-2 py-2 text-right font-semibold cursor-pointer"
-              onClick={() => handleSort("r")}
-            >
-              <span className="inline-flex items-center">
-                R{" "}
-                {sortArrow("r") && (
-                  <span className="ml-1 text-[10px]">{sortArrow("r")}</span>
-                )}
-              </span>
-            </th>
-
-            <th
-              className="px-2 py-2 text-right font-semibold cursor-pointer"
-              onClick={() => handleSort("h")}
-            >
-              <span className="inline-flex items-center">
-                H{" "}
-                {sortArrow("h") && (
-                  <span className="ml-1 text-[10px]">{sortArrow("h")}</span>
-                )}
-              </span>
-            </th>
-
-            <th
-              className="px-2 py-2 text-right font-semibold cursor-pointer"
-              onClick={() => handleSort("doubles")}
-            >
-              <span className="inline-flex items-center">
-                2B{" "}
-                {sortArrow("doubles") && (
-                  <span className="ml-1 text-[10px]">
-                    {sortArrow("doubles")}
-                  </span>
-                )}
-              </span>
-            </th>
-
-            <th
-              className="px-2 py-2 text-right font-semibold cursor-pointer"
-              onClick={() => handleSort("triples")}
-            >
-              <span className="inline-flex items-center">
-                3B{" "}
-                {sortArrow("triples") && (
-                  <span className="ml-1 text-[10px]">
-                    {sortArrow("triples")}
-                  </span>
-                )}
-              </span>
-            </th>
-
-            <th
-              className="px-2 py-2 text-right font-semibold cursor-pointer"
-              onClick={() => handleSort("hr")}
-            >
-              <span className="inline-flex items-center">
-                HR{" "}
-                {sortArrow("hr") && (
-                  <span className="ml-1 text-[10px]">{sortArrow("hr")}</span>
-                )}
-              </span>
-            </th>
-
-            <th
-              className="px-2 py-2 text-right font-semibold cursor-pointer"
-              onClick={() => handleSort("rbi")}
-            >
-              <span className="inline-flex items-center">
-                RBI{" "}
-                {sortArrow("rbi") && (
-                  <span className="ml-1 text-[10px]">{sortArrow("rbi")}</span>
-                )}
-              </span>
-            </th>
-
-            <th
-              className="px-2 py-2 text-right font-semibold cursor-pointer"
-              onClick={() => handleSort("bb")}
-            >
-              <span className="inline-flex items-center">
-                BB{" "}
-                {sortArrow("bb") && (
-                  <span className="ml-1 text-[10px]">{sortArrow("bb")}</span>
-                )}
-              </span>
-            </th>
-
-            <th
-              className="px-2 py-2 text-right font-semibold cursor-pointer"
-              onClick={() => handleSort("so")}
-            >
-              <span className="inline-flex items-center">
-                SO{" "}
-                {sortArrow("so") && (
-                  <span className="ml-1 text-[10px]">{sortArrow("so")}</span>
-                )}
-              </span>
-            </th>
-
-            <th
-              className="px-2 py-2 text-right font-semibold cursor-pointer"
-              onClick={() => handleSort("sb")}
-            >
-              <span className="inline-flex items-center">
-                SB{" "}
-                {sortArrow("sb") && (
-                  <span className="ml-1 text-[10px]">{sortArrow("sb")}</span>
-                )}
-              </span>
-            </th>
-
-            <th
-              className="px-2 py-2 text-right font-semibold cursor-pointer"
-              onClick={() => handleSort("avg")}
-            >
-              <span className="inline-flex items-center">
-                AVG{" "}
-                {sortArrow("avg") && (
-                  <span className="ml-1 text-[10px]">{sortArrow("avg")}</span>
-                )}
-              </span>
-            </th>
-
-            <th
-              className="px-2 py-2 text-right font-semibold cursor-pointer"
-              onClick={() => handleSort("obp")}
-            >
-              <span className="inline-flex items-center">
-                OBP{" "}
-                {sortArrow("obp") && (
-                  <span className="ml-1 text-[10px]">{sortArrow("obp")}</span>
-                )}
-              </span>
-            </th>
-
-            <th
-              className="px-2 py-2 text-right font-semibold cursor-pointer"
-              onClick={() => handleSort("slg")}
-            >
-              <span className="inline-flex items-center">
-                SLG{" "}
-                {sortArrow("slg") && (
-                  <span className="ml-1 text-[10px]">{sortArrow("slg")}</span>
-                )}
-              </span>
-            </th>
+            {/* Dynamic stat columns */}
+            {columns.map(([key, label]) => (
+              <th
+                key={key}
+                className="px-2 py-2 text-right font-semibold cursor-pointer"
+                onClick={() => handleSort(key)}
+              >
+                <span className="inline-flex items-center justify-end">
+                  {label}{" "}
+                  {sortArrow(key) && (
+                    <span className="ml-1 text-[10px]">{sortArrow(key)}</span>
+                  )}
+                </span>
+              </th>
+            ))}
           </tr>
         </thead>
 
@@ -379,6 +271,7 @@ export function PlayerStatsTable({ players, onPlayerClick }) {
               key={p.id ?? p.player_id ?? `${p.player_name}-${idx}`}
               className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
             >
+              {/* Player name — sticky */}
               <td className="px-4 py-1.5 font-medium sticky left-0 bg-inherit">
                 <button
                   type="button"
@@ -395,50 +288,12 @@ export function PlayerStatsTable({ players, onPlayerClick }) {
 
               <td className="px-2 py-1.5 text-center">{p.position || "—"}</td>
 
-              <td className="px-2 py-1.5 text-right tabular-nums">
-                {safeInt(p.gp || p.g)}
-              </td>
-              <td className="px-2 py-1.5 text-right tabular-nums">
-                {safeInt(p.ab)}
-              </td>
-              <td className="px-2 py-1.5 text-right tabular-nums">
-                {safeInt(p.r)}
-              </td>
-              <td className="px-2 py-1.5 text-right tabular-nums">
-                {safeInt(p.h)}
-              </td>
-              <td className="px-2 py-1.5 text-right tabular-nums">
-                {safeInt(p.doubles || p["2b"])}
-              </td>
-              <td className="px-2 py-1.5 text-right tabular-nums">
-                {safeInt(p.triples || p["3b"])}
-              </td>
-              <td className="px-2 py-1.5 text-right tabular-nums">
-                {safeInt(p.hr)}
-              </td>
-              <td className="px-2 py-1.5 text-right tabular-nums">
-                {safeInt(p.rbi)}
-              </td>
-              <td className="px-2 py-1.5 text-right tabular-nums">
-                {safeInt(p.bb)}
-              </td>
-              <td className="px-2 py-1.5 text-right tabular-nums">
-                {safeInt(p.so)}
-              </td>
-              <td className="px-2 py-1.5 text-right tabular-nums">
-                {safeInt(p.sb)}
-              </td>
-
-              <td className="px-2 py-1.5 text-right font-semibold text-blue-600 tabular-nums">
-                {formatAvg(p.avg)}
-              </td>
-
-              <td className="px-2 py-1.5 text-right tabular-nums">
-                {p.obp != null ? p.obp : "—"}
-              </td>
-              <td className="px-2 py-1.5 text-right tabular-nums">
-                {p.slg != null ? p.slg : "—"}
-              </td>
+              {/* Dynamic stat cells */}
+              {columns.map(([key, , renderFn]) => (
+                <td key={key} className="px-2 py-1.5 text-right tabular-nums">
+                  {renderFn(p)}
+                </td>
+              ))}
             </tr>
           ))}
         </tbody>

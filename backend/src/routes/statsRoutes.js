@@ -1,3 +1,4 @@
+// src/routes/statsRoutes.js
 import { Router } from "express";
 import * as statsController from "../controllers/statsController.js";
 
