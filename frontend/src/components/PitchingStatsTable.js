@@ -29,9 +29,22 @@ const PitchingStatsTable = ({ year }) => {
 
   const isModernStats = year >= 2025;
 
-  const formatStat = (value, decimals = 2) => {
+  /**
+   * Universal Stat Formatter
+   * @param {number|string} value - The raw stat value
+   * @param {number} decimals - Number of decimal places
+   * @param {boolean} dropZero - If true, converts "0.333" to ".333"
+   */
+  const formatStat = (value, decimals = 2, dropZero = false) => {
     if (value === null || value === undefined) return "--";
-    return value.toFixed(decimals);
+    const num = typeof value === "number" ? value : parseFloat(value);
+    if (isNaN(num)) return "--";
+
+    let formatted = num.toFixed(decimals);
+    if (dropZero && formatted.startsWith("0.")) {
+      return formatted.slice(1);
+    }
+    return formatted;
   };
 
   const handleSort = (key) => {
@@ -85,15 +98,8 @@ const PitchingStatsTable = ({ year }) => {
               {isModernStats && (
                 <>
                   <SortableHeader label="ERA" sortKey="era" />
-                  <th className="sortable" onClick={() => handleSort("whip")}>
-                    WHIP
-                  </th>
-                  <th
-                    className="sortable"
-                    onClick={() => handleSort("k_per_9")}
-                  >
-                    K/9
-                  </th>
+                  <SortableHeader label="WHIP" sortKey="whip" />
+                  <SortableHeader label="K/9" sortKey="k_per_9" />
                 </>
               )}
 
@@ -132,10 +138,15 @@ const PitchingStatsTable = ({ year }) => {
 
                 {isModernStats && (
                   <>
-                    <td className="highlight">{formatStat(player.era, 2)}</td>
-                    <td className="highlight">{formatStat(player.whip, 2)}</td>
+                    {/* ERA and WHIP keep leading zeros */}
                     <td className="highlight">
-                      {formatStat(player.k_per_9, 1)}
+                      {formatStat(player.era, 2, false)}
+                    </td>
+                    <td className="highlight">
+                      {formatStat(player.whip, 2, false)}
+                    </td>
+                    <td className="highlight">
+                      {formatStat(player.k_per_9, 1, false)}
                     </td>
                   </>
                 )}
@@ -151,7 +162,8 @@ const PitchingStatsTable = ({ year }) => {
                   </>
                 )}
 
-                <td>{formatStat(player.ip, 1)}</td>
+                {/* IP uses 1 decimal place */}
+                <td>{formatStat(player.ip, 1, false)}</td>
                 <td>{player.h || "--"}</td>
                 <td>{player.r || "--"}</td>
                 <td>{player.er || "--"}</td>

@@ -24,12 +24,12 @@ export function PlayerStatsTable({ players, onPlayerClick }) {
       "obp",
       "slg",
     ],
-    []
+    [],
   );
 
   const isNumericField = useCallback(
     (field) => numericSortFields.includes(field),
-    [numericSortFields]
+    [numericSortFields],
   );
 
   const getSortValue = (p, field) => {
@@ -430,7 +430,7 @@ export function PlayerStatsTable({ players, onPlayerClick }) {
               </td>
 
               <td className="px-2 py-1.5 text-right font-semibold text-blue-600 tabular-nums">
-                {formatAvg(p.avg) === "—" ? "—" : `.${formatAvg(p.avg)}`}
+                {formatAvg(p.avg)}
               </td>
 
               <td className="px-2 py-1.5 text-right tabular-nums">
