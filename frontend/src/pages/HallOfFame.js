@@ -1,394 +1,606 @@
 import React, { useMemo, useState } from "react";
-import { Trophy, Users, Star, Search, Award } from "lucide-react";
+import {
+  Trophy,
+  Users,
+  Star,
+  Search,
+  Award,
+  ChevronUp,
+  ChevronDown,
+} from "lucide-react";
 import { useHallOfFame } from "../hooks/useHallOfFame";
 import { Container } from "../components/common/Container";
-import { SectionTitle } from "../components/common/SectionTitle";
-import { Card, CardBody } from "../components/common/Card";
 import { BannerError } from "../components/common/BannerError";
 import { Skeleton } from "../components/common/Skeleton";
+
+// ── Category config ───────────────────────────────────────────────────────
+const CATEGORY_META = {
+  Player: { color: "#1D4ED8", bg: "#EFF6FF", label: "PLAYER" },
+  Coach: { color: "#065F46", bg: "#ECFDF5", label: "COACH" },
+  Contributor: { color: "#6B21A8", bg: "#F5F3FF", label: "CONTRIB." },
+};
+
+function getCatMeta(cat) {
+  return CATEGORY_META[cat] || CATEGORY_META.Contributor;
+}
+
+function SortIcon({ active, dir }) {
+  if (!active) return <span style={{ opacity: 0.3, fontSize: 11 }}>↕</span>;
+  return dir === "asc" ? (
+    <ChevronUp size={13} style={{ color: "#B45309" }} />
+  ) : (
+    <ChevronDown size={13} style={{ color: "#B45309" }} />
+  );
+}
 
 export default function HallOfFame() {
   const { members, loading, err } = useHallOfFame();
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState("year-desc");
+  const [sortCol, setSortCol] = useState("year");
+  const [sortDir, setSortDir] = useState("desc");
 
-  // Filter and sort members
-  const filteredMembers = useMemo(() => {
-    let result = [...members];
-
-    // Category filter
-    if (categoryFilter !== "all") {
-      result = result.filter(
-        (m) => (m.category || "").toLowerCase() === categoryFilter.toLowerCase()
-      );
+  function handleSort(col) {
+    if (sortCol === col) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortCol(col);
+      setSortDir(col === "year" ? "desc" : "asc");
     }
+  }
 
-    // Search filter
-    if (search.trim()) {
-      const term = search.toLowerCase();
-      result = result.filter((m) =>
-        (m.inductee_name || m.name || "").toLowerCase().includes(term)
-      );
-    }
-
-    // Sort
-    result.sort((a, b) => {
-      const yearA = a.induction_year || 0;
-      const yearB = b.induction_year || 0;
-      const nameA = (a.inductee_name || a.name || "").toLowerCase();
-      const nameB = (b.inductee_name || b.name || "").toLowerCase();
-
-      switch (sortBy) {
-        case "year-desc":
-          return yearB - yearA || nameA.localeCompare(nameB);
-        case "year-asc":
-          return yearA - yearB || nameA.localeCompare(nameB);
-        case "name":
-          return nameA.localeCompare(nameB);
-        default:
-          return 0;
-      }
-    });
-
-    return result;
-  }, [members, categoryFilter, search, sortBy]);
-
-  // Calculate stats by category
   const stats = useMemo(() => {
-    const byCategory = {
-      Player: 0,
-      Coach: 0,
-      Contributor: 0,
-    };
-
+    const byCategory = { Player: 0, Coach: 0, Contributor: 0 };
     members.forEach((m) => {
-      const cat = m.category || "Contributor";
-      if (byCategory[cat] !== undefined) {
-        byCategory[cat]++;
-      } else {
-        // Handle unexpected categories if any
-        byCategory.Contributor++;
-      }
+      const c = m.category || "Contributor";
+      byCategory[c] = (byCategory[c] || 0) + 1;
     });
-
-    const recentYears = [...members]
-      .sort((a, b) => (b.induction_year || 0) - (a.induction_year || 0))
-      .slice(0, 5);
-
-    return {
-      total: members.length,
-      byCategory,
-      recent: recentYears,
-    };
+    return { total: members.length, byCategory };
   }, [members]);
 
+  const rows = useMemo(() => {
+    let out = [...members];
+    if (categoryFilter !== "all") {
+      out = out.filter((m) => (m.category || "Contributor") === categoryFilter);
+    }
+    if (search.trim()) {
+      const t = search.toLowerCase();
+      out = out.filter((m) =>
+        (m.inductee_name || m.name || "").toLowerCase().includes(t),
+      );
+    }
+    out.sort((a, b) => {
+      const nameA = (a.inductee_name || a.name || "").toLowerCase();
+      const nameB = (b.inductee_name || b.name || "").toLowerCase();
+      const yearA = a.induction_year || 0;
+      const yearB = b.induction_year || 0;
+      const catA = (a.category || "Contributor").toLowerCase();
+      const catB = (b.category || "Contributor").toLowerCase();
+      let cmp = 0;
+      if (sortCol === "name") cmp = nameA.localeCompare(nameB);
+      else if (sortCol === "year") cmp = yearA - yearB;
+      else if (sortCol === "cat") cmp = catA.localeCompare(catB);
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return out;
+  }, [members, categoryFilter, search, sortCol, sortDir]);
+
   return (
-    <Container className="py-12">
-      <SectionTitle
-        eyebrow="Legacy"
-        title="Hall of Fame"
-        desc="Honoring the legends who shaped the NBC World Series through exceptional performance, leadership, and dedication."
-      />
-
-      {/* Hero Stats Section */}
-      <div className="mb-10">
-        <Card className="bg-gradient-to-br from-gray-800 via-gray-900 to-black text-white overflow-hidden">
-          <CardBody className="p-8">
-            <div className="grid md:grid-cols-4 gap-6">
-              {/* Total Members */}
-              <div className="text-center">
-                <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-yellow-500/20 flex items-center justify-center">
-                  <Star size={32} className="text-yellow-400" />
-                </div>
-                <div className="text-4xl font-black mb-1">{stats.total}</div>
-                <div className="text-sm text-gray-300">Total Inductees</div>
-              </div>
-
-              {/* Players */}
-              <div className="text-center">
-                <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-blue-500/20 flex items-center justify-center">
-                  <Users size={28} className="text-blue-400" />
-                </div>
-                <div className="text-4xl font-black mb-1">
-                  {stats.byCategory.Player}
-                </div>
-                <div className="text-sm text-gray-300">Players</div>
-              </div>
-
-              {/* Coaches */}
-              <div className="text-center">
-                <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-green-500/20 flex items-center justify-center">
-                  <Award size={28} className="text-green-400" />
-                </div>
-                <div className="text-4xl font-black mb-1">
-                  {stats.byCategory.Coach}
-                </div>
-                <div className="text-sm text-gray-300">Coaches</div>
-              </div>
-
-              {/* Contributors */}
-              <div className="text-center">
-                <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-purple-500/20 flex items-center justify-center">
-                  <Trophy size={28} className="text-purple-400" />
-                </div>
-                <div className="text-4xl font-black mb-1">
-                  {stats.byCategory.Contributor}
-                </div>
-                <div className="text-sm text-gray-300">Contributors</div>
-              </div>
-            </div>
-          </CardBody>
-        </Card>
+    <div style={s.page}>
+      {/* ── Page header ─────────────────────────────────────────────── */}
+      <div style={s.pageHeader}>
+        <Container>
+          <div style={s.eyebrow}>NBC WORLD SERIES · LEGACY</div>
+          <h1 style={s.h1}>Hall of Fame</h1>
+          <p style={s.subtitle}>
+            Honoring the legends who shaped the NBC World Series through
+            exceptional performance, leadership, and dedication.
+          </p>
+        </Container>
       </div>
 
-      {/* Filters and Search */}
-      <Card className="mb-6">
-        <CardBody className="flex flex-wrap gap-4 items-end">
-          {/* Search */}
-          <div className="flex-1 min-w-[250px]">
-            <label className="block text-xs font-semibold text-gray-600 mb-2">
-              Search Inductees
-            </label>
-            <div className="relative">
-              <Search
-                size={18}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-              />
+      <Container>
+        <div style={s.body}>
+          {/* ── Stat rail ─────────────────────────────────────────────── */}
+          <div style={s.statRail}>
+            {[
+              {
+                label: "Total Inductees",
+                value: stats.total,
+                icon: <Star size={22} color="#D97706" />,
+                accent: "#D97706",
+              },
+              {
+                label: "Players",
+                value: stats.byCategory.Player,
+                icon: <Users size={22} color="#1D4ED8" />,
+                accent: "#1D4ED8",
+              },
+              {
+                label: "Coaches",
+                value: stats.byCategory.Coach,
+                icon: <Award size={22} color="#065F46" />,
+                accent: "#065F46",
+              },
+              {
+                label: "Contributors",
+                value: stats.byCategory.Contributor,
+                icon: <Trophy size={22} color="#6B21A8" />,
+                accent: "#6B21A8",
+              },
+            ].map(({ label, value, icon, accent }) => (
+              <div key={label} style={s.statCell}>
+                <div
+                  style={{
+                    ...s.statIconWrap,
+                    borderColor: accent + "33",
+                    background: accent + "0D",
+                  }}
+                >
+                  {icon}
+                </div>
+                <div style={{ ...s.statValue, color: accent }}>{value}</div>
+                <div style={s.statLabel}>{label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* ── Toolbar ───────────────────────────────────────────────── */}
+          <div style={s.toolbar}>
+            <div style={s.searchWrap}>
+              <Search size={15} style={s.searchIcon} />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-3 py-2.5 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all"
-                placeholder="Search by name..."
+                placeholder="Search inductees…"
+                style={s.searchInput}
               />
             </div>
-          </div>
 
-          {/* Category Filter */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-2">
-              Category
-            </label>
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="px-4 py-2.5 border-2 border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 bg-white cursor-pointer transition-all"
-            >
-              <option value="all">All Categories</option>
-              <option value="Player">Players</option>
-              <option value="Coach">Coaches</option>
-              <option value="Contributor">Contributors</option>
-            </select>
-          </div>
-
-          {/* Sort */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-2">
-              Sort By
-            </label>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-4 py-2.5 border-2 border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 bg-white cursor-pointer transition-all"
-            >
-              <option value="year-desc">Newest First</option>
-              <option value="year-asc">Oldest First</option>
-              <option value="name">Name (A-Z)</option>
-            </select>
-          </div>
-
-          {/* Clear Filters */}
-          {(search || categoryFilter !== "all") && (
-            <button
-              onClick={() => {
-                setSearch("");
-                setCategoryFilter("all");
-              }}
-              className="px-4 py-2.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all font-medium"
-            >
-              Clear Filters
-            </button>
-          )}
-        </CardBody>
-      </Card>
-
-      {/* Results Count */}
-      <div className="mb-4 text-sm text-gray-600">
-        Showing <strong>{filteredMembers.length}</strong> of{" "}
-        <strong>{stats.total}</strong> inductees
-      </div>
-
-      {err && (
-        <div className="mb-4">
-          <BannerError message={err} />
-        </div>
-      )}
-
-      {loading ? (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <Skeleton key={i} className="h-56" />
-          ))}
-        </div>
-      ) : filteredMembers.length > 0 ? (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredMembers.map((member, idx) => {
-            const name = member.inductee_name || member.name || "Unknown";
-            const year = member.induction_year || "—";
-            const category = member.category || "Contributor";
-            const bio = member.bio || "";
-
-            // Category color coding
-            const categoryStyles = {
-              Player: {
-                bg: "bg-blue-50",
-                border: "border-blue-200",
-                text: "text-blue-700",
-                icon: Users,
-              },
-              Coach: {
-                bg: "bg-green-50",
-                border: "border-green-200",
-                text: "text-green-700",
-                icon: Award,
-              },
-              Contributor: {
-                bg: "bg-purple-50",
-                border: "border-purple-200",
-                text: "text-purple-700",
-                icon: Trophy,
-              },
-            };
-
-            const style =
-              categoryStyles[category] || categoryStyles.Contributor;
-            const Icon = style.icon;
-
-            return (
-              <Card
-                key={member.id ?? `${name}-${idx}`}
-                className="hover:shadow-xl transition-all hover:-translate-y-1 overflow-hidden group"
-              >
-                {/* Header with year badge */}
-                <div className="bg-gradient-to-br from-gray-700 via-gray-800 to-gray-900 p-5 text-white relative">
-                  {/* Year Badge */}
-                  <div className="absolute top-4 right-4 w-14 h-14 rounded-full bg-yellow-500 flex items-center justify-center shadow-lg">
-                    <span className="text-gray-900 font-black text-sm">
-                      {year}
-                    </span>
-                  </div>
-
-                  {/* Icon */}
-                  <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center mb-3">
-                    <Star size={24} className="text-yellow-400" />
-                  </div>
-
-                  {/* Name */}
-                  <h3 className="text-xl font-bold leading-tight pr-16">
-                    {name}
-                  </h3>
-                </div>
-
-                {/* Body */}
-                <CardBody>
-                  {/* Category Badge */}
-                  <div className="mb-4">
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${style.bg} ${style.border} ${style.text} border`}
-                    >
-                      <Icon size={12} />
-                      {category}
-                    </span>
-                  </div>
-
-                  {/* Bio */}
-                  {bio ? (
-                    <p className="text-sm text-gray-600 leading-relaxed line-clamp-3">
-                      {bio}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-gray-400 italic">
-                      Inducted into the NBC World Series Hall of Fame in {year}.
-                    </p>
-                  )}
-
-                  {/* Induction Year Footer */}
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-500">Inducted</span>
-                      <span className="text-gray-900 font-bold">{year}</span>
-                    </div>
-                  </div>
-                </CardBody>
-              </Card>
-            );
-          })}
-        </div>
-      ) : (
-        <Card>
-          <CardBody className="text-center py-12">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Search className="w-8 h-8 text-gray-400" />
+            <div style={s.pillGroup}>
+              {[
+                { val: "all", label: "All" },
+                { val: "Player", label: "Players" },
+                { val: "Coach", label: "Coaches" },
+                { val: "Contributor", label: "Contributors" },
+              ].map(({ val, label }) => (
+                <button
+                  key={val}
+                  onClick={() => setCategoryFilter(val)}
+                  style={{
+                    ...s.pill,
+                    ...(categoryFilter === val ? s.pillActive : {}),
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              No inductees found
-            </h3>
-            <p className="text-gray-600 mb-4">
-              {search
-                ? `No members match "${search}"`
-                : "No members in this category"}
-            </p>
-            <button
-              onClick={() => {
-                setSearch("");
-                setCategoryFilter("all");
-              }}
-              className="px-6 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg font-medium transition-colors"
-            >
-              Clear Filters
-            </button>
-          </CardBody>
-        </Card>
-      )}
 
-      {/* Recent Inductees Highlight */}
-      {!search && categoryFilter === "all" && stats.recent.length > 0 && (
-        <div className="mt-12">
-          <h3 className="text-2xl font-bold mb-6 flex items-center gap-2">
-            <Star className="text-yellow-500" size={24} />
-            Recent Inductees
-          </h3>
-          <Card>
-            <CardBody>
-              <div className="space-y-3">
-                {stats.recent.map((m, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors"
+            <div style={s.toolbarRight}>
+              {(search || categoryFilter !== "all") && (
+                <button
+                  onClick={() => {
+                    setSearch("");
+                    setCategoryFilter("all");
+                  }}
+                  style={s.clearBtn}
+                >
+                  Clear
+                </button>
+              )}
+              <span style={s.resultCount}>
+                {rows.length} of {stats.total}
+              </span>
+            </div>
+          </div>
+
+          {err && (
+            <div style={{ marginBottom: 16 }}>
+              <BannerError message={err} />
+            </div>
+          )}
+
+          {/* ── Table ─────────────────────────────────────────────────── */}
+          <div style={s.tableWrap}>
+            <table style={s.table}>
+              <thead>
+                <tr style={s.theadRow}>
+                  <th style={{ ...s.th, width: 48, textAlign: "right" }}>#</th>
+                  <th
+                    style={{ ...s.th, textAlign: "left", cursor: "pointer" }}
+                    onClick={() => handleSort("name")}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center flex-shrink-0">
-                        <Star size={18} className="text-yellow-600" />
+                    <span style={s.thInner}>
+                      Inductee{" "}
+                      <SortIcon active={sortCol === "name"} dir={sortDir} />
+                    </span>
+                  </th>
+                  <th
+                    style={{
+                      ...s.th,
+                      textAlign: "left",
+                      cursor: "pointer",
+                      width: 150,
+                    }}
+                    onClick={() => handleSort("cat")}
+                  >
+                    <span style={s.thInner}>
+                      Category{" "}
+                      <SortIcon active={sortCol === "cat"} dir={sortDir} />
+                    </span>
+                  </th>
+                  <th
+                    style={{
+                      ...s.th,
+                      textAlign: "right",
+                      cursor: "pointer",
+                      width: 120,
+                    }}
+                    onClick={() => handleSort("year")}
+                  >
+                    <span style={{ ...s.thInner, justifyContent: "flex-end" }}>
+                      Inducted{" "}
+                      <SortIcon active={sortCol === "year"} dir={sortDir} />
+                    </span>
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {loading ? (
+                  [...Array(10)].map((_, i) => (
+                    <tr key={i} style={i % 2 === 0 ? s.trEven : s.trOdd}>
+                      <td colSpan={4} style={s.td}>
+                        <Skeleton className="h-4 w-full" />
+                      </td>
+                    </tr>
+                  ))
+                ) : rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} style={s.emptyCell}>
+                      <Search
+                        size={32}
+                        style={{ color: "#9CA3AF", marginBottom: 10 }}
+                      />
+                      <div style={{ color: "#6B7280", marginBottom: 12 }}>
+                        No inductees match
+                        {search ? ` "${search}"` : " this filter"}
                       </div>
-                      <div>
-                        <div className="font-semibold text-gray-900">
-                          {m.inductee_name || m.name}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {m.category || "Contributor"}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-sm font-bold text-gray-600">
-                      {m.induction_year}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardBody>
-          </Card>
+                      <button
+                        onClick={() => {
+                          setSearch("");
+                          setCategoryFilter("all");
+                        }}
+                        style={s.emptyBtn}
+                      >
+                        Clear Filters
+                      </button>
+                    </td>
+                  </tr>
+                ) : (
+                  rows.map((m, i) => {
+                    const name = m.inductee_name || m.name || "Unknown";
+                    const year = m.induction_year || "—";
+                    const cat = m.category || "Contributor";
+                    const meta = getCatMeta(cat);
+                    const isEven = i % 2 === 0;
+
+                    return (
+                      <tr
+                        key={m.id ?? `${name}-${i}`}
+                        style={isEven ? s.trEven : s.trOdd}
+                        onMouseEnter={(e) =>
+                          (e.currentTarget.style.background = "#FEF3C7")
+                        }
+                        onMouseLeave={(e) =>
+                          (e.currentTarget.style.background = isEven
+                            ? s.trEven.background
+                            : s.trOdd.background)
+                        }
+                      >
+                        <td style={{ ...s.td, ...s.tdNum }}>{i + 1}</td>
+
+                        <td style={{ ...s.td, ...s.tdName }}>
+                          <Star
+                            size={11}
+                            style={{
+                              color: "#D97706",
+                              marginRight: 8,
+                              flexShrink: 0,
+                            }}
+                          />
+                          {name}
+                        </td>
+
+                        <td style={s.td}>
+                          <span
+                            style={{
+                              ...s.badge,
+                              background: meta.bg,
+                              color: meta.color,
+                              border: `1px solid ${meta.color}33`,
+                            }}
+                          >
+                            {meta.label}
+                          </span>
+                        </td>
+
+                        <td style={{ ...s.td, ...s.tdYear }}>{year}</td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {!loading && rows.length > 0 && (
+            <div style={s.footNote}>
+              NBC Hall of Fame · {stats.total} inductees · 1991–present
+            </div>
+          )}
         </div>
-      )}
-    </Container>
+      </Container>
+    </div>
   );
 }
+
+// ── Styles ────────────────────────────────────────────────────────────────
+const s = {
+  page: {
+    minHeight: "100vh",
+    background: "#F9FAFB",
+    fontFamily: "'IBM Plex Sans', 'Segoe UI', sans-serif",
+    color: "#111827",
+  },
+
+  // Header
+  pageHeader: {
+    background: "#1F2937",
+    borderBottom: "4px solid #D97706",
+    paddingTop: 48,
+    paddingBottom: 36,
+  },
+  eyebrow: {
+    fontSize: 11,
+    letterSpacing: "0.2em",
+    color: "#D97706",
+    fontWeight: 700,
+    marginBottom: 10,
+    fontFamily: "'IBM Plex Mono', monospace",
+  },
+  h1: {
+    fontSize: "clamp(2rem, 5vw, 3rem)",
+    fontWeight: 800,
+    letterSpacing: "-0.02em",
+    margin: "0 0 12px",
+    color: "#F9FAFB",
+    lineHeight: 1.1,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "#9CA3AF",
+    maxWidth: 520,
+    lineHeight: 1.7,
+    margin: 0,
+  },
+
+  body: {
+    paddingTop: 32,
+    paddingBottom: 64,
+  },
+
+  // Stat rail
+  statRail: {
+    display: "grid",
+    gridTemplateColumns: "repeat(4, 1fr)",
+    gap: 12,
+    marginBottom: 24,
+  },
+  statCell: {
+    background: "#FFFFFF",
+    border: "1px solid #E5E7EB",
+    borderRadius: 8,
+    padding: "20px 16px",
+    textAlign: "center",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+  },
+  statIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: "50%",
+    border: "1px solid",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    margin: "0 auto 10px",
+  },
+  statValue: {
+    fontSize: 34,
+    fontWeight: 900,
+    lineHeight: 1,
+    letterSpacing: "-0.02em",
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: "#6B7280",
+    fontWeight: 600,
+  },
+
+  // Toolbar
+  toolbar: {
+    display: "flex",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 12,
+    padding: "12px 16px",
+    background: "#FFFFFF",
+    border: "1px solid #E5E7EB",
+    borderRadius: 8,
+    boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+  },
+  searchWrap: {
+    position: "relative",
+    flex: "1 1 200px",
+    minWidth: 180,
+  },
+  searchIcon: {
+    position: "absolute",
+    left: 10,
+    top: "50%",
+    transform: "translateY(-50%)",
+    color: "#9CA3AF",
+    pointerEvents: "none",
+  },
+  searchInput: {
+    width: "100%",
+    background: "#F9FAFB",
+    border: "1px solid #D1D5DB",
+    borderRadius: 6,
+    color: "#111827",
+    fontSize: 13,
+    fontFamily: "inherit",
+    padding: "8px 10px 8px 34px",
+    outline: "none",
+    boxSizing: "border-box",
+  },
+  pillGroup: {
+    display: "flex",
+    gap: 6,
+    flexWrap: "wrap",
+  },
+  pill: {
+    background: "#F3F4F6",
+    border: "1px solid #E5E7EB",
+    borderRadius: 6,
+    color: "#374151",
+    fontSize: 12,
+    fontFamily: "inherit",
+    fontWeight: 600,
+    padding: "6px 14px",
+    cursor: "pointer",
+  },
+  pillActive: {
+    background: "#1F2937",
+    border: "1px solid #1F2937",
+    color: "#FFFFFF",
+  },
+  toolbarRight: {
+    marginLeft: "auto",
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+  },
+  clearBtn: {
+    background: "transparent",
+    border: "1px solid #D1D5DB",
+    borderRadius: 6,
+    color: "#6B7280",
+    fontSize: 12,
+    fontFamily: "inherit",
+    fontWeight: 600,
+    padding: "6px 12px",
+    cursor: "pointer",
+  },
+  resultCount: {
+    fontSize: 12,
+    color: "#9CA3AF",
+    whiteSpace: "nowrap",
+  },
+
+  // Table
+  tableWrap: {
+    border: "1px solid #E5E7EB",
+    borderRadius: 8,
+    overflow: "hidden",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+  },
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+    fontSize: 13,
+    background: "#FFFFFF",
+  },
+  theadRow: {
+    background: "#1F2937",
+  },
+  th: {
+    padding: "12px 16px",
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: "0.08em",
+    color: "#9CA3AF",
+    borderBottom: "3px solid #D97706",
+    userSelect: "none",
+    textTransform: "uppercase",
+  },
+  thInner: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 4,
+  },
+  trEven: { background: "#FFFFFF", transition: "background 0.1s" },
+  trOdd: { background: "#F9FAFB", transition: "background 0.1s" },
+  td: {
+    padding: "11px 16px",
+    borderBottom: "1px solid #F3F4F6",
+    verticalAlign: "middle",
+  },
+  tdNum: {
+    color: "#D1D5DB",
+    fontSize: 11,
+    textAlign: "right",
+    fontVariantNumeric: "tabular-nums",
+    fontFamily: "'IBM Plex Mono', monospace",
+  },
+  tdName: {
+    color: "#111827",
+    fontWeight: 600,
+    display: "flex",
+    alignItems: "center",
+  },
+  tdYear: {
+    textAlign: "right",
+    fontVariantNumeric: "tabular-nums",
+    fontWeight: 700,
+    color: "#D97706",
+    fontFamily: "'IBM Plex Mono', monospace",
+    letterSpacing: "0.03em",
+  },
+  badge: {
+    display: "inline-block",
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: "0.08em",
+    padding: "3px 8px",
+    borderRadius: 4,
+  },
+  emptyCell: {
+    padding: "48px 16px",
+    textAlign: "center",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+  },
+  emptyBtn: {
+    background: "#1F2937",
+    border: "none",
+    borderRadius: 6,
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontFamily: "inherit",
+    fontWeight: 600,
+    padding: "8px 16px",
+    cursor: "pointer",
+  },
+  footNote: {
+    marginTop: 16,
+    fontSize: 11,
+    color: "#9CA3AF",
+    letterSpacing: "0.06em",
+    textAlign: "right",
+  },
+};
