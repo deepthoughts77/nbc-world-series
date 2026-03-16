@@ -6,7 +6,7 @@ import { pool } from "../db.js";
  */
 export const getAllHallOfFameMembers = async (req, res) => {
   try {
-    const limit = Math.min(parseInt(req.query.limit || "50", 10), 100);
+    const limit = Math.min(parseInt(req.query.limit || "200", 10), 500);
     const offset = parseInt(req.query.offset || "0", 10);
     const q = (req.query.q || "").trim();
 
@@ -62,7 +62,7 @@ export const getHallOfFameMemberById = async (req, res) => {
       `SELECT id, inductee_name, induction_year, player_id, category, bio
        FROM hall_of_fame
        WHERE id = $1`,
-      [req.params.id]
+      [req.params.id],
     );
 
     if (rows.length === 0) {

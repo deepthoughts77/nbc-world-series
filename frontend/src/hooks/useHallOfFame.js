@@ -9,7 +9,7 @@ export function useHallOfFame() {
 
   useEffect(() => {
     let stop = false;
-    API.get("/hall-of-fame")
+    API.get("/hall-of-fame?limit=500")
       .then((r) => !stop && setMembers(pickArray(r)))
       .catch((e) => {
         setErr("Unable to load Hall of Fame members.");
