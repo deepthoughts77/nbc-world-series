@@ -5,11 +5,10 @@ import { fileURLToPath } from "url";
 
 const { Pool } = pg;
 
-// Use DATABASE_URL for Render, fallback to local for development
 const pool = new Pool({
   connectionString:
     process.env.DATABASE_URL ||
-    "postgres://nbc_admin:Forthelove329@127.0.0.1:5432/nbc_world_series",
+    "postgres://nbc_admin:Ghostweep147@127.0.0.1:5432/nbc_world_series",
   ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
 });
 
@@ -27,6 +26,20 @@ const toF = (v) => {
   if (!v || v === "-") return 0;
   return parseFloat(v) || 0;
 };
+
+function parseIP(val) {
+  const s = String(val || "").trim();
+  if (!s || s === "-" || s === "0") return 0;
+  if (s.includes(" ")) {
+    const [w, f] = s.split(/\s+/);
+    const whole = parseFloat(w) || 0;
+    if (f === "1-3" || f === "1/3") return whole + 0.33;
+    if (f === "2-3" || f === "2/3") return whole + 0.67;
+    if (f === "1-2" || f === "1/2") return whole + 0.5;
+    return whole;
+  }
+  return parseFloat(s) || 0;
+}
 
 function readCsv(filePath) {
   if (!fs.existsSync(filePath)) return [];
@@ -74,18 +87,24 @@ async function run() {
     await client.query("DELETE FROM batting_stats WHERE year = 1946");
     await client.query("DELETE FROM pitching_stats WHERE year = 1946");
 
+    console.log("⚾ Importing 1946 Batting...");
     for (const r of readCsv(BATTING_CSV)) {
       if (!r.Player) continue;
       const { tId, pId } = await getIds(client, r.Team, r.Player);
-      const ab = toI(r.AB),
-        h = toI(r.H),
-        d2 = toI(r["2B"]),
-        d3 = toI(r["3B"]),
-        hr = toI(r.HR);
+
+      const ab = toI(r.AB);
+      const h = toI(r.H);
+      const d2 = toI(r["2B"]);
+      const d3 = toI(r["3B"]);
+      const hr = toI(r.HR);
+      // TB = Singles (H - 2B - 3B - HR) + 2*2B + 3*3B + 4*HR
       const tb = h + d2 + 2 * d3 + 3 * hr;
+
       await client.query(
-        `INSERT INTO batting_stats (player_id, team_id, year, season_key, ab, r, h, "2b", "3b", hr, rbi, tb, avg, slg)
-         VALUES ($1, $2, 1946, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+        `INSERT INTO batting_stats 
+          (player_id, team_id, year, season_key, ab, r, h, "2b", "3b", hr, rbi, sb, sh, po, a, e, tb, avg, slg)
+         VALUES 
+          ($1, $2, 1946, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
         [
           pId,
           tId,
@@ -97,20 +116,54 @@ async function run() {
           d3,
           hr,
           toI(r.RBI),
+          toI(r.SB),
+          toI(r.SH),
+          toI(r.PO),
+          toI(r.A),
+          toI(r.E),
           tb,
-          toF(r.AVG),
+          toF(r.Pct), // FIXED: 1946 CSV uses 'Pct' header, not 'AVG'
           ab > 0 ? tb / ab : 0,
         ],
       );
     }
+
+    console.log("🥎 Importing 1946 Pitching...");
+    for (const r of readCsv(PITCHING_CSV)) {
+      if (!r.Pitcher) continue;
+      const { tId, pId } = await getIds(client, r.Team, r.Pitcher);
+
+      await client.query(
+        `INSERT INTO pitching_stats 
+          (player_id, team_id, year, season_key, w, l, ip, r, h, bb, so, wp, hbp)
+         VALUES 
+          ($1, $2, 1946, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        [
+          pId,
+          tId,
+          `1946_${r.Team}_${r.Pitcher}`.toLowerCase().replace(/\W/g, "_"),
+          toI(r.W),
+          toI(r.L),
+          parseIP(r.IP),
+          toI(r.R),
+          toI(r.H),
+          toI(r.BB),
+          toI(r.SO),
+          toI(r.WP),
+          toI(r.HB), // 1946 CSV uses 'HB' header
+        ],
+      );
+    }
+
     await client.query("COMMIT");
     console.log("✅ 1946 Import Successful");
   } catch (e) {
     await client.query("ROLLBACK");
-    console.error(e);
+    console.error("❌ Import Failed:", e);
   } finally {
     client.release();
     await pool.end();
   }
 }
+
 run();
