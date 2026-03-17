@@ -239,13 +239,30 @@ export default function PlayerStatsPage() {
   };
 
   const handlePlayerClickFromSearch = (playerId) => {
-    navigate(`/players/${playerId}`);
+    window.location.replace(window.location.origin + `/players/${playerId}`);
   };
 
   // ---------- Resolve correct player id before navigating ----------
-  const resolveAndNavigateToPlayer = useCallback(
-    async (row) => {
-      if (!row) return;
+  const resolveAndNavigateToPlayer = useCallback(async (row) => {
+    if (!row) return;
+
+    // Fast path — if player_id is directly available, just navigate
+    const directId = row.player_id || row.playerId || row.player?.id;
+    if (directId) {
+      window.location.replace(window.location.origin + `/players/${directId}`);
+      return;
+    }
+
+    // Fallback: search by name
+    const rowName = row.player_name || "";
+    if (!rowName) return;
+
+    try {
+      const res = await API.get(
+        `/players/search?q=${encodeURIComponent(rowName)}`,
+      );
+      const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
+      if (!Array.isArray(list) || list.length === 0) return;
 
       const normalizeName = (s) =>
         String(s || "")
@@ -253,67 +270,21 @@ export default function PlayerStatsPage() {
           .toLowerCase()
           .replace(/\s+/g, " ");
 
-      const nameMatches = (rowName, apiName) => {
-        const a = normalizeName(rowName);
-        const b = normalizeName(apiName);
-        if (!a || !b) return false;
-        return a === b;
-      };
-
-      const rowName = row.player_name || "";
-      const candidates = [
-        row.player_id,
-        row.playerId,
-        row.player?.id,
-        row.id,
-      ].filter(Boolean);
-
-      // 1) Try candidate ids but VERIFY against /players/:id name
-      for (const id of candidates) {
-        try {
-          const res = await API.get(`/players/${id}`);
-          const data = res.data || {};
-
-          const apiFullName =
-            data.full_name ||
-            data.player?.full_name ||
-            (data.first_name && data.last_name
-              ? `${data.first_name} ${data.last_name}`
-              : "") ||
-            (data.player?.first_name && data.player?.last_name
-              ? `${data.player.first_name} ${data.player.last_name}`
-              : "");
-
-          if (nameMatches(rowName, apiFullName)) {
-            navigate(`/players/${id}`);
-            return;
-          }
-        } catch (e) {}
-      }
-
-      // 2) Fallback: /players/search?q=NAME
-      try {
-        const res = await API.get(
-          `/players/search?q=${encodeURIComponent(rowName)}`,
-        );
-        const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
-        if (!Array.isArray(list) || list.length === 0) return;
-
-        const exact = list.find((p) =>
-          nameMatches(
-            rowName,
+      const exact = list.find(
+        (p) =>
+          normalizeName(rowName) ===
+          normalizeName(
             p.full_name || `${p.first_name || ""} ${p.last_name || ""}`.trim(),
           ),
-        );
+      );
 
-        const pick = exact || list[0];
-        if (pick?.id) navigate(`/players/${pick.id}`);
-      } catch (e) {
-        console.error("Could not resolve player id for:", rowName, e);
-      }
-    },
-    [navigate],
-  );
+      const pick = exact || list[0];
+      if (pick?.id)
+        window.location.replace(window.location.origin + `/players/${pick.id}`);
+    } catch (e) {
+      console.error("Could not resolve player id for:", rowName, e);
+    }
+  }, []);
 
   const handleYearChange = (e) => {
     const value = e.target.value || null;
