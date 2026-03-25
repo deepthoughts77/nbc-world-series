@@ -1,8 +1,8 @@
 // frontend/src/pages/Archives.jsx
 //
 // Route: /archives
-// Displays NBC World Series historical PDF documents with
-// search, year filter, type filter, and inline PDF preview.
+// NBC World Series Document Archive — Digital access portal for
+// Wichita State University Libraries Special Collections.
 
 import React, { useState, useEffect, useMemo } from "react";
 import {
@@ -22,7 +22,7 @@ import { API } from "../api";
 import { Container } from "../components/common/Container";
 import { Skeleton } from "../components/common/Skeleton";
 
-// ── Backend origin helper ────────────────────────────────────────────────
+// ── Backend origin helper ─────────────────────────────────────────────────
 const API_ORIGIN = process.env.REACT_APP_API_ORIGIN || "http://localhost:5000";
 
 function getDocumentUrl(fileUrl) {
@@ -35,11 +35,17 @@ function getDocumentUrl(fileUrl) {
 
 // ── Doc type config ───────────────────────────────────────────────────────
 const DOC_TYPES = {
+  annual: {
+    label: "Baseball Annual",
+    icon: BookOpen,
+    color: "#B45309",
+    bg: "#FEF3C7",
+  },
   program: {
     label: "Tournament Program",
     icon: Trophy,
     color: "#D97706",
-    bg: "#FEF3C7",
+    bg: "#FFFBEB",
   },
   scorebook: {
     label: "Scorebook",
@@ -55,9 +61,21 @@ const DOC_TYPES = {
   },
   hof: {
     label: "Hall of Fame",
-    icon: BookOpen,
+    icon: Trophy,
     color: "#7C3AED",
     bg: "#F5F3FF",
+  },
+  photo_booklet: {
+    label: "Photo Booklet",
+    icon: FileText,
+    color: "#0891B2",
+    bg: "#ECFEFF",
+  },
+  guide: {
+    label: "Guide",
+    icon: BookOpen,
+    color: "#65A30D",
+    bg: "#F7FEE7",
   },
   other: {
     label: "Historical Document",
@@ -83,84 +101,85 @@ function DocCard({ doc, onPreview, isPreviewOpen }) {
   const Icon = meta.icon;
   const docUrl = getDocumentUrl(doc.file_url);
 
+  // Use display_year if available, fall back to year
+  const displayYear = doc.display_year || doc.sort_year || doc.year || "";
+
   return (
     <div
       style={{
         background: "#FFFFFF",
         border: "1px solid #E2E8F0",
+        borderTop: `3px solid ${meta.color}`,
         borderRadius: 10,
         overflow: "hidden",
         boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-        transition: "box-shadow 0.15s",
+        display: "flex",
+        flexDirection: "column",
       }}
     >
       {/* Card header */}
-      <div
-        style={{
-          background: meta.bg,
-          borderBottom: `2px solid ${meta.color}33`,
-          padding: "16px 18px",
-          display: "flex",
-          alignItems: "flex-start",
-          gap: 12,
-        }}
-      >
+      <div style={{ padding: "16px 18px 12px", flex: 1 }}>
         <div
           style={{
-            width: 40,
-            height: 40,
-            borderRadius: 8,
-            background: meta.color + "22",
-            border: `1px solid ${meta.color}44`,
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
+            gap: 8,
+            marginBottom: 8,
           }}
         >
-          <Icon size={20} color={meta.color} />
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: "0.1em",
-              color: meta.color,
-              textTransform: "uppercase",
-              marginBottom: 3,
+              width: 32,
+              height: 32,
+              borderRadius: 6,
+              background: meta.bg,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
             }}
           >
-            {meta.label}
-            {doc.year && (
-              <span style={{ marginLeft: 8, color: "#94A3B8" }}>
-                · {doc.year}
-              </span>
+            <Icon size={16} color={meta.color} />
+          </div>
+          <div>
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: "0.1em",
+                color: meta.color,
+                textTransform: "uppercase",
+              }}
+            >
+              {meta.label}
+            </div>
+            {displayYear && (
+              <div style={{ fontSize: 11, color: "#94A3B8", fontWeight: 600 }}>
+                {displayYear}
+              </div>
             )}
           </div>
-          <div
-            style={{
-              fontSize: 14,
-              fontWeight: 700,
-              color: "#0F172A",
-              lineHeight: 1.3,
-              wordBreak: "break-word",
-            }}
-          >
-            {doc.title}
-          </div>
         </div>
-      </div>
 
-      {/* Card body */}
-      <div style={{ padding: "14px 18px" }}>
+        <h3
+          style={{
+            fontSize: 14,
+            fontWeight: 700,
+            color: "#0F172A",
+            lineHeight: 1.4,
+            margin: "0 0 8px",
+          }}
+        >
+          {doc.title}
+        </h3>
+
         {doc.description && (
           <p
             style={{
-              fontSize: 13,
+              fontSize: 12,
               color: "#64748B",
               lineHeight: 1.6,
-              marginBottom: 10,
+              margin: "0 0 10px",
             }}
           >
             {doc.description}
@@ -169,12 +188,7 @@ function DocCard({ doc, onPreview, isPreviewOpen }) {
 
         {/* Meta pills */}
         <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 6,
-            marginBottom: 14,
-          }}
+          style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 8 }}
         >
           {doc.page_count && <span style={pill}>{doc.page_count} pages</span>}
           {doc.pages_with_stats && (
@@ -188,10 +202,10 @@ function DocCard({ doc, onPreview, isPreviewOpen }) {
         {doc.notes && (
           <p
             style={{
-              fontSize: 12,
+              fontSize: 11,
               color: "#94A3B8",
               fontStyle: "italic",
-              marginBottom: 12,
+              margin: "0 0 8px",
               lineHeight: 1.5,
             }}
           >
@@ -199,75 +213,92 @@ function DocCard({ doc, onPreview, isPreviewOpen }) {
           </p>
         )}
 
-        {/* Actions */}
-        <div style={{ display: "flex", gap: 8 }}>
-          <button
-            onClick={() => onPreview(doc)}
+        {/* Source attribution */}
+        {doc.source_name && (
+          <div
             style={{
-              flex: 1,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-              padding: "8px 12px",
-              background: isPreviewOpen ? "#1D4ED8" : "#F1F5F9",
-              border: `1px solid ${isPreviewOpen ? "#1D4ED8" : "#E2E8F0"}`,
-              borderRadius: 6,
-              color: isPreviewOpen ? "#FFFFFF" : "#374151",
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: "pointer",
+              fontSize: 10,
+              color: "#B0BEC5",
+              letterSpacing: "0.03em",
+              marginBottom: 4,
             }}
           >
-            {isPreviewOpen ? (
-              <ChevronUp size={14} />
-            ) : (
-              <ChevronDown size={14} />
-            )}
-            {isPreviewOpen ? "Close Preview" : "Preview"}
-          </button>
+            📚 {doc.source_name}
+          </div>
+        )}
+      </div>
 
-          <a
-            href={docUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 5,
-              padding: "8px 12px",
-              background: "transparent",
-              border: "1px solid #E2E8F0",
-              borderRadius: 6,
-              color: "#374151",
-              fontSize: 12,
-              fontWeight: 600,
-              textDecoration: "none",
-            }}
-          >
-            <ExternalLink size={13} /> Open
-          </a>
+      {/* Actions */}
+      <div
+        style={{
+          padding: "10px 18px 14px",
+          borderTop: "1px solid #F1F5F9",
+          display: "flex",
+          gap: 8,
+        }}
+      >
+        <button
+          onClick={() => onPreview(doc)}
+          style={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            padding: "8px 12px",
+            background: isPreviewOpen ? "#1D4ED8" : "#F1F5F9",
+            border: `1px solid ${isPreviewOpen ? "#1D4ED8" : "#E2E8F0"}`,
+            borderRadius: 6,
+            color: isPreviewOpen ? "#FFFFFF" : "#374151",
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          {isPreviewOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          {isPreviewOpen ? "Close Preview" : "Preview"}
+        </button>
 
-          <a
-            href={docUrl}
-            download
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 5,
-              padding: "8px 12px",
-              background: "transparent",
-              border: "1px solid #E2E8F0",
-              borderRadius: 6,
-              color: "#374151",
-              fontSize: 12,
-              fontWeight: 600,
-              textDecoration: "none",
-            }}
-          >
-            <Download size={13} />
-          </a>
-        </div>
+        <a
+          href={docUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 5,
+            padding: "8px 12px",
+            background: "transparent",
+            border: "1px solid #E2E8F0",
+            borderRadius: 6,
+            color: "#374151",
+            fontSize: 12,
+            fontWeight: 600,
+            textDecoration: "none",
+          }}
+        >
+          <ExternalLink size={13} /> Open
+        </a>
+
+        <a
+          href={docUrl}
+          download
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 5,
+            padding: "8px 12px",
+            background: "transparent",
+            border: "1px solid #E2E8F0",
+            borderRadius: 6,
+            color: "#374151",
+            fontSize: 12,
+            fontWeight: 600,
+            textDecoration: "none",
+          }}
+        >
+          <Download size={13} />
+        </a>
       </div>
     </div>
   );
@@ -284,22 +315,23 @@ export default function Archives() {
   const [typeFilter, setTypeFilter] = useState("");
   const [previewDoc, setPreviewDoc] = useState(null);
 
-  // Load documents and years
   useEffect(() => {
     setLoading(true);
-    Promise.all([API.get("/documents?limit=200"), API.get("/documents/years")])
+    Promise.all([API.get("/documents?limit=500"), API.get("/documents/years")])
       .then(([docsRes, yearsRes]) => {
         setDocs(docsRes.data?.data || []);
+        // years now returns { year, display_year } objects
         setYears(yearsRes.data?.data || []);
       })
       .catch(() => setErr("Failed to load documents."))
       .finally(() => setLoading(false));
   }, []);
 
-  // Filter docs
   const filtered = useMemo(() => {
     let out = [...docs];
-    if (yearFilter) out = out.filter((d) => String(d.year) === yearFilter);
+    // filter by sort_year (numeric)
+    if (yearFilter)
+      out = out.filter((d) => String(d.sort_year || d.year) === yearFilter);
     if (typeFilter) out = out.filter((d) => d.doc_type === typeFilter);
     if (search.trim()) {
       const t = search.toLowerCase();
@@ -307,6 +339,7 @@ export default function Archives() {
         (d) =>
           (d.title || "").toLowerCase().includes(t) ||
           (d.description || "").toLowerCase().includes(t) ||
+          (d.display_year || "").toLowerCase().includes(t) ||
           (d.notes || "").toLowerCase().includes(t),
       );
     }
@@ -325,7 +358,7 @@ export default function Archives() {
       <div
         style={{
           background: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
-          borderBottom: "4px solid #D97706",
+          borderBottom: "4px solid #B45309",
           paddingTop: 48,
           paddingBottom: 36,
         }}
@@ -341,7 +374,8 @@ export default function Archives() {
               textTransform: "uppercase",
             }}
           >
-            NBC World Series · Historical Records
+            NBC World Series · Wichita State University Libraries Special
+            Collections
           </div>
           <h1
             style={{
@@ -359,13 +393,14 @@ export default function Archives() {
             style={{
               fontSize: 14,
               color: "#94A3B8",
-              maxWidth: 520,
+              maxWidth: 600,
               lineHeight: 1.7,
               margin: 0,
             }}
           >
-            Historical programs, scorebooks, statistical records, and other
-            primary source documents from the NBC World Series.
+            Historical programs, scorebooks, statistical records, and official
+            baseball annuals from the NBC World Series — digitized and preserved
+            by Wichita State University Libraries Special Collections.
           </p>
         </Container>
       </div>
@@ -423,7 +458,6 @@ export default function Archives() {
               boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
             }}
           >
-            {/* Search */}
             <div style={{ position: "relative", flex: "1 1 220px" }}>
               <Search
                 size={14}
@@ -454,21 +488,19 @@ export default function Archives() {
               />
             </div>
 
-            {/* Year filter */}
             <select
               value={yearFilter}
               onChange={(e) => setYearFilter(e.target.value)}
               style={selectStyle}
             >
               <option value="">All Years</option>
-              {years.map((y) => (
-                <option key={y} value={y}>
-                  {y}
+              {years.map((y, idx) => (
+                <option key={`${y.year}-${idx}`} value={y.year}>
+                  {y.display_year || y.year}
                 </option>
               ))}
             </select>
 
-            {/* Type filter */}
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
@@ -482,7 +514,6 @@ export default function Archives() {
               ))}
             </select>
 
-            {/* Clear */}
             {(search || yearFilter || typeFilter) && (
               <button
                 onClick={() => {
@@ -549,39 +580,72 @@ export default function Archives() {
               <div
                 style={{
                   padding: "12px 18px",
-                  background: "#F1F5F9",
-                  borderBottom: "1px solid #E2E8F0",
+                  background: "#1E293B",
+                  borderBottom: "1px solid #334155",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
                 }}
               >
-                <span
-                  style={{ fontSize: 13, fontWeight: 700, color: "#0F172A" }}
-                >
-                  {previewDoc.title}{" "}
-                  {previewDoc.year ? `(${previewDoc.year})` : ""}
-                </span>
-                <button
-                  onClick={() => setPreviewDoc(null)}
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    color: "#64748B",
-                    fontSize: 20,
-                    cursor: "pointer",
-                    lineHeight: 1,
-                  }}
-                >
-                  ×
-                </button>
+                <div>
+                  <span
+                    style={{ fontSize: 13, fontWeight: 700, color: "#F8FAFC" }}
+                  >
+                    {previewDoc.title}{" "}
+                    {previewDoc.display_year || previewDoc.year
+                      ? `(${previewDoc.display_year || previewDoc.year})`
+                      : ""}
+                  </span>
+                  {previewDoc.source_name && (
+                    <span
+                      style={{ fontSize: 11, color: "#64748B", marginLeft: 10 }}
+                    >
+                      {previewDoc.source_name}
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <a
+                    href={previewUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 5,
+                      padding: "5px 10px",
+                      background: "#334155",
+                      borderRadius: 5,
+                      color: "#CBD5E1",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      textDecoration: "none",
+                    }}
+                  >
+                    <ExternalLink size={12} /> Open in new tab
+                  </a>
+                  <button
+                    onClick={() => setPreviewDoc(null)}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: "#64748B",
+                      fontSize: 20,
+                      cursor: "pointer",
+                      lineHeight: 1,
+                      padding: "0 4px",
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
               <iframe
                 src={previewUrl}
                 title={previewDoc.title}
                 style={{
                   width: "100%",
-                  height: 700,
+                  height: 750,
                   border: "none",
                   display: "block",
                 }}
@@ -616,11 +680,17 @@ export default function Archives() {
                 size={40}
                 style={{ color: "#CBD5E1", marginBottom: 12 }}
               />
-              <p style={{ color: "#64748B", fontSize: 14, margin: 0 }}>
+              <p style={{ color: "#64748B", fontSize: 14, margin: "0 0 6px" }}>
                 {docs.length === 0
-                  ? "No documents have been uploaded yet."
+                  ? "No documents in the archive yet."
                   : "No documents match your filters."}
               </p>
+              {docs.length === 0 && (
+                <p style={{ color: "#94A3B8", fontSize: 12, margin: 0 }}>
+                  Documents from Wichita State University Libraries Special
+                  Collections will appear here.
+                </p>
+              )}
             </div>
           ) : (
             <div
@@ -638,6 +708,28 @@ export default function Archives() {
                   isPreviewOpen={previewDoc?.id === doc.id}
                 />
               ))}
+            </div>
+          )}
+
+          {/* ── Attribution footer ───────────────────────────────────── */}
+          {!loading && docs.length > 0 && (
+            <div
+              style={{
+                marginTop: 40,
+                paddingTop: 20,
+                borderTop: "1px solid #E2E8F0",
+                textAlign: "center",
+                fontSize: 12,
+                color: "#94A3B8",
+                lineHeight: 1.7,
+              }}
+            >
+              Documents digitized and hosted by{" "}
+              <strong style={{ color: "#64748B" }}>
+                Wichita State University Libraries Special Collections
+              </strong>
+              <br />
+              NBC World Series records, 1935–present
             </div>
           )}
         </div>

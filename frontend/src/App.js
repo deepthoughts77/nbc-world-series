@@ -26,7 +26,6 @@ const PlayerProfile = React.lazy(() => import("./pages/PlayerProfile"));
 const LeadingPitchers = React.lazy(() => import("./pages/LeadingPitchers"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 const Archives = React.lazy(() => import("./pages/Archives"));
-const UploadDocument = React.lazy(() => import("./pages/UploadDocument"));
 
 function PageLoader() {
   return (
@@ -73,7 +72,6 @@ export default function App() {
 
             {/* Archives and Admin */}
             <Route path="/archives" element={<Archives />} />
-            <Route path="/admin/upload-document" element={<UploadDocument />} />
 
             {/* 404 */}
             <Route path="*" element={<NotFound />} />
