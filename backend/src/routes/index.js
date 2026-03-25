@@ -4,6 +4,7 @@ import { Router } from "express";
 import adminRoutes from "./adminRoutes.js";
 import authRoutes from "./authRoutes.js";
 import healthRoutes from "./healthRoutes.js";
+import documentsRouter from "./documents.js";
 
 import mlbAlumniRoutes from "./mlbAlumniRoutes.js";
 import championshipRoutes from "./championshipRoutes.js";
@@ -49,6 +50,7 @@ router.use("/pitching-stats", (req, res, next) => {
 router.use("/player-stats", playerStatsRoutes);
 router.use("/hall-of-fame", hofRoutes);
 router.use("/records", recordsRoutes);
+router.use("/documents", documentsRouter);
 
 // Search — ALL search traffic goes through searchRoutes.
 // searchRoutes registers both /natural and /ask so the full

@@ -31,7 +31,7 @@ const recordsRouter = require("./routes/records");
 const playersRouter = require("./routes/players");
 const adminRouter = require("./routes/admin");
 const statisticsRouter = require("./routes/statistics");
-
+const documentsRouter = require("./routes/documents");
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -160,14 +160,12 @@ app.get("/health", async (_req, res) => {
     });
   } catch (err) {
     console.error("Health DB ping failed:", err.message);
-    res
-      .status(500)
-      .json({
-        ok: false,
-        service: "nbc-world-series-api",
-        env: process.env.NODE_ENV,
-        error: "Database not reachable",
-      });
+    res.status(500).json({
+      ok: false,
+      service: "nbc-world-series-api",
+      env: process.env.NODE_ENV,
+      error: "Database not reachable",
+    });
   }
 });
 
@@ -485,6 +483,7 @@ app.use("/api/mlb-alumni", mlbAlumniRouter);
 app.use("/api/records", recordsRouter);
 app.use("/api/players", playersRouter);
 app.use("/api", statisticsRouter);
+app.use("/api/documents", documentsRouter);
 app.use("/api", nbcImport);
 app.use(adminRouter);
 

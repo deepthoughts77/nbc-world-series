@@ -48,6 +48,8 @@ app.use(
 app.use(express.json());
 app.use(morgan("dev"));
 
+app.use("/uploads", express.static(path.resolve("uploads")));
+
 // ── DOUBLE API PREFIX REWRITER (Safety Net) ───────────────────────────────
 // This catches requests to /api/api/... and rewrites them to /api/...
 app.use((req, res, next) => {

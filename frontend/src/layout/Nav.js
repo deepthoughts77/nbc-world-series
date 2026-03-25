@@ -48,6 +48,12 @@ export function Nav() {
                   Hall of Fame
                 </NavLink>
               </li>
+              {/* Added Archives Link */}
+              <li>
+                <NavLink to="/archives" className={activeClass}>
+                  Archives
+                </NavLink>
+              </li>
               <li>
                 <NavLink to="/records" className={activeClass}>
                   Records
@@ -126,6 +132,18 @@ export function Nav() {
                 onClick={() => setOpen(false)}
               >
                 Hall of Fame
+              </NavLink>
+              {/* Added Archives for Mobile */}
+              <NavLink
+                to="/archives"
+                className={({ isActive }) =>
+                  `px-3 py-2 rounded-lg ${
+                    isActive ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"
+                  }`
+                }
+                onClick={() => setOpen(false)}
+              >
+                Archives
               </NavLink>
               <NavLink
                 to="/records"
