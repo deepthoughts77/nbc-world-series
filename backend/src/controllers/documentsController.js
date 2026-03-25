@@ -1,6 +1,5 @@
 // backend/src/controllers/documentsController.js
-//
-// Library-first metadata controller for NBC World Series documents.
+// Metadata controller for NBC World Series documents.
 // PDFs are hosted at Wichita State University Libraries Special Collections.
 // This site stores metadata + stable institutional URLs only.
 
@@ -36,14 +35,17 @@ export const getAllDocuments = async (req, res) => {
     if (public_only !== "false") {
       conditions.push(`is_public = true`);
     }
+
     if (year) {
       conditions.push(`sort_year = $${p++}`);
       values.push(parseInt(year, 10));
     }
+
     if (doc_type && VALID_TYPES.has(doc_type)) {
       conditions.push(`doc_type = $${p++}`);
       values.push(doc_type);
     }
+
     if (q) {
       conditions.push(
         `(title ILIKE $${p} OR description ILIKE $${p} OR notes ILIKE $${p})`,
@@ -138,7 +140,6 @@ export const getDocumentById = async (req, res) => {
 };
 
 // ── POST /api/documents ───────────────────────────────────────────────────
-// Create a new document record (metadata + external URL — no file upload)
 export const createDocument = async (req, res) => {
   try {
     const {
@@ -176,12 +177,13 @@ export const createDocument = async (req, res) => {
         : null;
     const displayYear = display_year || (sortYear ? String(sortYear) : null);
 
+    // Removed cloudinary_id from the INSERT statement to prevent 500 errors
     const { rows } = await pool.query(
       `INSERT INTO documents
-         (title, display_year, sort_year, year, doc_type, description,
-          file_url, cloudinary_id, page_count, pages_with_stats, notes,
-          source_name, source_credit, is_public)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+          (title, display_year, sort_year, year, doc_type, description,
+           file_url, page_count, pages_with_stats, notes,
+           source_name, source_credit, is_public)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
        RETURNING *`,
       [
         title.trim(),
@@ -191,7 +193,6 @@ export const createDocument = async (req, res) => {
         docType,
         description ? description.trim() : null,
         file_url.trim(),
-        "", // cloudinary_id empty for external URLs
         page_count ? parseInt(page_count, 10) : null,
         pages_with_stats ? pages_with_stats.trim() : null,
         notes ? notes.trim() : null,
@@ -206,7 +207,7 @@ export const createDocument = async (req, res) => {
     console.error("createDocument error:", err);
     return res.status(500).json({
       success: false,
-      error: "Failed to create document.",
+      error: "Failed to create document record.",
       detail: err.message,
     });
   }
@@ -310,17 +311,4 @@ export const deleteDocument = async (req, res) => {
       detail: err.message,
     });
   }
-};
-
-// ── POST /api/documents/upload (legacy — kept for backward compat) ────────
-// Kept so existing upload route doesn't break. Redirects to createDocument
-// with file_url from request body if present.
-export const uploadDocument = async (req, res) => {
-  // If a file was uploaded locally, build a URL from it
-  if (req.file) {
-    req.body.file_url =
-      req.body.file_url ||
-      `/uploads/${req.file.filename || req.file.originalname}`;
-  }
-  return createDocument(req, res);
 };
