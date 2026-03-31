@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Trophy, Calendar, TrendingUp } from "lucide-react";
+import { Link } from "react-router-dom";
 import { API } from "../api";
 import { Container } from "../components/common/Container";
 import { Card, CardBody } from "../components/common/Card";
@@ -35,6 +36,13 @@ export default function PlayerProfile() {
       fetchPlayer();
     }
   }, [id]);
+
+  function getTeamLink(stat) {
+    if (stat?.team_id) return `/teams/${stat.team_id}`;
+    if (stat?.id) return `/teams/${stat.id}`;
+    if (stat?.team_name) return `/teams/${encodeURIComponent(stat.team_name)}`;
+    return "/teams";
+  }
 
   if (loading) {
     return (
@@ -114,11 +122,15 @@ export default function PlayerProfile() {
                   .sort();
 
                 return (
-                  <div
+                  <Link
                     key={idx}
-                    className="border border-gray-200 rounded-lg p-4 hover:border-blue-400 transition-colors"
+                    to={`/teams/${team.id}`}
+                    className="block border border-gray-200 rounded-lg p-4 hover:border-blue-400 transition-colors text-inherit no-underline"
+                    style={{ textDecoration: "none", color: "inherit" }}
                   >
-                    <h3 className="font-bold text-gray-900">{team.name}</h3>
+                    <h3 className="font-bold text-gray-900 hover:text-blue-600 transition-colors">
+                      {team.name}
+                    </h3>
                     {team.city && team.state && (
                       <p className="text-sm text-gray-600">
                         {team.city}, {team.state}
@@ -127,7 +139,7 @@ export default function PlayerProfile() {
                     <p className="text-sm text-blue-600 mt-2">
                       {allYears.join(", ")}
                     </p>
-                  </div>
+                  </Link>
                 );
               })}
             </div>
@@ -259,7 +271,12 @@ export default function PlayerProfile() {
                         {stat.year}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900">
-                        {stat.team_name}
+                        <Link
+                          to={getTeamLink(stat)}
+                          className="text-blue-600 hover:underline"
+                        >
+                          {stat.team_name}
+                        </Link>
                       </td>
                       <td className="px-4 py-3 text-sm text-center">
                         {stat.gp || 0}
@@ -413,7 +430,12 @@ export default function PlayerProfile() {
                         {stat.year}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900">
-                        {stat.team_name}
+                        <Link
+                          to={getTeamLink(stat)}
+                          className="text-blue-600 hover:underline"
+                        >
+                          {stat.team_name}
+                        </Link>
                       </td>
                       <td className="px-4 py-3 text-sm text-center">
                         {stat.w || 0}

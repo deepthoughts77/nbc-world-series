@@ -1,5 +1,6 @@
+//frontend/src/pages/TeamYearDetail.js
 import React, { useEffect, useState } from "react";
-import { useParams, NavLink } from "react-router-dom";
+import { useParams, NavLink, Link } from "react-router-dom";
 import { Users, ChevronRight } from "lucide-react";
 import { Container } from "../components/common/Container";
 import { Card, CardBody } from "../components/common/Card";
@@ -20,6 +21,21 @@ function fmt2(v) {
 }
 function val(v) {
   return v != null && v !== "" ? v : "—";
+}
+
+function getPlayerName(p) {
+  return (
+    `${p.first_name || p.player_name?.split(" ")[0] || ""} ${
+      p.last_name || p.player_name?.split(" ").slice(1).join(" ") || ""
+    }`.trim() ||
+    p.player_name ||
+    "Unknown Player"
+  );
+}
+
+function getPlayerLink(p) {
+  const playerId = p.player_id || p.id;
+  return playerId ? `/players/${playerId}` : null;
 }
 
 function BattingTable({ rows }) {
@@ -66,39 +82,50 @@ function BattingTable({ rows }) {
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
-          {rows.map((p, i) => (
-            <tr key={i} className="hover:bg-blue-50 transition-colors">
-              <td className="px-3 py-2 sticky left-0 bg-white">
-                <div className="font-semibold text-gray-900">
-                  {p.first_name || p.player_name?.split(" ")[0] || ""}{" "}
-                  {p.last_name ||
-                    p.player_name?.split(" ").slice(1).join(" ") ||
-                    ""}
-                </div>
-                {p.jersey_num && (
-                  <div className="text-[10px] text-gray-400">
-                    #{p.jersey_num}
-                  </div>
-                )}
-              </td>
-              <td className="px-3 py-2 text-right">{val(p.gp ?? p.g)}</td>
-              <td className="px-3 py-2 text-right">{val(p.ab)}</td>
-              <td className="px-3 py-2 text-right">{val(p.h)}</td>
-              <td className="px-3 py-2 text-right">{val(p["2b"])}</td>
-              <td className="px-3 py-2 text-right">{val(p["3b"])}</td>
-              <td className="px-3 py-2 text-right">{val(p.hr)}</td>
-              <td className="px-3 py-2 text-right">{val(p.r)}</td>
-              <td className="px-3 py-2 text-right">{val(p.rbi)}</td>
-              <td className="px-3 py-2 text-right">{val(p.bb)}</td>
-              <td className="px-3 py-2 text-right">{val(p.so)}</td>
-              <td className="px-3 py-2 text-right">{val(p.sb)}</td>
-              <td className="px-3 py-2 text-right font-semibold">
-                {fmt3(p.avg)}
-              </td>
-              <td className="px-3 py-2 text-right">{fmt3(p.obp)}</td>
-              <td className="px-3 py-2 text-right">{fmt3(p.slg)}</td>
-            </tr>
-          ))}
+          {rows.map((p, i) => {
+            const playerName = getPlayerName(p);
+            const playerLink = getPlayerLink(p);
+
+            return (
+              <tr key={i} className="hover:bg-blue-50 transition-colors">
+                <td className="px-3 py-2 sticky left-0 bg-white">
+                  {playerLink ? (
+                    <Link
+                      to={playerLink}
+                      className="font-semibold text-blue-600 hover:underline"
+                    >
+                      {playerName}
+                    </Link>
+                  ) : (
+                    <div className="font-semibold text-gray-900">
+                      {playerName}
+                    </div>
+                  )}
+                  {p.jersey_num && (
+                    <div className="text-[10px] text-gray-400">
+                      #{p.jersey_num}
+                    </div>
+                  )}
+                </td>
+                <td className="px-3 py-2 text-right">{val(p.gp ?? p.g)}</td>
+                <td className="px-3 py-2 text-right">{val(p.ab)}</td>
+                <td className="px-3 py-2 text-right">{val(p.h)}</td>
+                <td className="px-3 py-2 text-right">{val(p["2b"])}</td>
+                <td className="px-3 py-2 text-right">{val(p["3b"])}</td>
+                <td className="px-3 py-2 text-right">{val(p.hr)}</td>
+                <td className="px-3 py-2 text-right">{val(p.r)}</td>
+                <td className="px-3 py-2 text-right">{val(p.rbi)}</td>
+                <td className="px-3 py-2 text-right">{val(p.bb)}</td>
+                <td className="px-3 py-2 text-right">{val(p.so)}</td>
+                <td className="px-3 py-2 text-right">{val(p.sb)}</td>
+                <td className="px-3 py-2 text-right font-semibold">
+                  {fmt3(p.avg)}
+                </td>
+                <td className="px-3 py-2 text-right">{fmt3(p.obp)}</td>
+                <td className="px-3 py-2 text-right">{fmt3(p.slg)}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -149,41 +176,52 @@ function PitchingTable({ rows }) {
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
-          {rows.map((p, i) => (
-            <tr key={i} className="hover:bg-blue-50 transition-colors">
-              <td className="px-3 py-2 sticky left-0 bg-white">
-                <div className="font-semibold text-gray-900">
-                  {p.first_name || p.player_name?.split(" ")[0] || ""}{" "}
-                  {p.last_name ||
-                    p.player_name?.split(" ").slice(1).join(" ") ||
-                    ""}
-                </div>
-                {p.jersey_num && (
-                  <div className="text-[10px] text-gray-400">
-                    #{p.jersey_num}
-                  </div>
-                )}
-              </td>
-              <td className="px-3 py-2 text-right">{val(p.app)}</td>
-              <td className="px-3 py-2 text-right">{val(p.w)}</td>
-              <td className="px-3 py-2 text-right">{val(p.l)}</td>
-              <td className="px-3 py-2 text-right">{val(p.sv)}</td>
-              <td className="px-3 py-2 text-right">{val(p.ip)}</td>
-              <td className="px-3 py-2 text-right">{val(p.h)}</td>
-              <td className="px-3 py-2 text-right">{val(p.r)}</td>
-              <td className="px-3 py-2 text-right">{val(p.er)}</td>
-              <td className="px-3 py-2 text-right">{val(p.bb)}</td>
-              <td className="px-3 py-2 text-right">{val(p.so)}</td>
-              <td className="px-3 py-2 text-right">{val(p.cg)}</td>
-              <td className="px-3 py-2 text-right">{val(p.sho)}</td>
-              <td className="px-3 py-2 text-right font-semibold">
-                {fmt2(p.era)}
-              </td>
-              <td className="px-3 py-2 text-right">
-                {p.whip != null ? fmt2(p.whip) : "—"}
-              </td>
-            </tr>
-          ))}
+          {rows.map((p, i) => {
+            const playerName = getPlayerName(p);
+            const playerLink = getPlayerLink(p);
+
+            return (
+              <tr key={i} className="hover:bg-blue-50 transition-colors">
+                <td className="px-3 py-2 sticky left-0 bg-white">
+                  {playerLink ? (
+                    <Link
+                      to={playerLink}
+                      className="font-semibold text-blue-600 hover:underline"
+                    >
+                      {playerName}
+                    </Link>
+                  ) : (
+                    <div className="font-semibold text-gray-900">
+                      {playerName}
+                    </div>
+                  )}
+                  {p.jersey_num && (
+                    <div className="text-[10px] text-gray-400">
+                      #{p.jersey_num}
+                    </div>
+                  )}
+                </td>
+                <td className="px-3 py-2 text-right">{val(p.app)}</td>
+                <td className="px-3 py-2 text-right">{val(p.w)}</td>
+                <td className="px-3 py-2 text-right">{val(p.l)}</td>
+                <td className="px-3 py-2 text-right">{val(p.sv)}</td>
+                <td className="px-3 py-2 text-right">{val(p.ip)}</td>
+                <td className="px-3 py-2 text-right">{val(p.h)}</td>
+                <td className="px-3 py-2 text-right">{val(p.r)}</td>
+                <td className="px-3 py-2 text-right">{val(p.er)}</td>
+                <td className="px-3 py-2 text-right">{val(p.bb)}</td>
+                <td className="px-3 py-2 text-right">{val(p.so)}</td>
+                <td className="px-3 py-2 text-right">{val(p.cg)}</td>
+                <td className="px-3 py-2 text-right">{val(p.sho)}</td>
+                <td className="px-3 py-2 text-right font-semibold">
+                  {fmt2(p.era)}
+                </td>
+                <td className="px-3 py-2 text-right">
+                  {p.whip != null ? fmt2(p.whip) : "—"}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
