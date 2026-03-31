@@ -145,72 +145,47 @@ export const createDocument = async (req, res) => {
   try {
     const {
       title,
-      display_year,
-      sort_year,
-      year,
-      doc_type = "other",
-      description,
       file_url,
-      page_count,
-      pages_with_stats,
-      notes,
-      source_name = "Wichita State University Libraries Special Collections",
-      source_credit,
-      is_public = true,
+      year,
+      sort_year,
+      display_year,
+      doc_type,
+      is_public,
     } = req.body;
 
-    // 1. Validate required fields
-    if (!title) return res.status(400).json({ error: "Title required" });
-    if (!file_url) return res.status(400).json({ error: "URL required" });
+    // Simple validation
+    if (!title || !file_url) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Missing title or URL" });
+    }
 
-    const sYear = sort_year
-      ? parseInt(sort_year, 10)
-      : year
-        ? parseInt(year, 10)
-        : null;
+    const sYear = sort_year || year || null;
 
-    // 2. Perform the Insert
     const result = await pool.query(
-      `INSERT INTO documents
-          (title, display_year, sort_year, year, doc_type, description,
-           file_url, page_count, pages_with_stats, notes,
-           source_name, source_credit, is_public)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+      `INSERT INTO documents 
+       (title, file_url, year, sort_year, display_year, doc_type, is_public)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) 
        RETURNING *`,
       [
-        title.trim(),
+        title,
+        file_url,
+        year,
+        sYear,
         display_year || String(sYear),
-        sYear,
-        sYear,
-        doc_type,
-        description || null,
-        file_url.trim(),
-        page_count ? parseInt(page_count, 10) : null,
-        pages_with_stats || null,
-        notes || null,
-        source_name,
-        source_credit || null,
-        is_public === true || is_public === "true",
+        doc_type || "other",
+        is_public,
       ],
     );
 
-    // 3. SECURE RESPONSE: Always send a valid JSON object
-    const savedDoc =
-      result.rows && result.rows.length > 0
-        ? result.rows[0]
-        : { title, file_url, status: "Check DB" };
-
+    // GUARANTEE: This always returns a JSON object
     return res.status(201).json({
       success: true,
-      data: savedDoc,
+      data: result.rows[0] || { title, file_url },
     });
   } catch (err) {
-    console.error("createDocument Error:", err);
-    // Ensure we return JSON even on error
-    return res.status(500).json({
-      success: false,
-      error: err.message,
-    });
+    console.error("POST Error:", err);
+    return res.status(500).json({ success: false, error: err.message });
   }
 };
 
