@@ -159,26 +159,18 @@ export const createDocument = async (req, res) => {
       is_public = true,
     } = req.body;
 
-    if (!title || !title.trim()) {
-      return res
-        .status(400)
-        .json({ success: false, error: "Title is required." });
-    }
-    if (!file_url || !file_url.trim()) {
-      return res
-        .status(400)
-        .json({ success: false, error: "File URL is required." });
-    }
+    // 1. Validate required fields
+    if (!title) return res.status(400).json({ error: "Title required" });
+    if (!file_url) return res.status(400).json({ error: "URL required" });
 
-    const docType = VALID_TYPES.has(doc_type) ? doc_type : "other";
-    const sortYear = sort_year
+    const sYear = sort_year
       ? parseInt(sort_year, 10)
       : year
         ? parseInt(year, 10)
         : null;
-    const displayYear = display_year || (sortYear ? String(sortYear) : null);
 
-    const { rows } = await pool.query(
+    // 2. Perform the Insert
+    const result = await pool.query(
       `INSERT INTO documents
           (title, display_year, sort_year, year, doc_type, description,
            file_url, page_count, pages_with_stats, notes,
@@ -187,36 +179,37 @@ export const createDocument = async (req, res) => {
        RETURNING *`,
       [
         title.trim(),
-        displayYear,
-        sortYear,
-        sortYear,
-        docType,
-        description ? description.trim() : null,
+        display_year || String(sYear),
+        sYear,
+        sYear,
+        doc_type,
+        description || null,
         file_url.trim(),
         page_count ? parseInt(page_count, 10) : null,
-        pages_with_stats ? pages_with_stats.trim() : null,
-        notes ? notes.trim() : null,
+        pages_with_stats || null,
+        notes || null,
         source_name,
         source_credit || null,
-        is_public !== false && is_public !== "false",
+        is_public === true || is_public === "true",
       ],
     );
 
-    // FIX: Keep the response logic INSIDE the try block
-    if (rows && rows.length > 0) {
-      return res.status(201).json({ success: true, data: rows[0] });
-    } else {
-      return res.status(201).json({
-        success: true,
-        message: "Document created successfully, but no data returned.",
-      });
-    }
+    // 3. SECURE RESPONSE: Always send a valid JSON object
+    const savedDoc =
+      result.rows && result.rows.length > 0
+        ? result.rows[0]
+        : { title, file_url, status: "Check DB" };
+
+    return res.status(201).json({
+      success: true,
+      data: savedDoc,
+    });
   } catch (err) {
-    console.error("createDocument error:", err);
+    console.error("createDocument Error:", err);
+    // Ensure we return JSON even on error
     return res.status(500).json({
       success: false,
-      error: "Failed to create document record.",
-      detail: err.message,
+      error: err.message,
     });
   }
 };
