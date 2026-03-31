@@ -140,6 +140,7 @@ export const getDocumentById = async (req, res) => {
 };
 
 // ── POST /api/documents ───────────────────────────────────────────────────
+// ── POST /api/documents ───────────────────────────────────────────────────
 export const createDocument = async (req, res) => {
   try {
     const {
@@ -177,7 +178,6 @@ export const createDocument = async (req, res) => {
         : null;
     const displayYear = display_year || (sortYear ? String(sortYear) : null);
 
-    // Removed cloudinary_id from the INSERT statement to prevent 500 errors
     const { rows } = await pool.query(
       `INSERT INTO documents
           (title, display_year, sort_year, year, doc_type, description,
@@ -202,7 +202,15 @@ export const createDocument = async (req, res) => {
       ],
     );
 
-    return res.status(201).json({ success: true, data: rows[0] });
+    // FIX: Keep the response logic INSIDE the try block
+    if (rows && rows.length > 0) {
+      return res.status(201).json({ success: true, data: rows[0] });
+    } else {
+      return res.status(201).json({
+        success: true,
+        message: "Document created successfully, but no data returned.",
+      });
+    }
   } catch (err) {
     console.error("createDocument error:", err);
     return res.status(500).json({
