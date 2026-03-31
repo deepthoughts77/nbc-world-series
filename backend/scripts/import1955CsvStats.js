@@ -1,3 +1,4 @@
+//backend/scripts/import1955CsvStats.js
 import pg from "pg";
 import fs from "fs";
 import path from "path";

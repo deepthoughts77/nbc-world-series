@@ -1,3 +1,4 @@
+//frontend/src/pages/Teams.js
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, ChevronRight } from "lucide-react";

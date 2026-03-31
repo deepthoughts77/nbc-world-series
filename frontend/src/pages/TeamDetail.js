@@ -1,6 +1,7 @@
+// frontend/src/pages/TeamDetail.js
 import React, { useEffect, useState } from "react";
 import { useParams, NavLink, useNavigate } from "react-router-dom";
-import { Users, Trophy, Calendar, ChevronRight } from "lucide-react";
+import { Users, Trophy, Calendar, ChevronRight, BarChart3 } from "lucide-react";
 import { Container } from "../components/common/Container";
 import { Card, CardBody } from "../components/common/Card";
 import { BannerError } from "../components/common/BannerError";
@@ -23,16 +24,16 @@ export default function TeamDetail() {
     setLoading(true);
     setErr(null);
 
-    // teamSlug may be a numeric ID (from Teams list) or a URL-encoded name
     const isId = /^\d+$/.test(teamSlug);
     const teamUrl = isId
       ? `${API}/api/teams/${teamSlug}`
-      : `${API}/api/teams/by-name/${encodeURIComponent(decodeURIComponent(teamSlug))}`;
+      : `${API}/api/teams/by-name/${encodeURIComponent(
+          decodeURIComponent(teamSlug),
+        )}`;
 
     fetch(teamUrl)
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
       .then(async (teamData) => {
-        // backend may wrap in { team: {...} } or return the object directly
         const t = teamData.team ?? teamData;
         setTeam(t);
         const [champsRes, yearsRes] = await Promise.all([
@@ -84,21 +85,31 @@ export default function TeamDetail() {
         ← Back to Teams
       </NavLink>
 
-      {/* ── Header ── */}
       <Card>
         <CardBody className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div>
             <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold mb-3">
               <Users size={14} /> Team Profile
             </div>
+
             <h1 className="text-3xl font-extrabold tracking-tight">
               {teamName}
             </h1>
+
             <p className="mt-1 text-gray-500 text-sm">
               {[team?.city, team?.state].filter(Boolean).join(", ") ||
                 "Location unknown"}
             </p>
+
+            <NavLink
+              to="/team-totals"
+              className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors"
+            >
+              <BarChart3 size={16} />
+              View Team Totals
+            </NavLink>
           </div>
+
           <div className="flex gap-6">
             <div className="text-center">
               <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">
@@ -108,6 +119,7 @@ export default function TeamDetail() {
                 {champCount}
               </div>
             </div>
+
             <div className="text-center">
               <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">
                 Appearances
@@ -116,6 +128,7 @@ export default function TeamDetail() {
                 {appearCount}
               </div>
             </div>
+
             {appearCount > 0 && (
               <div className="text-center">
                 <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">
@@ -130,14 +143,14 @@ export default function TeamDetail() {
         </CardBody>
       </Card>
 
-      {/* ── Championship History ── */}
       {championships.length > 0 && (
         <Card>
           <CardBody>
             <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <Trophy className="text-yellow-500" size={18} /> Championship
-              History
+              <Trophy className="text-yellow-500" size={18} />
+              Championship History
             </h2>
+
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -156,6 +169,7 @@ export default function TeamDetail() {
                     </th>
                   </tr>
                 </thead>
+
                 <tbody className="divide-y divide-gray-100">
                   {[...championships]
                     .sort((a, b) => (b.year || 0) - (a.year || 0))
@@ -164,6 +178,7 @@ export default function TeamDetail() {
                         c.champion_team_id === team?.id ||
                         (c.champion_name || "").toLowerCase() ===
                           teamName.toLowerCase();
+
                       return (
                         <tr key={c.year} className="hover:bg-gray-50">
                           <td className="px-4 py-2 font-semibold">{c.year}</td>
@@ -196,12 +211,12 @@ export default function TeamDetail() {
         </Card>
       )}
 
-      {/* ── Available Years ── */}
       <div>
         <div className="flex items-center gap-3 mb-5">
           <Calendar size={20} className="text-blue-600" />
           <h2 className="text-xl font-bold">Player Statistics by Year</h2>
         </div>
+
         <p className="text-sm text-gray-500 mb-6">
           Select a year to view batting and pitching stats for all players on
           this team.
@@ -229,6 +244,7 @@ export default function TeamDetail() {
               const isChampYear = championships.some(
                 (c) => c.year === year && c.champion_team_id === team?.id,
               );
+
               return (
                 <button
                   key={year}
@@ -244,7 +260,9 @@ export default function TeamDetail() {
                     <div className="absolute -top-2 -right-2 text-xs">🏆</div>
                   )}
                   <span
-                    className={`text-2xl font-bold ${isChampYear ? "text-yellow-700" : "text-gray-800"}`}
+                    className={`text-2xl font-bold ${
+                      isChampYear ? "text-yellow-700" : "text-gray-800"
+                    }`}
                   >
                     {year}
                   </span>
