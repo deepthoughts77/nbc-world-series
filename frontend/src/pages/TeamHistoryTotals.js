@@ -230,7 +230,8 @@ export default function TeamHistoryTotals() {
             </h1>
             <p className="mt-1 text-gray-500 text-sm">
               {[team?.city, team?.state].filter(Boolean).join(", ") || ""}
-              {" — "}Year-by-year team totals. Click any column to sort.
+              {"  "}Year-by-year team totals. Click on any season for more
+              details.
             </p>
           </div>
           <div className="flex gap-4 text-center">
