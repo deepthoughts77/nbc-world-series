@@ -423,3 +423,22 @@ export const getAllTeamPitchingTotalsByYear = async (req, res) => {
     res.status(500).json({ error: "server_error" });
   }
 };
+
+export const getAllStatYears = async (_req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT DISTINCT year
+      FROM (
+        SELECT year FROM batting_stats WHERE year IS NOT NULL
+        UNION
+        SELECT year FROM pitching_stats WHERE year IS NOT NULL
+      ) y
+      ORDER BY year DESC
+    `);
+
+    res.json(rows.map((r) => Number(r.year)).filter(Boolean));
+  } catch (err) {
+    console.error("getAllStatYears error:", err);
+    res.status(500).json({ error: "server_error" });
+  }
+};

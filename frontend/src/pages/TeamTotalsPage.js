@@ -58,7 +58,8 @@ function SortableHeader({
 export default function TeamTotalsPage() {
   const navigate = useNavigate();
 
-  const [year, setYear] = useState(2025);
+  const [availableYears, setAvailableYears] = useState([]);
+  const [year, setYear] = useState(null);
   const [activeTab, setActiveTab] = useState("batting");
   const [battingRows, setBattingRows] = useState([]);
   const [pitchingRows, setPitchingRows] = useState([]);
@@ -68,6 +69,25 @@ export default function TeamTotalsPage() {
   const [sortDir, setSortDir] = useState("asc");
 
   useEffect(() => {
+    async function loadYears() {
+      try {
+        const res = await API.get("/teams/totals/years");
+        const years = Array.isArray(res.data) ? res.data : [];
+        setAvailableYears(years);
+        if (years.length > 0) {
+          setYear(years[0]);
+        }
+      } catch (_e) {
+        setErr("Failed to load available years.");
+      }
+    }
+
+    loadYears();
+  }, []);
+
+  useEffect(() => {
+    if (!year) return;
+
     async function loadData() {
       try {
         setLoading(true);
@@ -108,7 +128,7 @@ export default function TeamTotalsPage() {
     return copy;
   }, [rows, sortKey, sortDir]);
 
-  if (loading) {
+  if (loading && !year) {
     return (
       <Container className="py-12 space-y-4">
         <Skeleton className="h-10 w-48" />
@@ -144,11 +164,11 @@ export default function TeamTotalsPage() {
           <div className="flex items-center gap-3">
             <label className="text-sm font-medium text-gray-700">Year</label>
             <select
-              value={year}
+              value={year || ""}
               onChange={(e) => setYear(Number(e.target.value))}
               className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
             >
-              {[2025, 2024, 2023, 2022, 2021, 2020].map((y) => (
+              {availableYears.map((y) => (
                 <option key={y} value={y}>
                   {y}
                 </option>
@@ -272,7 +292,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="BB"
                       col="bb"
-                      title="Walks (Base on Balls)"
+                      title="Walks"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -299,7 +319,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="AVG"
                       col="avg"
-                      title="Batting Average — Hits divided by At Bats"
+                      title="Batting Average"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -308,7 +328,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="OBP"
                       col="obp"
-                      title="On-Base Percentage — How often a batter reaches base"
+                      title="On-Base Percentage"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -317,7 +337,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="SLG"
                       col="slg"
-                      title="Slugging Percentage — Total bases divided by At Bats"
+                      title="Slugging Percentage"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -377,7 +397,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="APP"
                       col="app"
-                      title="Appearances (games pitched)"
+                      title="Appearances"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -440,7 +460,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="ER"
                       col="er"
-                      title="Earned Runs Allowed"
+                      title="Earned Runs"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -449,7 +469,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="BB"
                       col="bb"
-                      title="Walks (Base on Balls)"
+                      title="Walks"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -485,7 +505,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="ERA"
                       col="era"
-                      title="Earned Run Average — Earned runs allowed per 9 innings"
+                      title="Earned Run Average"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
