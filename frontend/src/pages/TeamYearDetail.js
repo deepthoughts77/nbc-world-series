@@ -52,24 +52,25 @@ function BattingTable({ rows }) {
         <thead>
           <tr className="bg-gray-50 border-b text-left">
             {[
-              "Player",
-              "GP",
-              "AB",
-              "H",
-              "2B",
-              "3B",
-              "HR",
-              "R",
-              "RBI",
-              "BB",
-              "SO",
-              "SB",
-              "AVG",
-              "OBP",
-              "SLG",
-            ].map((h) => (
+              ["Player", "Player Name"],
+              ["GP", "Games Played"],
+              ["AB", "At Bats"],
+              ["H", "Hits"],
+              ["2B", "Doubles"],
+              ["3B", "Triples"],
+              ["HR", "Home Runs"],
+              ["R", "Runs Scored"],
+              ["RBI", "Runs Batted In"],
+              ["BB", "Walks (Base on Balls)"],
+              ["SO", "Strikeouts"],
+              ["SB", "Stolen Bases"],
+              ["AVG", "Batting Average — Hits divided by At Bats"],
+              ["OBP", "On-Base Percentage — How often a batter reaches base"],
+              ["SLG", "Slugging Percentage — Total bases divided by At Bats"],
+            ].map(([h, tip]) => (
               <th
                 key={h}
+                title={tip}
                 className={`px-3 py-2 font-semibold text-gray-600 ${
                   h === "Player"
                     ? "text-left sticky left-0 bg-gray-50 min-w-[140px]"
@@ -146,24 +147,25 @@ function PitchingTable({ rows }) {
         <thead>
           <tr className="bg-gray-50 border-b text-left">
             {[
-              "Player",
-              "APP",
-              "W",
-              "L",
-              "SV",
-              "IP",
-              "H",
-              "R",
-              "ER",
-              "BB",
-              "SO",
-              "CG",
-              "SHO",
-              "ERA",
-              "WHIP",
-            ].map((h) => (
+              ["Player", "Player Name"],
+              ["APP", "Appearances (games pitched)"],
+              ["W", "Wins"],
+              ["L", "Losses"],
+              ["SV", "Saves"],
+              ["IP", "Innings Pitched"],
+              ["H", "Hits Allowed"],
+              ["R", "Runs Allowed"],
+              ["ER", "Earned Runs Allowed"],
+              ["BB", "Walks (Base on Balls)"],
+              ["SO", "Strikeouts"],
+              ["CG", "Complete Games"],
+              ["SHO", "Shutouts"],
+              ["ERA", "Earned Run Average — Earned runs allowed per 9 innings"],
+              ["WHIP", "Walks plus Hits per Inning Pitched"],
+            ].map(([h, tip]) => (
               <th
                 key={h}
+                title={tip}
                 className={`px-3 py-2 font-semibold text-gray-600 ${
                   h === "Player"
                     ? "text-left sticky left-0 bg-gray-50 min-w-[140px]"

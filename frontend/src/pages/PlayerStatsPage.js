@@ -680,6 +680,7 @@ export default function PlayerStatsPage() {
                             <thead className="bg-gray-50">
                               <tr className="border-b border-gray-200 text-gray-700">
                                 <th
+                                  title="Pitcher Name"
                                   className="px-4 py-2 text-left font-semibold sticky left-0 bg-gray-50 z-10 cursor-pointer"
                                   onClick={() =>
                                     handlePitchSort(
@@ -692,6 +693,7 @@ export default function PlayerStatsPage() {
                                   {pitchArrow(team.teamName, "player_name")}
                                 </th>
                                 <th
+                                  title="Jersey Number"
                                   className="px-2 py-2 text-center font-semibold cursor-pointer"
                                   onClick={() =>
                                     handlePitchSort(team.teamName, "jersey_num")
@@ -701,34 +703,39 @@ export default function PlayerStatsPage() {
                                 </th>
 
                                 {[
-                                  ["era", "ERA"],
-                                  ["w", "W"],
-                                  ["l", "L"],
-                                  ["app", "APP"],
-                                  ["gs", "GS"],
-                                  ["cg", "CG"],
-                                  ["sho", "SHO"],
-                                  ["cbo", "CBO"],
-                                  ["sv", "SV"],
-                                  ["ip", "IP"],
-                                  ["h", "H"],
-                                  ["r", "R"],
-                                  ["er", "ER"],
-                                  ["bb", "BB"],
-                                  ["so", "SO"],
-                                  ["doubles", "2B"],
-                                  ["triples", "3B"],
-                                  ["hr", "HR"],
-                                  ["ab", "AB"],
-                                  ["b_avg", "B/Avg"],
-                                  ["wp", "WP"],
-                                  ["hbp", "HBP"],
-                                  ["bk", "BK"],
-                                  ["sfa", "SFA"],
-                                  ["sha", "SHA"],
-                                ].map(([field, label]) => (
+                                  [
+                                    "era",
+                                    "ERA",
+                                    "Earned Run Average — Earned runs allowed per 9 innings",
+                                  ],
+                                  ["w", "W", "Wins"],
+                                  ["l", "L", "Losses"],
+                                  ["app", "APP", "Appearances (games pitched)"],
+                                  ["gs", "GS", "Games Started"],
+                                  ["cg", "CG", "Complete Games"],
+                                  ["sho", "SHO", "Shutouts"],
+                                  ["cbo", "CBO", "Combined Shutouts"],
+                                  ["sv", "SV", "Saves"],
+                                  ["ip", "IP", "Innings Pitched"],
+                                  ["h", "H", "Hits Allowed"],
+                                  ["r", "R", "Runs Allowed"],
+                                  ["er", "ER", "Earned Runs Allowed"],
+                                  ["bb", "BB", "Walks (Base on Balls)"],
+                                  ["so", "SO", "Strikeouts"],
+                                  ["doubles", "2B", "Doubles Allowed"],
+                                  ["triples", "3B", "Triples Allowed"],
+                                  ["hr", "HR", "Home Runs Allowed"],
+                                  ["ab", "AB", "At Bats Against"],
+                                  ["b_avg", "B/Avg", "Batting Average Against"],
+                                  ["wp", "WP", "Wild Pitches"],
+                                  ["hbp", "HBP", "Hit Batters"],
+                                  ["bk", "BK", "Balks"],
+                                  ["sfa", "SFA", "Sacrifice Flies Allowed"],
+                                  ["sha", "SHA", "Sacrifice Hits Allowed"],
+                                ].map(([field, label, tip]) => (
                                   <th
                                     key={field}
+                                    title={tip}
                                     className="px-2 py-2 text-right font-semibold cursor-pointer"
                                     onClick={() =>
                                       handlePitchSort(team.teamName, field)

@@ -1,10 +1,30 @@
 // frontend/src/components/player-stats/PlayerStatsTable.js
 import React, { useState, useMemo, useCallback } from "react";
 
+// ── Batting glossary — shown as tooltip on column header hover ────────────
+const BATTING_GLOSSARY = {
+  player: "Player Name",
+  jersey: "Jersey Number",
+  pos: "Position",
+  g: "Games Played",
+  ab: "At Bats",
+  r: "Runs Scored",
+  h: "Hits",
+  doubles: "Doubles (2B)",
+  triples: "Triples (3B)",
+  hr: "Home Runs",
+  rbi: "Runs Batted In",
+  bb: "Walks (Base on Balls)",
+  so: "Strikeouts",
+  sb: "Stolen Bases",
+  avg: "Batting Average — Hits divided by At Bats",
+  obp: "On-Base Percentage — How often a batter reaches base",
+  slg: "Slugging Percentage — Total bases divided by At Bats",
+};
+
 export function PlayerStatsTable({ players, onPlayerClick }) {
-  // Default sort: AVG, highest first
   const [sortField, setSortField] = useState("avg");
-  const [sortDir, setSortDir] = useState("desc"); // "asc" | "desc"
+  const [sortDir, setSortDir] = useState("desc");
 
   const numericSortFields = useMemo(
     () => [
@@ -38,10 +58,8 @@ export function PlayerStatsTable({ players, onPlayerClick }) {
         return p.player_name || "";
       case "jersey":
         return p.jersey_num;
-
       case "pos":
         return p.position || p.pos;
-
       case "g":
         return p.gp ?? p.g;
       case "ab":
@@ -64,14 +82,12 @@ export function PlayerStatsTable({ players, onPlayerClick }) {
         return p.so;
       case "sb":
         return p.sb;
-
       case "avg":
         return p.avg;
       case "obp":
         return p.obp;
       case "slg":
         return p.slg;
-
       default:
         return null;
     }
@@ -86,29 +102,22 @@ export function PlayerStatsTable({ players, onPlayerClick }) {
 
   const sortedPlayers = useMemo(() => {
     if (!players || !players.length) return [];
-
     const list = [...players];
     const numeric = isNumericField(sortField);
-
     list.sort((a, b) => {
       const aRaw = getSortValue(a, sortField);
       const bRaw = getSortValue(b, sortField);
-
       const aMissing =
         aRaw === null || aRaw === undefined || aRaw === "" || aRaw === "—";
       const bMissing =
         bRaw === null || bRaw === undefined || bRaw === "" || bRaw === "—";
-
       if (aMissing && bMissing) return 0;
-      if (aMissing) return 1; // missing values go to bottom
+      if (aMissing) return 1;
       if (bMissing) return -1;
-
       let cmp;
-
       if (numeric) {
         const aNum = getNumeric(aRaw);
         const bNum = getNumeric(bRaw);
-
         if (Number.isNaN(aNum) && Number.isNaN(bNum)) cmp = 0;
         else if (Number.isNaN(aNum)) cmp = 1;
         else if (Number.isNaN(bNum)) cmp = -1;
@@ -116,10 +125,8 @@ export function PlayerStatsTable({ players, onPlayerClick }) {
       } else {
         cmp = String(aRaw).localeCompare(String(bRaw));
       }
-
       return sortDir === "asc" ? cmp : -cmp;
     });
-
     return list;
   }, [players, sortField, sortDir, isNumericField]);
 
@@ -141,7 +148,7 @@ export function PlayerStatsTable({ players, onPlayerClick }) {
     if (val === null || val === undefined) return "—";
     const num = typeof val === "number" ? val : parseFloat(val);
     if (Number.isNaN(num)) return val;
-    return num.toFixed(3).slice(1); // "345" for .345
+    return num.toFixed(3).slice(1);
   };
 
   const safeInt = (val) => {
@@ -149,227 +156,62 @@ export function PlayerStatsTable({ players, onPlayerClick }) {
     return val;
   };
 
+  // Reusable sortable th with tooltip
+  const Th = ({ field, label, align = "right", children }) => (
+    <th
+      title={BATTING_GLOSSARY[field] || label}
+      className={`px-2 py-2 font-semibold cursor-pointer select-none text-${align}`}
+      style={{ borderBottom: "2px solid #e5e7eb" }}
+      onClick={() => handleSort(field)}
+    >
+      <span className="inline-flex items-center gap-1">
+        {children || label}
+        {sortArrow(field) && (
+          <span className="text-[10px]">{sortArrow(field)}</span>
+        )}
+      </span>
+    </th>
+  );
+
   if (!players || players.length === 0) {
     return <p className="px-6 py-4 text-sm text-gray-500">No players found.</p>;
   }
 
   return (
-    // ✅ KEY FIX: allow horizontal scroll, and prevent column squeezing
     <div className="-mx-6 overflow-x-auto px-6">
       <table className="table-auto w-max min-w-full whitespace-nowrap text-xs md:text-sm">
         <thead className="bg-gray-50">
           <tr className="border-b border-gray-200 text-gray-700">
+            {/* Player — sticky */}
             <th
-              className="px-4 py-2 text-left font-semibold sticky left-0 bg-gray-50 z-10 cursor-pointer"
+              title={BATTING_GLOSSARY["player"]}
+              className="px-4 py-2 text-left font-semibold sticky left-0 bg-gray-50 z-10 cursor-pointer select-none"
               onClick={() => handleSort("player")}
             >
-              <span className="inline-flex items-center">
-                Player{" "}
+              <span className="inline-flex items-center gap-1">
+                Player
                 {sortArrow("player") && (
-                  <span className="ml-1 text-[10px]">
-                    {sortArrow("player")}
-                  </span>
+                  <span className="text-[10px]">{sortArrow("player")}</span>
                 )}
               </span>
             </th>
 
-            <th
-              className="px-2 py-2 text-center font-semibold cursor-pointer"
-              onClick={() => handleSort("jersey")}
-            >
-              <span className="inline-flex items-center">
-                No.{" "}
-                {sortArrow("jersey") && (
-                  <span className="ml-1 text-[10px]">
-                    {sortArrow("jersey")}
-                  </span>
-                )}
-              </span>
-            </th>
-
-            <th
-              className="px-2 py-2 text-center font-semibold cursor-pointer"
-              onClick={() => handleSort("pos")}
-            >
-              <span className="inline-flex items-center">
-                POS{" "}
-                {sortArrow("pos") && (
-                  <span className="ml-1 text-[10px]">{sortArrow("pos")}</span>
-                )}
-              </span>
-            </th>
-
-            <th
-              className="px-2 py-2 text-right font-semibold cursor-pointer"
-              onClick={() => handleSort("g")}
-            >
-              <span className="inline-flex items-center">
-                G{" "}
-                {sortArrow("g") && (
-                  <span className="ml-1 text-[10px]">{sortArrow("g")}</span>
-                )}
-              </span>
-            </th>
-
-            <th
-              className="px-2 py-2 text-right font-semibold cursor-pointer"
-              onClick={() => handleSort("ab")}
-            >
-              <span className="inline-flex items-center">
-                AB{" "}
-                {sortArrow("ab") && (
-                  <span className="ml-1 text-[10px]">{sortArrow("ab")}</span>
-                )}
-              </span>
-            </th>
-
-            <th
-              className="px-2 py-2 text-right font-semibold cursor-pointer"
-              onClick={() => handleSort("r")}
-            >
-              <span className="inline-flex items-center">
-                R{" "}
-                {sortArrow("r") && (
-                  <span className="ml-1 text-[10px]">{sortArrow("r")}</span>
-                )}
-              </span>
-            </th>
-
-            <th
-              className="px-2 py-2 text-right font-semibold cursor-pointer"
-              onClick={() => handleSort("h")}
-            >
-              <span className="inline-flex items-center">
-                H{" "}
-                {sortArrow("h") && (
-                  <span className="ml-1 text-[10px]">{sortArrow("h")}</span>
-                )}
-              </span>
-            </th>
-
-            <th
-              className="px-2 py-2 text-right font-semibold cursor-pointer"
-              onClick={() => handleSort("doubles")}
-            >
-              <span className="inline-flex items-center">
-                2B{" "}
-                {sortArrow("doubles") && (
-                  <span className="ml-1 text-[10px]">
-                    {sortArrow("doubles")}
-                  </span>
-                )}
-              </span>
-            </th>
-
-            <th
-              className="px-2 py-2 text-right font-semibold cursor-pointer"
-              onClick={() => handleSort("triples")}
-            >
-              <span className="inline-flex items-center">
-                3B{" "}
-                {sortArrow("triples") && (
-                  <span className="ml-1 text-[10px]">
-                    {sortArrow("triples")}
-                  </span>
-                )}
-              </span>
-            </th>
-
-            <th
-              className="px-2 py-2 text-right font-semibold cursor-pointer"
-              onClick={() => handleSort("hr")}
-            >
-              <span className="inline-flex items-center">
-                HR{" "}
-                {sortArrow("hr") && (
-                  <span className="ml-1 text-[10px]">{sortArrow("hr")}</span>
-                )}
-              </span>
-            </th>
-
-            <th
-              className="px-2 py-2 text-right font-semibold cursor-pointer"
-              onClick={() => handleSort("rbi")}
-            >
-              <span className="inline-flex items-center">
-                RBI{" "}
-                {sortArrow("rbi") && (
-                  <span className="ml-1 text-[10px]">{sortArrow("rbi")}</span>
-                )}
-              </span>
-            </th>
-
-            <th
-              className="px-2 py-2 text-right font-semibold cursor-pointer"
-              onClick={() => handleSort("bb")}
-            >
-              <span className="inline-flex items-center">
-                BB{" "}
-                {sortArrow("bb") && (
-                  <span className="ml-1 text-[10px]">{sortArrow("bb")}</span>
-                )}
-              </span>
-            </th>
-
-            <th
-              className="px-2 py-2 text-right font-semibold cursor-pointer"
-              onClick={() => handleSort("so")}
-            >
-              <span className="inline-flex items-center">
-                SO{" "}
-                {sortArrow("so") && (
-                  <span className="ml-1 text-[10px]">{sortArrow("so")}</span>
-                )}
-              </span>
-            </th>
-
-            <th
-              className="px-2 py-2 text-right font-semibold cursor-pointer"
-              onClick={() => handleSort("sb")}
-            >
-              <span className="inline-flex items-center">
-                SB{" "}
-                {sortArrow("sb") && (
-                  <span className="ml-1 text-[10px]">{sortArrow("sb")}</span>
-                )}
-              </span>
-            </th>
-
-            <th
-              className="px-2 py-2 text-right font-semibold cursor-pointer"
-              onClick={() => handleSort("avg")}
-            >
-              <span className="inline-flex items-center">
-                AVG{" "}
-                {sortArrow("avg") && (
-                  <span className="ml-1 text-[10px]">{sortArrow("avg")}</span>
-                )}
-              </span>
-            </th>
-
-            <th
-              className="px-2 py-2 text-right font-semibold cursor-pointer"
-              onClick={() => handleSort("obp")}
-            >
-              <span className="inline-flex items-center">
-                OBP{" "}
-                {sortArrow("obp") && (
-                  <span className="ml-1 text-[10px]">{sortArrow("obp")}</span>
-                )}
-              </span>
-            </th>
-
-            <th
-              className="px-2 py-2 text-right font-semibold cursor-pointer"
-              onClick={() => handleSort("slg")}
-            >
-              <span className="inline-flex items-center">
-                SLG{" "}
-                {sortArrow("slg") && (
-                  <span className="ml-1 text-[10px]">{sortArrow("slg")}</span>
-                )}
-              </span>
-            </th>
+            <Th field="jersey" label="No." align="center" />
+            <Th field="pos" label="POS" align="center" />
+            <Th field="g" label="G" />
+            <Th field="ab" label="AB" />
+            <Th field="r" label="R" />
+            <Th field="h" label="H" />
+            <Th field="doubles" label="2B" />
+            <Th field="triples" label="3B" />
+            <Th field="hr" label="HR" />
+            <Th field="rbi" label="RBI" />
+            <Th field="bb" label="BB" />
+            <Th field="so" label="SO" />
+            <Th field="sb" label="SB" />
+            <Th field="avg" label="AVG" />
+            <Th field="obp" label="OBP" />
+            <Th field="slg" label="SLG" />
           </tr>
         </thead>
 
@@ -388,13 +230,10 @@ export function PlayerStatsTable({ players, onPlayerClick }) {
                   {p.player_name}
                 </button>
               </td>
-
               <td className="px-2 py-1.5 text-center tabular-nums">
                 {p.jersey_num || "—"}
               </td>
-
               <td className="px-2 py-1.5 text-center">{p.position || "—"}</td>
-
               <td className="px-2 py-1.5 text-right tabular-nums">
                 {safeInt(p.gp || p.g)}
               </td>
@@ -428,11 +267,9 @@ export function PlayerStatsTable({ players, onPlayerClick }) {
               <td className="px-2 py-1.5 text-right tabular-nums">
                 {safeInt(p.sb)}
               </td>
-
               <td className="px-2 py-1.5 text-right font-semibold text-blue-600 tabular-nums">
                 {formatAvg(p.avg)}
               </td>
-
               <td className="px-2 py-1.5 text-right tabular-nums">
                 {p.obp != null ? p.obp : "—"}
               </td>
