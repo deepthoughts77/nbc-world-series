@@ -102,7 +102,7 @@ export default function TeamDetail() {
             </p>
 
             <NavLink
-              to="/team-totals"
+              to={`/teams/${teamSlug}/totals`}
               className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors"
             >
               <BarChart3 size={16} />

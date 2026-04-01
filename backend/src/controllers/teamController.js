@@ -116,6 +116,109 @@ export const getTeamChampionships = async (req, res) => {
   }
 };
 
+export const getTeamBattingTotalsByYear = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { rows } = await pool.query(
+      `SELECT
+         bs.year,
+         SUM(COALESCE(bs.gp, 0))   AS gp,
+         SUM(COALESCE(bs.ab, 0))   AS ab,
+         SUM(COALESCE(bs.h, 0))    AS h,
+         SUM(COALESCE(bs."2b", 0)) AS doubles,
+         SUM(COALESCE(bs."3b", 0)) AS triples,
+         SUM(COALESCE(bs.hr, 0))   AS hr,
+         SUM(COALESCE(bs.r, 0))    AS r,
+         SUM(COALESCE(bs.rbi, 0))  AS rbi,
+         SUM(COALESCE(bs.bb, 0))   AS bb,
+         SUM(COALESCE(bs.so, 0))   AS so,
+         SUM(COALESCE(bs.sb, 0))   AS sb,
+         CASE
+           WHEN SUM(COALESCE(bs.ab, 0)) > 0
+             THEN ROUND(SUM(COALESCE(bs.h, 0))::numeric / SUM(COALESCE(bs.ab, 0)), 3)
+           ELSE 0
+         END AS avg,
+         CASE
+           WHEN (SUM(COALESCE(bs.ab, 0)) + SUM(COALESCE(bs.bb, 0))) > 0
+             THEN ROUND(
+               (SUM(COALESCE(bs.h, 0)) + SUM(COALESCE(bs.bb, 0)))::numeric
+               / (SUM(COALESCE(bs.ab, 0)) + SUM(COALESCE(bs.bb, 0))), 3)
+           ELSE 0
+         END AS obp,
+         CASE
+           WHEN SUM(COALESCE(bs.ab, 0)) > 0
+             THEN ROUND(
+               (
+                 (SUM(COALESCE(bs.h,0)) - SUM(COALESCE(bs."2b",0)) - SUM(COALESCE(bs."3b",0)) - SUM(COALESCE(bs.hr,0)))
+                 + (2 * SUM(COALESCE(bs."2b",0)))
+                 + (3 * SUM(COALESCE(bs."3b",0)))
+                 + (4 * SUM(COALESCE(bs.hr,0)))
+               )::numeric / SUM(COALESCE(bs.ab, 0)), 3)
+           ELSE 0
+         END AS slg
+       FROM batting_stats bs
+       WHERE bs.team_id = $1
+       GROUP BY bs.year
+       ORDER BY bs.year DESC`,
+      [id],
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("getTeamBattingTotalsByYear error:", err);
+    res.status(500).json({ error: "server_error" });
+  }
+};
+
+/** GET /api/teams/:id/totals/pitching
+ *  Returns pitching totals aggregated by year for a single team.
+ */
+export const getTeamPitchingTotalsByYear = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { rows } = await pool.query(
+      `SELECT
+         ps.year,
+         SUM(COALESCE(ps.app, 0))  AS app,
+         SUM(COALESCE(ps.w, 0))    AS w,
+         SUM(COALESCE(ps.l, 0))    AS l,
+         SUM(COALESCE(ps.sv, 0))   AS sv,
+         SUM(COALESCE(ps.ip, 0))   AS ip,
+         SUM(COALESCE(ps.h, 0))    AS h,
+         SUM(COALESCE(ps.r, 0))    AS r,
+         SUM(COALESCE(ps.er, 0))   AS er,
+         SUM(COALESCE(ps.bb, 0))   AS bb,
+         SUM(COALESCE(ps.so, 0))   AS so,
+         SUM(COALESCE(ps.cg, 0))   AS cg,
+         SUM(COALESCE(ps.sho, 0))  AS sho,
+         CASE
+           WHEN SUM(COALESCE(ps.ip, 0)) > 0
+             THEN ROUND((SUM(COALESCE(ps.er, 0)) * 9.0 / SUM(COALESCE(ps.ip, 0)))::numeric, 2)
+           ELSE 0
+         END AS era,
+         CASE
+           WHEN SUM(COALESCE(ps.ip, 0)) > 0
+             THEN ROUND(
+               (SUM(COALESCE(ps.bb, 0)) + SUM(COALESCE(ps.h, 0)))::numeric
+               / SUM(COALESCE(ps.ip, 0)), 2)
+           ELSE 0
+         END AS whip
+       FROM pitching_stats ps
+       WHERE ps.team_id = $1
+       GROUP BY ps.year
+       ORDER BY ps.year DESC`,
+      [id],
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("getTeamPitchingTotalsByYear error:", err);
+    res.status(500).json({ error: "server_error" });
+  }
+};
+
 /** GET /api/teams/:id/years */
 export const getTeamYears = async (req, res) => {
   try {

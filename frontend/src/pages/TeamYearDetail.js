@@ -303,6 +303,13 @@ export default function TeamYearDetail() {
           {teamName}
         </NavLink>
         <ChevronRight size={14} />
+        <NavLink
+          to={`/teams/${teamSlug}/totals`}
+          className="text-blue-600 hover:underline"
+        >
+          Season Totals
+        </NavLink>
+        <ChevronRight size={14} />
         <span className="font-semibold text-gray-800">{year} Season</span>
       </nav>
 

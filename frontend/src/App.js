@@ -18,6 +18,7 @@ const ChampionshipMvp = React.lazy(() => import("./pages/ChampionshipMvp"));
 const Teams = React.lazy(() => import("./pages/Teams"));
 const TeamDetail = React.lazy(() => import("./pages/TeamDetail"));
 const TeamTotalsPage = React.lazy(() => import("./pages/TeamTotalsPage"));
+const TeamHistoryTotals = React.lazy(() => import("./pages/TeamHistoryTotals"));
 const HallOfFame = React.lazy(() => import("./pages/HallOfFame"));
 const Records = React.lazy(() => import("./pages/Records"));
 const PlayerStatsPage = React.lazy(() => import("./pages/PlayerStatsPage"));
@@ -40,6 +41,7 @@ export default function App() {
       <PageShell>
         <Suspense fallback={<PageLoader />}>
           <Routes>
+            {/* Core Pages */}
             <Route path="/" element={<Home />} />
             <Route path="/championships" element={<Championships />} />
             <Route path="/teams" element={<Teams />} />
@@ -48,9 +50,11 @@ export default function App() {
             <Route path="/records" element={<Records />} />
             <Route path="/player-stats" element={<PlayerStatsPage />} />
 
+            {/* Leaders */}
             <Route path="/leaders/batting" element={<BattingLeadersPage />} />
             <Route path="/leaders/pitching" element={<LeadingPitchers />} />
 
+            {/* Championship Detail Pages */}
             <Route
               path="/championships/:year/final"
               element={<ChampionshipFinal />}
@@ -64,12 +68,21 @@ export default function App() {
               element={<ChampionshipDetail />}
             />
 
-            <Route path="/teams/:teamSlug" element={<TeamDetail />} />
+            {/* Team Pages — order matters: /totals before /:year */}
+            <Route
+              path="/teams/:teamSlug/totals"
+              element={<TeamHistoryTotals />}
+            />
             <Route path="/teams/:teamSlug/:year" element={<TeamYearDetail />} />
+            <Route path="/teams/:teamSlug" element={<TeamDetail />} />
+
+            {/* Player Pages */}
             <Route path="/players/:id" element={<PlayerProfile />} />
 
+            {/* Archives */}
             <Route path="/archives" element={<Archives />} />
 
+            {/* 404 */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>

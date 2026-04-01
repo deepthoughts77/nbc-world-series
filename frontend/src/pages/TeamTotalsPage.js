@@ -10,7 +10,7 @@ import { Skeleton } from "../components/common/Skeleton";
 function fmt3(v) {
   const n = parseFloat(v);
   if (isNaN(n)) return v ?? "—";
-  return n.toFixed(3).replace(/^0/, ".");
+  return n.toFixed(3).replace(/^0\./, ".");
 }
 function fmt2(v) {
   const n = parseFloat(v);
@@ -24,6 +24,7 @@ function val(v) {
 function SortableHeader({
   label,
   col,
+  title,
   sortKey,
   sortDir,
   setSortKey,
@@ -43,6 +44,7 @@ function SortableHeader({
 
   return (
     <th
+      title={title || label}
       onClick={handleClick}
       className={`px-3 py-2 font-semibold text-gray-600 cursor-pointer select-none ${
         align === "left" ? "text-left" : "text-right"
@@ -188,15 +190,17 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="Team"
                       col="team_name"
+                      title="Team Name"
+                      align="left"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
                       setSortDir={setSortDir}
-                      align="left"
                     />
                     <SortableHeader
                       label="GP"
                       col="gp"
+                      title="Games Played"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -205,6 +209,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="AB"
                       col="ab"
+                      title="At Bats"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -213,6 +218,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="H"
                       col="h"
+                      title="Hits"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -221,6 +227,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="2B"
                       col="doubles"
+                      title="Doubles"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -229,6 +236,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="3B"
                       col="triples"
+                      title="Triples"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -237,6 +245,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="HR"
                       col="hr"
+                      title="Home Runs"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -245,6 +254,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="R"
                       col="r"
+                      title="Runs Scored"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -253,6 +263,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="RBI"
                       col="rbi"
+                      title="Runs Batted In"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -261,6 +272,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="BB"
                       col="bb"
+                      title="Walks (Base on Balls)"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -269,6 +281,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="SO"
                       col="so"
+                      title="Strikeouts"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -277,6 +290,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="SB"
                       col="sb"
+                      title="Stolen Bases"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -285,6 +299,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="AVG"
                       col="avg"
+                      title="Batting Average — Hits divided by At Bats"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -293,6 +308,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="OBP"
                       col="obp"
+                      title="On-Base Percentage — How often a batter reaches base"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -301,6 +317,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="SLG"
                       col="slg"
+                      title="Slugging Percentage — Total bases divided by At Bats"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -350,15 +367,17 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="Team"
                       col="team_name"
+                      title="Team Name"
+                      align="left"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
                       setSortDir={setSortDir}
-                      align="left"
                     />
                     <SortableHeader
                       label="APP"
                       col="app"
+                      title="Appearances (games pitched)"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -367,6 +386,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="W"
                       col="w"
+                      title="Wins"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -375,6 +395,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="L"
                       col="l"
+                      title="Losses"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -383,6 +404,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="SV"
                       col="sv"
+                      title="Saves"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -391,6 +413,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="IP"
                       col="ip"
+                      title="Innings Pitched"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -399,6 +422,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="H"
                       col="h"
+                      title="Hits Allowed"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -407,6 +431,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="R"
                       col="r"
+                      title="Runs Allowed"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -415,6 +440,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="ER"
                       col="er"
+                      title="Earned Runs Allowed"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -423,6 +449,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="BB"
                       col="bb"
+                      title="Walks (Base on Balls)"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -431,6 +458,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="SO"
                       col="so"
+                      title="Strikeouts"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -439,6 +467,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="CG"
                       col="cg"
+                      title="Complete Games"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -447,6 +476,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="SHO"
                       col="sho"
+                      title="Shutouts"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -455,6 +485,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="ERA"
                       col="era"
+                      title="Earned Run Average — Earned runs allowed per 9 innings"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}
@@ -463,6 +494,7 @@ export default function TeamTotalsPage() {
                     <SortableHeader
                       label="WHIP"
                       col="whip"
+                      title="Walks plus Hits per Inning Pitched"
                       sortKey={sortKey}
                       sortDir={sortDir}
                       setSortKey={setSortKey}

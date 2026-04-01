@@ -1,7 +1,7 @@
 // src/layout/Nav.js
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { NavLink } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ChevronDown, Users, BarChart3 } from "lucide-react";
 import { Container } from "../components/common/Container";
 
 export function Nav() {
@@ -11,6 +11,19 @@ export function Nav() {
     (isActive ? "bg-white/15 text-white " : "text-white/80 ") + linkBase;
 
   const [open, setOpen] = useState(false);
+  const [teamsDropdownOpen, setTeamsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setTeamsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-white/70 bg-white/90 border-b border-gray-200">
@@ -38,17 +51,194 @@ export function Nav() {
                   Championships
                 </NavLink>
               </li>
-              <li>
-                <NavLink to="/teams" className={activeClass}>
+
+              {/* Teams dropdown */}
+              <li className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setTeamsDropdownOpen((v) => !v)}
+                  className={
+                    "flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors " +
+                    (teamsDropdownOpen
+                      ? "bg-white/15 text-white"
+                      : "text-white/80 hover:bg-white/10")
+                  }
+                >
                   Teams
-                </NavLink>
+                  <ChevronDown
+                    size={14}
+                    className={`transition-transform ${teamsDropdownOpen ? "rotate-180" : ""}`}
+                  />
+                </button>
+
+                {teamsDropdownOpen && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "calc(100% + 8px)",
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      background: "#FFFFFF",
+                      border: "1px solid #E2E8F0",
+                      borderRadius: 10,
+                      boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                      minWidth: 200,
+                      zIndex: 100,
+                      overflow: "hidden",
+                    }}
+                  >
+                    {/* Arrow pointer */}
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: -6,
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        width: 12,
+                        height: 12,
+                        background: "#FFFFFF",
+                        border: "1px solid #E2E8F0",
+                        borderBottom: "none",
+                        borderRight: "none",
+                        rotate: "45deg",
+                      }}
+                    />
+
+                    <NavLink
+                      to="/teams"
+                      end
+                      onClick={() => setTeamsDropdownOpen(false)}
+                      style={{ textDecoration: "none" }}
+                    >
+                      {({ isActive }) => (
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            padding: "12px 16px",
+                            background: isActive ? "#EFF6FF" : "#FFFFFF",
+                            borderBottom: "1px solid #F1F5F9",
+                            cursor: "pointer",
+                            transition: "background 0.15s",
+                          }}
+                          onMouseEnter={(e) =>
+                            (e.currentTarget.style.background = "#F8FAFC")
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.style.background = isActive
+                              ? "#EFF6FF"
+                              : "#FFFFFF")
+                          }
+                        >
+                          <div
+                            style={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: 8,
+                              background: "#EFF6FF",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                            }}
+                          >
+                            <Users size={16} color="#2563EB" />
+                          </div>
+                          <div>
+                            <div
+                              style={{
+                                fontSize: 13,
+                                fontWeight: 700,
+                                color: "#0F172A",
+                              }}
+                            >
+                              Team Registry
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 11,
+                                color: "#94A3B8",
+                                marginTop: 1,
+                              }}
+                            >
+                              All teams & histories
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </NavLink>
+
+                    <NavLink
+                      to="/team-totals"
+                      onClick={() => setTeamsDropdownOpen(false)}
+                      style={{ textDecoration: "none" }}
+                    >
+                      {({ isActive }) => (
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            padding: "12px 16px",
+                            background: isActive ? "#EFF6FF" : "#FFFFFF",
+                            cursor: "pointer",
+                            transition: "background 0.15s",
+                          }}
+                          onMouseEnter={(e) =>
+                            (e.currentTarget.style.background = "#F8FAFC")
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.style.background = isActive
+                              ? "#EFF6FF"
+                              : "#FFFFFF")
+                          }
+                        >
+                          <div
+                            style={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: 8,
+                              background: "#F0FDF4",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                            }}
+                          >
+                            <BarChart3 size={16} color="#059669" />
+                          </div>
+                          <div>
+                            <div
+                              style={{
+                                fontSize: 13,
+                                fontWeight: 700,
+                                color: "#0F172A",
+                              }}
+                            >
+                              Team Totals
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 11,
+                                color: "#94A3B8",
+                                marginTop: 1,
+                              }}
+                            >
+                              Season batting & pitching
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </NavLink>
+                  </div>
+                )}
               </li>
+
               <li>
                 <NavLink to="/hall-of-fame" className={activeClass}>
                   Hall of Fame
                 </NavLink>
               </li>
-              {/* Added Archives Link */}
               <li>
                 <NavLink to="/archives" className={activeClass}>
                   Archives
@@ -91,9 +281,7 @@ export function Nav() {
               <NavLink
                 to="/"
                 className={({ isActive }) =>
-                  `px-3 py-2 rounded-lg ${
-                    isActive ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"
-                  }`
+                  `px-3 py-2 rounded-lg ${isActive ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"}`
                 }
                 end
                 onClick={() => setOpen(false)}
@@ -103,43 +291,68 @@ export function Nav() {
               <NavLink
                 to="/championships"
                 className={({ isActive }) =>
-                  `px-3 py-2 rounded-lg ${
-                    isActive ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"
-                  }`
+                  `px-3 py-2 rounded-lg ${isActive ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"}`
                 }
                 onClick={() => setOpen(false)}
               >
                 Championships
               </NavLink>
-              <NavLink
-                to="/teams"
-                className={({ isActive }) =>
-                  `px-3 py-2 rounded-lg ${
-                    isActive ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"
-                  }`
-                }
-                onClick={() => setOpen(false)}
+
+              {/* Mobile Teams section */}
+              <div
+                style={{
+                  borderRadius: 8,
+                  overflow: "hidden",
+                  border: "1px solid #F1F5F9",
+                }}
               >
-                Teams
-              </NavLink>
+                <div
+                  style={{
+                    padding: "8px 12px 4px",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: "0.1em",
+                    color: "#94A3B8",
+                    textTransform: "uppercase",
+                    background: "#F8FAFC",
+                  }}
+                >
+                  Teams
+                </div>
+                <NavLink
+                  to="/teams"
+                  end
+                  className={({ isActive }) =>
+                    `flex items-center gap-2 px-3 py-2 ${isActive ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50 text-gray-700"}`
+                  }
+                  onClick={() => setOpen(false)}
+                >
+                  <Users size={15} /> Team Registry
+                </NavLink>
+                <NavLink
+                  to="/team-totals"
+                  className={({ isActive }) =>
+                    `flex items-center gap-2 px-3 py-2 ${isActive ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50 text-gray-700"}`
+                  }
+                  onClick={() => setOpen(false)}
+                >
+                  <BarChart3 size={15} /> Team Totals
+                </NavLink>
+              </div>
+
               <NavLink
                 to="/hall-of-fame"
                 className={({ isActive }) =>
-                  `px-3 py-2 rounded-lg ${
-                    isActive ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"
-                  }`
+                  `px-3 py-2 rounded-lg ${isActive ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"}`
                 }
                 onClick={() => setOpen(false)}
               >
                 Hall of Fame
               </NavLink>
-              {/* Added Archives for Mobile */}
               <NavLink
                 to="/archives"
                 className={({ isActive }) =>
-                  `px-3 py-2 rounded-lg ${
-                    isActive ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"
-                  }`
+                  `px-3 py-2 rounded-lg ${isActive ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"}`
                 }
                 onClick={() => setOpen(false)}
               >
@@ -148,9 +361,7 @@ export function Nav() {
               <NavLink
                 to="/records"
                 className={({ isActive }) =>
-                  `px-3 py-2 rounded-lg ${
-                    isActive ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"
-                  }`
+                  `px-3 py-2 rounded-lg ${isActive ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"}`
                 }
                 onClick={() => setOpen(false)}
               >
@@ -159,9 +370,7 @@ export function Nav() {
               <NavLink
                 to="/player-stats"
                 className={({ isActive }) =>
-                  `px-3 py-2 rounded-lg ${
-                    isActive ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"
-                  }`
+                  `px-3 py-2 rounded-lg ${isActive ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"}`
                 }
                 onClick={() => setOpen(false)}
               >
@@ -170,9 +379,7 @@ export function Nav() {
               <NavLink
                 to="/leaders/pitching"
                 className={({ isActive }) =>
-                  `px-3 py-2 rounded-lg ${
-                    isActive ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"
-                  }`
+                  `px-3 py-2 rounded-lg ${isActive ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"}`
                 }
                 onClick={() => setOpen(false)}
               >
