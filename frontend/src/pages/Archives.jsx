@@ -399,7 +399,7 @@ export default function Archives() {
             }}
           >
             Historical programs, scorebooks, statistical records, and official
-            baseball annuals from the NBC World Series — digitized and preserved
+            baseball annuals from the NBC World Series digitized and preserved
             by Wichita State University Libraries Special Collections.
           </p>
         </Container>
