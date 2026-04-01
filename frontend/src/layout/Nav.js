@@ -1,7 +1,15 @@
 // src/layout/Nav.js
 import React, { useState, useRef, useEffect } from "react";
-import { NavLink } from "react-router-dom";
-import { Menu, X, ChevronDown, Users, BarChart3 } from "lucide-react";
+import { NavLink, useNavigate } from "react-router-dom";
+import {
+  Menu,
+  X,
+  ChevronDown,
+  Users,
+  BarChart3,
+  ArrowLeftRight,
+  Search,
+} from "lucide-react";
 import { Container } from "../components/common/Container";
 
 export function Nav() {
@@ -10,20 +18,40 @@ export function Nav() {
   const activeClass = ({ isActive }) =>
     (isActive ? "bg-white/15 text-white " : "text-white/80 ") + linkBase;
 
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [teamsDropdownOpen, setTeamsDropdownOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchVal, setSearchVal] = useState("");
   const dropdownRef = useRef(null);
+  const searchRef = useRef(null);
+  const searchInputRef = useRef(null);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(e) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setTeamsDropdownOpen(false);
       }
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setSearchOpen(false);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchVal.trim().length < 2) return;
+    navigate(`/search?q=${encodeURIComponent(searchVal.trim())}`);
+    setSearchOpen(false);
+    setSearchVal("");
+  };
+
+  const openSearch = () => {
+    setSearchOpen(true);
+    setTimeout(() => searchInputRef.current?.focus(), 50);
+  };
 
   return (
     <header className="sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-white/70 bg-white/90 border-b border-gray-200">
@@ -86,7 +114,6 @@ export function Nav() {
                       overflow: "hidden",
                     }}
                   >
-                    {/* Arrow pointer */}
                     <div
                       style={{
                         position: "absolute",
@@ -255,9 +282,90 @@ export function Nav() {
                 </NavLink>
               </li>
               <li>
+                <NavLink to="/compare" className={activeClass}>
+                  Compare
+                </NavLink>
+              </li>
+              <li>
                 <NavLink to="/leaders/pitching" className={activeClass}>
                   Leading Pitchers
                 </NavLink>
+              </li>
+
+              {/* Search button */}
+              <li ref={searchRef} style={{ position: "relative" }}>
+                {searchOpen ? (
+                  <form
+                    onSubmit={handleSearchSubmit}
+                    style={{ display: "flex", alignItems: "center", gap: 6 }}
+                  >
+                    <div style={{ position: "relative" }}>
+                      <Search
+                        size={13}
+                        style={{
+                          position: "absolute",
+                          left: 8,
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          color: "#9CA3AF",
+                          pointerEvents: "none",
+                        }}
+                      />
+                      <input
+                        ref={searchInputRef}
+                        value={searchVal}
+                        onChange={(e) => setSearchVal(e.target.value)}
+                        placeholder="Search…"
+                        style={{
+                          background: "rgba(255,255,255,0.12)",
+                          border: "1px solid rgba(255,255,255,0.25)",
+                          borderRadius: 6,
+                          fontSize: 13,
+                          padding: "6px 10px 6px 26px",
+                          color: "#FFFFFF",
+                          outline: "none",
+                          width: 160,
+                        }}
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      style={{
+                        background: "#1D4ED8",
+                        border: "none",
+                        borderRadius: 6,
+                        color: "#FFFFFF",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        padding: "6px 10px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Go
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSearchOpen(false)}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "rgba(255,255,255,0.5)",
+                        cursor: "pointer",
+                        padding: 2,
+                      }}
+                    >
+                      <X size={14} />
+                    </button>
+                  </form>
+                ) : (
+                  <button
+                    onClick={openSearch}
+                    className="px-3 py-2 rounded-lg text-sm font-medium hover:bg-white/10 transition-colors text-white/80"
+                    title="Search"
+                  >
+                    <Search size={15} />
+                  </button>
+                )}
               </li>
             </ul>
           </nav>
@@ -375,6 +483,15 @@ export function Nav() {
                 onClick={() => setOpen(false)}
               >
                 Player Stats
+              </NavLink>
+              <NavLink
+                to="/compare"
+                className={({ isActive }) =>
+                  `flex items-center gap-2 px-3 py-2 rounded-lg ${isActive ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"}`
+                }
+                onClick={() => setOpen(false)}
+              >
+                <ArrowLeftRight size={15} /> Compare Players
               </NavLink>
               <NavLink
                 to="/leaders/pitching"

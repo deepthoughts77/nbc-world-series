@@ -19,10 +19,12 @@ const Teams = React.lazy(() => import("./pages/Teams"));
 const TeamDetail = React.lazy(() => import("./pages/TeamDetail"));
 const TeamTotalsPage = React.lazy(() => import("./pages/TeamTotalsPage"));
 const TeamHistoryTotals = React.lazy(() => import("./pages/TeamHistoryTotals"));
+const SearchResults = React.lazy(() => import("./pages/SearchResults"));
 const HallOfFame = React.lazy(() => import("./pages/HallOfFame"));
 const Records = React.lazy(() => import("./pages/Records"));
 const PlayerStatsPage = React.lazy(() => import("./pages/PlayerStatsPage"));
 const PlayerProfile = React.lazy(() => import("./pages/PlayerProfile"));
+const PlayerComparison = React.lazy(() => import("./pages/PlayerComparison"));
 const LeadingPitchers = React.lazy(() => import("./pages/LeadingPitchers"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 const Archives = React.lazy(() => import("./pages/Archives"));
@@ -49,6 +51,8 @@ export default function App() {
             <Route path="/hall-of-fame" element={<HallOfFame />} />
             <Route path="/records" element={<Records />} />
             <Route path="/player-stats" element={<PlayerStatsPage />} />
+            <Route path="/compare" element={<PlayerComparison />} />
+            <Route path="/search" element={<SearchResults />} />
 
             {/* Leaders */}
             <Route path="/leaders/batting" element={<BattingLeadersPage />} />
