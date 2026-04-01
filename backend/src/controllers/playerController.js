@@ -17,11 +17,11 @@ const resolvePlayerId = async (rawId) => {
   try {
     const r1 = await pool.query(
       `SELECT 1 FROM batting_stats WHERE player_id = $1 LIMIT 1`,
-      [id]
+      [id],
     );
     const r2 = await pool.query(
       `SELECT 1 FROM pitching_stats WHERE player_id = $1 LIMIT 1`,
-      [id]
+      [id],
     );
     if (r1.rowCount > 0 || r2.rowCount > 0) {
       return id;
@@ -34,7 +34,7 @@ const resolvePlayerId = async (rawId) => {
   try {
     const r = await pool.query(
       `SELECT player_id FROM batting_stats WHERE id = $1 LIMIT 1`,
-      [id]
+      [id],
     );
     if (r.rows[0]?.player_id) {
       return r.rows[0].player_id;
@@ -47,7 +47,7 @@ const resolvePlayerId = async (rawId) => {
   try {
     const r = await pool.query(
       `SELECT player_id FROM pitching_stats WHERE id = $1 LIMIT 1`,
-      [id]
+      [id],
     );
     if (r.rows[0]?.player_id) {
       return r.rows[0].player_id;
@@ -55,7 +55,7 @@ const resolvePlayerId = async (rawId) => {
   } catch (e) {
     console.warn(
       "resolvePlayerId: pitching_stats.id lookup failed:",
-      e.message
+      e.message,
     );
   }
 
@@ -87,7 +87,7 @@ const getPlayerNameSafe = async (playerId) => {
        FROM players
        WHERE id = $1
        LIMIT 1`,
-      [playerId]
+      [playerId],
     );
 
     if (r.rows[0]) {
@@ -99,7 +99,7 @@ const getPlayerNameSafe = async (playerId) => {
   } catch (e) {
     console.warn(
       "getPlayerNameSafe: players first/last lookup failed:",
-      e.message
+      e.message,
     );
   }
 
@@ -134,14 +134,14 @@ export const searchPlayers = async (req, res) => {
        AND LOWER(p.first_name || ' ' || p.last_name) LIKE $1
        ORDER BY p.last_name, p.first_name
        LIMIT 25`,
-      [term]
+      [term],
     );
 
     return res.json(
       rows.map((r) => ({
         id: r.id,
         full_name: r.full_name,
-      }))
+      })),
     );
   } catch (e) {
     console.warn("searchPlayers failed:", e.message);
@@ -205,7 +205,7 @@ export const getBattingLeaders = async (req, res) => {
       ORDER BY ${sortColumn} ${sortDir}, p.last_name ASC
       LIMIT 500
       `,
-      [year]
+      [year],
     );
 
     let result = rows;
@@ -284,7 +284,7 @@ export const getPitchingLeaders = async (req, res) => {
       ORDER BY ${sortColumn} ${sortDir}, pl.last_name ASC
       LIMIT 500
       `,
-      [year]
+      [year],
     );
 
     let result = rows;
@@ -369,7 +369,7 @@ export const getPlayerById = async (req, res) => {
        JOIN teams t ON b.team_id = t.id
        WHERE b.player_id = $1
        ORDER BY b.year DESC`,
-      [playerId]
+      [playerId],
     );
 
     // 4) Pitching stats across all years/teams
@@ -409,7 +409,7 @@ export const getPlayerById = async (req, res) => {
        JOIN teams t ON p.team_id = t.id
        WHERE p.player_id = $1
        ORDER BY p.year DESC`,
-      [playerId]
+      [playerId],
     );
 
     // 5) If no stats at all, treat as not found
@@ -451,7 +451,7 @@ export const getPlayerById = async (req, res) => {
         END AS career_slg
        FROM batting_stats
        WHERE player_id = $1`,
-      [playerId]
+      [playerId],
     );
 
     // 7) Career pitching totals
@@ -478,7 +478,7 @@ export const getPlayerById = async (req, res) => {
         END AS career_era
        FROM pitching_stats
        WHERE player_id = $1`,
-      [playerId]
+      [playerId],
     );
 
     // 8) All teams this player has appeared for
@@ -509,7 +509,7 @@ export const getPlayerById = async (req, res) => {
       FROM team_years
       GROUP BY name, city, state
       ORDER BY first_year`,
-      [playerId]
+      [playerId],
     );
 
     const careerBatting = careerBattingResult.rows[0];
@@ -543,11 +543,12 @@ export const getPlayerById = async (req, res) => {
         career: pitchingCareer,
       },
       teams: teamsResult.rows.map((t) => ({
+        id: t.id,
         name: t.name,
         city: t.city,
         state: t.state,
         batting_years: t.batting_years,
-        pitching_years: t.patching_years,
+        pitching_years: t.pitching_years,
       })),
     });
   } catch (e) {

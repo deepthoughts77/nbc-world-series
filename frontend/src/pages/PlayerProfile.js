@@ -124,7 +124,11 @@ export default function PlayerProfile() {
                 return (
                   <Link
                     key={idx}
-                    to={`/teams/${team.id}`}
+                    to={
+                      team.id
+                        ? `/teams/${team.id}`
+                        : `/teams/${encodeURIComponent(team.name)}`
+                    }
                     className="block border border-gray-200 rounded-lg p-4 hover:border-blue-400 transition-colors text-inherit no-underline"
                     style={{ textDecoration: "none", color: "inherit" }}
                   >
