@@ -1,4 +1,4 @@
-// api.js - Centralized API client configuration and auth token management
+//frontend/src/api.js
 import axios from "axios";
 
 function computeBaseUrl() {

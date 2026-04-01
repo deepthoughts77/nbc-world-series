@@ -7,12 +7,11 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useParams, NavLink, useNavigate } from "react-router-dom";
 import { BarChart3, ChevronUp, ChevronDown } from "lucide-react";
+import { API } from "../api";
 import { Container } from "../components/common/Container";
 import { Card, CardBody } from "../components/common/Card";
 import { BannerError } from "../components/common/BannerError";
 import { Skeleton } from "../components/common/Skeleton";
-
-const API_URL = process.env.REACT_APP_API_URL || "";
 
 // ── Formatters ────────────────────────────────────────────────────────────
 function fmt3(v) {
@@ -122,27 +121,22 @@ export default function TeamHistoryTotals() {
     setErr(null);
 
     const isId = /^\d+$/.test(teamSlug);
-    const teamUrl = isId
-      ? `${API_URL}/api/teams/${teamSlug}`
-      : `${API_URL}/api/teams/by-name/${encodeURIComponent(decodeURIComponent(teamSlug))}`;
+    const endpoint = isId
+      ? `/teams/${teamSlug}`
+      : `/teams/by-name/${encodeURIComponent(decodeURIComponent(teamSlug))}`;
 
-    fetch(teamUrl)
-      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-      .then(async (teamData) => {
-        const t = teamData.team ?? teamData;
+    API.get(endpoint)
+      .then(async (teamRes) => {
+        const t = teamRes.data?.team ?? teamRes.data;
         setTeam(t);
 
         const [batRes, pitRes] = await Promise.all([
-          fetch(`${API_URL}/api/teams/${t.id}/totals/batting`).then((r) =>
-            r.json(),
-          ),
-          fetch(`${API_URL}/api/teams/${t.id}/totals/pitching`).then((r) =>
-            r.json(),
-          ),
+          API.get(`/teams/${t.id}/totals/batting`),
+          API.get(`/teams/${t.id}/totals/pitching`),
         ]);
 
-        setBatting(Array.isArray(batRes) ? batRes : []);
-        setPitching(Array.isArray(pitRes) ? pitRes : []);
+        setBatting(Array.isArray(batRes.data) ? batRes.data : []);
+        setPitching(Array.isArray(pitRes.data) ? pitRes.data : []);
       })
       .catch(() => setErr("Failed to load team history."))
       .finally(() => setLoading(false));
@@ -236,8 +230,7 @@ export default function TeamHistoryTotals() {
             </h1>
             <p className="mt-1 text-gray-500 text-sm">
               {[team?.city, team?.state].filter(Boolean).join(", ") || ""}
-              {"  "}Year-by-year team totals. Click a row to view that season's
-              team page with player stats and more.
+              {" — "}Year-by-year team totals. Click any column to sort.
             </p>
           </div>
           <div className="flex gap-4 text-center">
