@@ -29,9 +29,33 @@ function MvpBattingTable({ rows }) {
         </thead>
         <tbody>
           {rows.map((b, i) => (
-            <tr key={i} className="border-t">
-              <td className="py-2 pr-3">{b.player_name}</td>
-              <td className="py-2 pr-3">{b.team_name || "—"}</td>
+            <tr key={i} className="border-t hover:bg-blue-50 transition-colors">
+              <td className="py-2 pr-3">
+                {b.player_id ? (
+                  <Link
+                    to={`/players/${b.player_id}`}
+                    className="font-semibold text-blue-600 hover:underline"
+                  >
+                    {b.player_name}
+                  </Link>
+                ) : (
+                  <span className="font-semibold text-gray-800">
+                    {b.player_name}
+                  </span>
+                )}
+              </td>
+              <td className="py-2 pr-3">
+                {b.team_id ? (
+                  <Link
+                    to={`/teams/${b.team_id}`}
+                    className="text-blue-600 hover:underline"
+                  >
+                    {b.team_name || "—"}
+                  </Link>
+                ) : (
+                  b.team_name || "—"
+                )}
+              </td>
               <td className="py-2 pr-3">{b.ab ?? "—"}</td>
               <td className="py-2 pr-3">{b.r ?? "—"}</td>
               <td className="py-2 pr-3">{b.h ?? "—"}</td>
@@ -67,9 +91,33 @@ function MvpPitchingTable({ rows }) {
         </thead>
         <tbody>
           {rows.map((p, i) => (
-            <tr key={i} className="border-t">
-              <td className="py-2 pr-3">{p.player_name}</td>
-              <td className="py-2 pr-3">{p.team_name || "—"}</td>
+            <tr key={i} className="border-t hover:bg-blue-50 transition-colors">
+              <td className="py-2 pr-3">
+                {p.player_id ? (
+                  <Link
+                    to={`/players/${p.player_id}`}
+                    className="font-semibold text-blue-600 hover:underline"
+                  >
+                    {p.player_name}
+                  </Link>
+                ) : (
+                  <span className="font-semibold text-gray-800">
+                    {p.player_name}
+                  </span>
+                )}
+              </td>
+              <td className="py-2 pr-3">
+                {p.team_id ? (
+                  <Link
+                    to={`/teams/${p.team_id}`}
+                    className="text-blue-600 hover:underline"
+                  >
+                    {p.team_name || "—"}
+                  </Link>
+                ) : (
+                  p.team_name || "—"
+                )}
+              </td>
               <td className="py-2 pr-3">{p.ip ?? "—"}</td>
               <td className="py-2 pr-3">{p.h ?? "—"}</td>
               <td className="py-2 pr-3">{p.r ?? "—"}</td>
@@ -91,12 +139,16 @@ export default function ChampionshipMvp() {
   const [isLoading, setIsLoading] = useState(true);
   const [err, setErr] = useState(null);
 
+  // Try to resolve the MVP's player_id from the players table
+  const [mvpPlayerId, setMvpPlayerId] = useState(null);
+
   useEffect(() => {
     let ignore = false;
 
     async function load() {
       setIsLoading(true);
       setErr(null);
+      setMvpPlayerId(null);
 
       try {
         const res = await API.get(`/championships/${year}/mvp`, {
@@ -108,6 +160,25 @@ export default function ChampionshipMvp() {
         }
 
         if (!ignore) setPayload(res.data);
+
+        // Try to find the player_id by searching their name
+        const mvpName = res.data?.data?.mvp_name;
+        if (mvpName && !ignore) {
+          try {
+            const searchRes = await API.get("/players/search", {
+              params: { q: mvpName },
+            });
+            const matches = Array.isArray(searchRes.data) ? searchRes.data : [];
+            // Find exact or closest name match
+            const exact = matches.find(
+              (p) => p.full_name.toLowerCase() === mvpName.toLowerCase(),
+            );
+            const best = exact || matches[0];
+            if (best?.id && !ignore) setMvpPlayerId(best.id);
+          } catch {
+            /* silently skip — player link is optional */
+          }
+        }
       } catch (e) {
         if (!ignore) setErr(e?.message || "Failed to load MVP stats");
       } finally {
@@ -160,13 +231,28 @@ export default function ChampionshipMvp() {
       ) : (
         <Card>
           <CardBody>
-            <div className="mb-4">
-              <div className="text-lg font-bold text-gray-900">
-                {payload.data.mvp_name}
-              </div>
-              <div className="text-sm text-gray-600">
-                Source: {payload.data.source}
-              </div>
+            <div className="mb-6">
+              {/* Clickable MVP name */}
+              {mvpPlayerId ? (
+                <Link
+                  to={`/players/${mvpPlayerId}`}
+                  className="text-xl font-bold text-blue-600 hover:underline"
+                >
+                  {payload.data.mvp_name}
+                </Link>
+              ) : (
+                <div className="text-xl font-bold text-gray-900">
+                  {payload.data.mvp_name}
+                </div>
+              )}
+              {mvpPlayerId && (
+                <Link
+                  to={`/players/${mvpPlayerId}`}
+                  className="inline-flex items-center gap-1 mt-2 text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded-full px-3 py-1 hover:bg-blue-100 transition-colors"
+                >
+                  View Full Player Profile →
+                </Link>
+              )}
             </div>
 
             {payload.data.snapshot ? (
@@ -181,7 +267,6 @@ export default function ChampionshipMvp() {
                   </h4>
                   <MvpBattingTable rows={payload.data.batting || []} />
                 </div>
-
                 <div>
                   <h4 className="text-sm font-semibold text-gray-800 mb-2">
                     Pitching (final)

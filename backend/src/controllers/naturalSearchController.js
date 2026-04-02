@@ -904,7 +904,7 @@ export const naturalLanguageSearch = async (req, res) => {
 
     // ── INTERCEPT 3: Championship Streaks ────────────────────────────────
     if (
-      /\b(streak|consecutive|in\s+a\s+row|back.?to.?back|most\s+streak\w*)\b/i.test(
+      /\b(streak|consecutive|in\s+a\s+row|back.?to.?back|most\s+streak\w*|winning\s+streak|championship\s+streak|title\s+streak)\b/i.test(
         searchQuery,
       )
     ) {
@@ -950,7 +950,8 @@ export const naturalLanguageSearch = async (req, res) => {
     // ── INTERCEPT 4: Team stat queries ────────────────────────────────────────
     if (
       /\bteam\b/i.test(searchQuery) &&
-      /\b(most|highest|best|top|most|leading)\b/i.test(searchQuery)
+      /\b(most|highest|best|top|most|leading)\b/i.test(searchQuery) &&
+      !/\b(streak|consecutive|winning streak|in a row)\b/i.test(searchQuery)
     ) {
       const yearMatch = searchQuery.match(/\b(19|20)\d{2}\b/);
       const year = yearMatch ? parseInt(yearMatch[0]) : null;
