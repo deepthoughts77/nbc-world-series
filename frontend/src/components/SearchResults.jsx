@@ -1,12 +1,18 @@
 // src/components/SearchResults.jsx
 import React, { useMemo } from "react";
 import { Trophy, Star } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 // ── tiny shared UI ────────────────────────────────────────────────────────
-function Card({ children, className = "" }) {
+function Card({ children, className = "", onClick, clickable = false }) {
   return (
     <div
-      className={`bg-white rounded-2xl shadow-sm ring-1 ring-gray-200 ${className}`}
+      className={`bg-white rounded-2xl shadow-sm ring-1 ring-gray-200 ${className} ${
+        clickable
+          ? "cursor-pointer hover:ring-blue-400 hover:shadow-md transition-all"
+          : ""
+      }`}
+      onClick={onClick}
     >
       {children}
     </div>
@@ -49,7 +55,6 @@ function RowStat({ label, value, highlight = false }) {
   );
 }
 
-// ── bold-markdown renderer ────────────────────────────────────────────────
 function BoldText({ text }) {
   if (!text) return null;
   const parts = text.split("**");
@@ -62,19 +67,19 @@ function BoldText({ text }) {
   );
 }
 
-// ── stat formatters ───────────────────────────────────────────────────────
 const fmt3 = (v) => (v != null && v !== "" ? parseFloat(v).toFixed(3) : "");
 const fmt2 = (v) => (v != null && v !== "" ? parseFloat(v).toFixed(2) : "");
 
-// ── normalize a raw row from the backend into a clean batter object ───────
 function readBatter(p) {
   const avg = fmt3(p.avg ?? p.batting_avg ?? p.AVG);
   const obp = fmt3(p.obp ?? p.OBP);
   const slg = fmt3(p.slg ?? p.SLG);
   const fld = fmt3(p.fld ?? p.FLD);
   return {
+    player_id: p.player_id ?? p.id ?? null,
     player_name: p.player_name || p.name || "",
     team_name: p.team_name || p.team || "",
+    team_id: p.team_id ?? null,
     year: p.year || "",
     avg,
     obp,
@@ -99,11 +104,12 @@ function readBatter(p) {
   };
 }
 
-// ── normalize a raw row from the backend into a clean pitcher object ──────
 function readPitcher(p) {
   return {
+    player_id: p.player_id ?? p.id ?? null,
     player_name: p.player_name || p.name || "",
     team_name: p.team_name || p.team || "",
+    team_id: p.team_id ?? null,
     year: p.year || "",
     era: fmt2(p.era ?? p.ERA),
     ip: p.ip ?? p.IP ?? "",
@@ -148,8 +154,9 @@ function AnswerCard({ answer, isTie = false }) {
   );
 }
 
-// ── Championship block (queryType: "championship_winner") ─────────────────
+// ── Championship block ────────────────────────────────────────────────────
 function ChampionBlock({ data }) {
+  const navigate = useNavigate();
   if (!data) return null;
   const mvpNames = data.mvp_names;
   const mvpLabel =
@@ -158,7 +165,11 @@ function ChampionBlock({ data }) {
       : null;
 
   return (
-    <Card className="mt-4">
+    <Card
+      className="mt-4"
+      clickable={!!data.year}
+      onClick={() => data.year && navigate(`/championships/${data.year}`)}
+    >
       <CardBody>
         <div className="flex items-start gap-3">
           <Trophy size={20} className="text-yellow-600 mt-1 shrink-0" />
@@ -172,7 +183,6 @@ function ChampionBlock({ data }) {
             <div className="text-sm text-gray-500">
               {data.champion_city}, {data.champion_state}
             </div>
-
             {data.runner_up_name && (
               <div className="text-sm text-gray-600 mt-1">
                 Runner-up:{" "}
@@ -190,6 +200,11 @@ function ChampionBlock({ data }) {
                 <span className="font-medium">{data.championship_score}</span>
               </div>
             )}
+            {data.year && (
+              <div className="mt-2 text-xs text-blue-600 font-semibold">
+                View championship details →
+              </div>
+            )}
           </div>
         </div>
       </CardBody>
@@ -197,14 +212,19 @@ function ChampionBlock({ data }) {
   );
 }
 
-// ── MVP block (queryType: "championship_mvp") ─────────────────────────────
+// ── MVP block ─────────────────────────────────────────────────────────────
 function MvpBlock({ data }) {
+  const navigate = useNavigate();
   if (!data) return null;
   const names = Array.isArray(data.mvp_names) ? data.mvp_names : [];
   const label = names.length > 0 ? names.join(" & ") : "—";
 
   return (
-    <Card className="mt-4">
+    <Card
+      className="mt-4"
+      clickable={!!data.year}
+      onClick={() => data.year && navigate(`/championships/${data.year}`)}
+    >
       <CardBody>
         <div className="flex items-start gap-3">
           <Star size={20} className="text-yellow-500 mt-1 shrink-0" />
@@ -216,6 +236,11 @@ function MvpBlock({ data }) {
             {data.champion_name && (
               <div className="text-sm text-gray-500">{data.champion_name}</div>
             )}
+            {data.year && (
+              <div className="mt-2 text-xs text-blue-600 font-semibold">
+                View championship details →
+              </div>
+            )}
           </div>
         </div>
       </CardBody>
@@ -223,8 +248,9 @@ function MvpBlock({ data }) {
   );
 }
 
-// ── Batting leaderboard (queryType: "batting_stat") ───────────────────────
+// ── Batting leaderboard ───────────────────────────────────────────────────
 function BattingLeaderboard({ results, message, activeStat }) {
+  const navigate = useNavigate();
   if (!Array.isArray(results) || results.length === 0) return null;
 
   return (
@@ -236,10 +262,19 @@ function BattingLeaderboard({ results, message, activeStat }) {
       )}
       {results.map((raw, idx) => {
         const p = readBatter(raw);
+        const handleClick = () => {
+          if (p.player_id) navigate(`/players/${p.player_id}`);
+          else if (p.team_id && p.year)
+            navigate(`/teams/${p.team_id}/${p.year}`);
+        };
+        const isClickable = !!p.player_id || (!!p.team_id && !!p.year);
+
         return (
           <Card
             key={`${p.player_name}-${idx}`}
             className="hover:shadow-md transition-shadow"
+            clickable={isClickable}
+            onClick={isClickable ? handleClick : undefined}
           >
             <CardBody className="py-3 px-4">
               <div className="flex items-center gap-4">
@@ -247,13 +282,19 @@ function BattingLeaderboard({ results, message, activeStat }) {
                   {idx + 1}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold truncate">{p.player_name}</div>
+                  <div className="font-semibold truncate text-blue-700">
+                    {p.player_name}
+                  </div>
                   <div className="text-xs text-gray-500">
                     {p.team_name}
                     {p.year ? ` • ${p.year}` : ""}
                   </div>
+                  {isClickable && (
+                    <div className="text-xs text-blue-500 mt-0.5">
+                      View profile →
+                    </div>
+                  )}
                 </div>
-                {/* Desktop: active stat always first + highlighted, then core cols */}
                 {(() => {
                   const ALL_BATTING = [
                     { key: "avg", label: "AVG", val: p.avg },
@@ -277,7 +318,6 @@ function BattingLeaderboard({ results, message, activeStat }) {
                     { key: "e", label: "E", val: p.e },
                     { key: "fld", label: "FLD", val: p.fld },
                   ];
-                  // Put active stat first, then show up to 8 others that have values
                   const active = ALL_BATTING.find((c) => c.key === activeStat);
                   const rest = ALL_BATTING.filter(
                     (c) =>
@@ -299,7 +339,6 @@ function BattingLeaderboard({ results, message, activeStat }) {
                     </div>
                   );
                 })()}
-                {/* Mobile: active stat + AVG + HR */}
                 <div className="flex sm:hidden gap-4 text-sm shrink-0">
                   {activeStat && activeStat !== "avg" && (
                     <RowStat
@@ -328,8 +367,9 @@ function BattingLeaderboard({ results, message, activeStat }) {
   );
 }
 
-// ── Pitching leaderboard (queryType: "pitching_stat") ────────────────────
+// ── Pitching leaderboard ──────────────────────────────────────────────────
 function PitchingLeaderboard({ results, message, activeStat }) {
+  const navigate = useNavigate();
   if (!Array.isArray(results) || results.length === 0) return null;
 
   return (
@@ -342,10 +382,19 @@ function PitchingLeaderboard({ results, message, activeStat }) {
       {results.map((raw, idx) => {
         const p = readPitcher(raw);
         const wl = p.w !== "" && p.l !== "" ? `${p.w}-${p.l}` : "";
+        const handleClick = () => {
+          if (p.player_id) navigate(`/players/${p.player_id}`);
+          else if (p.team_id && p.year)
+            navigate(`/teams/${p.team_id}/${p.year}`);
+        };
+        const isClickable = !!p.player_id || (!!p.team_id && !!p.year);
+
         return (
           <Card
             key={`${p.player_name}-${idx}`}
             className="hover:shadow-md transition-shadow"
+            clickable={isClickable}
+            onClick={isClickable ? handleClick : undefined}
           >
             <CardBody className="py-3 px-4">
               <div className="flex items-center gap-4">
@@ -353,13 +402,19 @@ function PitchingLeaderboard({ results, message, activeStat }) {
                   {idx + 1}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold truncate">{p.player_name}</div>
+                  <div className="font-semibold truncate text-blue-700">
+                    {p.player_name}
+                  </div>
                   <div className="text-xs text-gray-500">
                     {p.team_name}
                     {p.year ? ` • ${p.year}` : ""}
                   </div>
+                  {isClickable && (
+                    <div className="text-xs text-blue-500 mt-0.5">
+                      View profile →
+                    </div>
+                  )}
                 </div>
-                {/* Desktop: active stat always first + highlighted */}
                 {(() => {
                   const ALL_PITCHING = [
                     { key: "era", label: "ERA", val: p.era },
@@ -372,7 +427,6 @@ function PitchingLeaderboard({ results, message, activeStat }) {
                     { key: "sho", label: "SHO", val: p.sho },
                     { key: "app", label: "APP", val: p.app },
                     { key: "l", label: "L", val: p.l },
-                    { key: "whip", label: "WHIP", val: p.whip },
                   ];
                   const active = ALL_PITCHING.find((c) => c.key === activeStat);
                   const rest = ALL_PITCHING.filter(
@@ -395,7 +449,6 @@ function PitchingLeaderboard({ results, message, activeStat }) {
                     </div>
                   );
                 })()}
-                {/* Mobile: active stat + ERA + W-L */}
                 <div className="flex sm:hidden gap-4 text-sm shrink-0">
                   {activeStat && activeStat !== "era" && (
                     <RowStat
@@ -426,11 +479,11 @@ function PitchingLeaderboard({ results, message, activeStat }) {
 
 // ── Generic leaderboard (championships, streaks, MVPs) ───────────────────
 function GenericLeaderboard({ results, queryType }) {
+  const navigate = useNavigate();
   if (!Array.isArray(results) || results.length === 0) return null;
   const supported = ["leaderboard", "streaks", "fallback"];
   if (!supported.includes(queryType)) return null;
 
-  // Streaks layout
   if (queryType === "streaks") {
     const topStreakWins = results[0]?.consecutive_wins;
     return (
@@ -460,8 +513,12 @@ function GenericLeaderboard({ results, queryType }) {
                 return (
                   <tr
                     key={idx}
-                    className="border-b last:border-0 hover:bg-gray-50 transition-colors"
+                    className="border-b last:border-0 hover:bg-blue-50 transition-colors cursor-pointer"
                     style={isTop ? { background: "#eff6ff" } : {}}
+                    onClick={() =>
+                      item.start_year &&
+                      navigate(`/championships/${item.start_year}`)
+                    }
                   >
                     <td
                       className="px-4 py-3 font-bold"
@@ -470,8 +527,8 @@ function GenericLeaderboard({ results, queryType }) {
                       {idx + 1}
                     </td>
                     <td
-                      className="px-4 py-3 font-semibold"
-                      style={{ color: isTop ? "#1e40af" : "#111827" }}
+                      className="px-4 py-3 font-semibold text-blue-700"
+                      style={{ color: isTop ? "#1e40af" : undefined }}
                     >
                       {item.team_name}
                     </td>
@@ -501,7 +558,6 @@ function GenericLeaderboard({ results, queryType }) {
     );
   }
 
-  // Championship / MVP leaderboard layout
   if (queryType === "leaderboard") {
     const isTeam = results[0]?.team_name != null;
     return (
@@ -525,40 +581,62 @@ function GenericLeaderboard({ results, queryType }) {
               </tr>
             </thead>
             <tbody>
-              {results.slice(0, 10).map((item, idx) => (
-                <tr
-                  key={idx}
-                  className="border-b last:border-0 hover:bg-gray-50 transition-colors"
-                >
-                  <td className="px-4 py-3 text-gray-300 font-bold">
-                    {idx + 1}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="font-semibold text-gray-900">
-                      {item.team_name || item.player_name}
-                    </div>
-                    {item.city && (
-                      <div className="text-xs text-gray-400">
-                        {item.city}, {item.state}
+              {results.slice(0, 10).map((item, idx) => {
+                const handleClick = () => {
+                  if (isTeam && item.team_id)
+                    navigate(`/teams/${item.team_id}`);
+                  else if (item.player_id)
+                    navigate(`/players/${item.player_id}`);
+                  else if (Array.isArray(item.years) && item.years[0])
+                    navigate(`/championships/${item.years[0]}`);
+                };
+                const isClickable = !!(
+                  item.team_id ||
+                  item.player_id ||
+                  (Array.isArray(item.years) && item.years[0])
+                );
+
+                return (
+                  <tr
+                    key={idx}
+                    className={`border-b last:border-0 transition-colors ${isClickable ? "hover:bg-blue-50 cursor-pointer" : "hover:bg-gray-50"}`}
+                    onClick={isClickable ? handleClick : undefined}
+                  >
+                    <td className="px-4 py-3 text-gray-300 font-bold">
+                      {idx + 1}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="font-semibold text-blue-700">
+                        {item.team_name || item.player_name}
                       </div>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span
-                      className="font-bold text-lg"
-                      style={{ color: idx === 0 ? "#2563eb" : "#374151" }}
-                    >
-                      {item.count}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-xs text-gray-400 hidden sm:table-cell">
-                    {Array.isArray(item.years)
-                      ? item.years.slice(0, 6).join(", ") +
-                        (item.years.length > 6 ? "…" : "")
-                      : ""}
-                  </td>
-                </tr>
-              ))}
+                      {item.city && (
+                        <div className="text-xs text-gray-400">
+                          {item.city}, {item.state}
+                        </div>
+                      )}
+                      {isClickable && (
+                        <div className="text-xs text-blue-500 mt-0.5">
+                          View details →
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span
+                        className="font-bold text-lg"
+                        style={{ color: idx === 0 ? "#2563eb" : "#374151" }}
+                      >
+                        {item.count}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-400 hidden sm:table-cell">
+                      {Array.isArray(item.years)
+                        ? item.years.slice(0, 6).join(", ") +
+                          (item.years.length > 6 ? "…" : "")
+                        : ""}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </CardBody>
@@ -566,7 +644,7 @@ function GenericLeaderboard({ results, queryType }) {
     );
   }
 
-  // Fallback: simple list
+  // Fallback
   return (
     <Card className="mt-4">
       <CardBody>
@@ -597,6 +675,7 @@ function GenericLeaderboard({ results, queryType }) {
 
 // ── Team roster ───────────────────────────────────────────────────────────
 function RosterBlock({ results, message }) {
+  const navigate = useNavigate();
   if (!Array.isArray(results) || results.length === 0) return null;
   return (
     <Card className="mt-4">
@@ -605,21 +684,28 @@ function RosterBlock({ results, message }) {
           <h3 className="font-semibold text-gray-700 mb-3">{message}</h3>
         )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-          {results.map((p, idx) => (
-            <div
-              key={idx}
-              className="flex items-center justify-between border rounded-lg px-3 py-2"
-            >
-              <span className="font-medium">
-                {p.first_name} {p.last_name}
-              </span>
-              <div className="flex gap-3 text-gray-500">
-                {p.avg != null && <span>AVG {fmt3(p.avg)}</span>}
-                {p.hr != null && <span>HR {p.hr}</span>}
-                {p.era != null && <span>ERA {fmt2(p.era)}</span>}
+          {results.map((p, idx) => {
+            const playerId = p.player_id ?? p.id;
+            const isClickable = !!playerId;
+            return (
+              <div
+                key={idx}
+                className={`flex items-center justify-between border rounded-lg px-3 py-2 transition-colors ${
+                  isClickable ? "hover:bg-blue-50 cursor-pointer" : ""
+                }`}
+                onClick={() => isClickable && navigate(`/players/${playerId}`)}
+              >
+                <span className="font-medium text-blue-700">
+                  {p.first_name} {p.last_name || p.player_name}
+                </span>
+                <div className="flex gap-3 text-gray-500">
+                  {p.avg != null && <span>AVG {fmt3(p.avg)}</span>}
+                  {p.hr != null && <span>HR {p.hr}</span>}
+                  {p.era != null && <span>ERA {fmt2(p.era)}</span>}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </CardBody>
     </Card>
@@ -628,6 +714,7 @@ function RosterBlock({ results, message }) {
 
 // ── Player lookup ─────────────────────────────────────────────────────────
 function PlayerLookup({ results, message }) {
+  const navigate = useNavigate();
   if (!Array.isArray(results) || results.length === 0) return null;
   return (
     <Card className="mt-4">
@@ -640,16 +727,30 @@ function PlayerLookup({ results, message }) {
             const hasBatting =
               raw.avg != null || raw.hr != null || raw.ab != null;
             const hasPitching = raw.era != null || raw.ip != null;
+            const playerId = raw.player_id ?? raw.id;
+            const isClickable = !!playerId;
+
             return (
-              <div key={idx} className="border-b last:border-0 pb-4 last:pb-0">
+              <div
+                key={idx}
+                className={`border-b last:border-0 pb-4 last:pb-0 rounded-lg transition-colors ${
+                  isClickable ? "hover:bg-blue-50 cursor-pointer p-2" : ""
+                }`}
+                onClick={() => isClickable && navigate(`/players/${playerId}`)}
+              >
                 <div className="flex items-center justify-between mb-2">
                   <div>
-                    <span className="font-semibold text-gray-900">
+                    <span className="font-semibold text-blue-700">
                       {raw.player_name}
                     </span>
                     {raw.team_name && (
                       <span className="text-sm text-gray-500 ml-2">
                         {raw.team_name}
+                      </span>
+                    )}
+                    {isClickable && (
+                      <span className="text-xs text-blue-500 ml-2">
+                        View profile →
                       </span>
                     )}
                   </div>
@@ -715,22 +816,15 @@ export default function SearchResults({ searchResults }) {
 
   return (
     <div className="mt-6 space-y-0">
-      {/* Always show the answer bubble */}
       <AnswerCard
         answer={answer}
         isTie={!!(answer && /tied|tie/.test(answer.toLowerCase()))}
       />
 
-      {/* Championship result */}
       {qt === "championship_winner" && <ChampionBlock data={data} />}
-
-      {/* MVP result */}
       {qt === "championship_mvp" && <MvpBlock data={data} />}
-
-      {/* Runner-up: answer bubble is enough, but show champion details too */}
       {qt === "championship_runnerup" && <ChampionBlock data={data} />}
 
-      {/* Batting leaderboard */}
       {qt === "batting_stat" && (
         <BattingLeaderboard
           results={results}
@@ -738,8 +832,6 @@ export default function SearchResults({ searchResults }) {
           activeStat={searchResults?.intent?.stat}
         />
       )}
-
-      {/* Pitching leaderboard */}
       {qt === "pitching_stat" && (
         <PitchingLeaderboard
           results={results}
@@ -747,18 +839,13 @@ export default function SearchResults({ searchResults }) {
           activeStat={searchResults?.intent?.stat}
         />
       )}
-
-      {/* Team roster */}
       {qt === "team_roster" && (
         <RosterBlock results={results} message={message} />
       )}
-
-      {/* Player lookup */}
       {qt === "player_lookup" && (
         <PlayerLookup results={results} message={message} />
       )}
 
-      {/* Generic leaderboards: most championships, streaks, most MVPs */}
       <GenericLeaderboard results={results} queryType={qt} />
     </div>
   );

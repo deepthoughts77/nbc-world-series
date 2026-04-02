@@ -160,33 +160,34 @@ export const getChampionshipFinalStats = async (req, res) => {
 
     // Batting: filter by YEAR (not final_id)
     const battingRes = await pool.query(
-      `
-      SELECT
-        b.team_id,
-        t.name AS team_name,
-        b.player_name,
-        b.ab, b.r, b.h, b.rbi, b.bb, b.so, b.po, b.a, b.lob
-      FROM championship_final_batting b
-      LEFT JOIN teams t ON t.id = b.team_id
-      WHERE b.year = $1 AND b.team_id = ANY($2::int[])
-      ORDER BY t.name, b.player_name
-      `,
+      `SELECT b.team_id,
+          t.name AS team_name,
+          b.player_name,
+          pl.id AS player_id,
+          b.ab, b.r, b.h, b.rbi, b.bb, b.so, b.po, b.a, b.lob
+   FROM championship_final_batting b
+   LEFT JOIN teams t ON t.id = b.team_id
+   LEFT JOIN players pl
+     ON LOWER(TRIM(pl.first_name || ' ' || pl.last_name)) = LOWER(TRIM(b.player_name))
+   WHERE b.year = $1 AND b.team_id = ANY($2::int[])
+   ORDER BY t.name, b.player_name`,
+
       [yearInt, teamIds],
     );
 
     // Pitching: filter by YEAR (not final_id)
     const pitchingRes = await pool.query(
-      `
-      SELECT
-        p.team_id,
-        t.name AS team_name,
-        p.player_name,
-        p.ip, p.h, p.r, p.er, p.bb, p.so
-      FROM championship_final_pitching p
-      LEFT JOIN teams t ON t.id = p.team_id
-      WHERE p.year = $1 AND p.team_id = ANY($2::int[])
-      ORDER BY t.name, p.player_name
-      `,
+      `SELECT p.team_id,
+          t.name AS team_name,
+          p.player_name,
+          pl.id AS player_id,
+          p.ip, p.h, p.r, p.er, p.bb, p.so
+   FROM championship_final_pitching p
+   LEFT JOIN teams t ON t.id = p.team_id
+   LEFT JOIN players pl
+     ON LOWER(TRIM(pl.first_name || ' ' || pl.last_name)) = LOWER(TRIM(p.player_name))
+   WHERE p.year = $1 AND p.team_id = ANY($2::int[])
+   ORDER BY t.name, p.player_name`,
       [yearInt, teamIds],
     );
 

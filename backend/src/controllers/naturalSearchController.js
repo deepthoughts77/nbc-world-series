@@ -754,7 +754,7 @@ function formatResponse(intent, results) {
     };
     const label =
       STAT_LABELS[intent.stat] || intent.stat?.toUpperCase() || "Stat";
-    const yearLabel = intent.year ? ` – ${intent.year} Season` : " – All Time";
+    const yearLabel = year ? ` in the ${year} Season` : " all time";
     const top = results[0];
     const topVal = top[intent.stat];
     const tied = results.filter((r) => r[intent.stat] == topVal);
@@ -942,6 +942,108 @@ export const naturalLanguageSearch = async (req, res) => {
           results: result.rows,
           queryType: "streaks",
           intent: { type: "streaks" },
+          count: result.rows.length,
+        });
+      }
+    }
+
+    // ── INTERCEPT 4: Team stat queries ────────────────────────────────────────
+    if (
+      /\bteam\b/i.test(searchQuery) &&
+      /\b(most|highest|best|top|most|leading)\b/i.test(searchQuery)
+    ) {
+      const yearMatch = searchQuery.match(/\b(19|20)\d{2}\b/);
+      const year = yearMatch ? parseInt(yearMatch[0]) : null;
+
+      // Detect which stat they're asking about
+      let statCol = "hr";
+      let statLabel = "Home Runs";
+      if (/\bavg\b|batting average/i.test(searchQuery)) {
+        statCol = "avg";
+        statLabel = "Batting Average";
+      } else if (/\brbi\b|runs batted/i.test(searchQuery)) {
+        statCol = "rbi";
+        statLabel = "RBI";
+      } else if (/\bhits?\b/i.test(searchQuery) && !/home/i.test(searchQuery)) {
+        statCol = "h";
+        statLabel = "Hits";
+      } else if (/\bruns?\b/i.test(searchQuery) && !/home/i.test(searchQuery)) {
+        statCol = "r";
+        statLabel = "Runs";
+      } else if (/\bwalk|bb\b/i.test(searchQuery)) {
+        statCol = "bb";
+        statLabel = "Walks";
+      } else if (/\bstrike|so\b/i.test(searchQuery)) {
+        statCol = "so";
+        statLabel = "Strikeouts";
+      } else if (/\bslg|slugging/i.test(searchQuery)) {
+        statCol = "slg";
+        statLabel = "Slugging %";
+      } else if (/\bobp|on.base/i.test(searchQuery)) {
+        statCol = "obp";
+        statLabel = "OBP";
+      } else if (/\bhome run|homer|hr\b/i.test(searchQuery)) {
+        statCol = "hr";
+        statLabel = "Home Runs";
+      }
+
+      const isRate = ["avg", "obp", "slg"].includes(statCol);
+      const orderDir = isRate ? "DESC" : "DESC";
+
+      const yearClause = year ? `WHERE bs.year = ${year}` : "";
+      const yearLabel = year ? ` in the ${year} Season` : " all time";
+
+      const result = await pool.query(`
+    SELECT
+      t.id AS team_id,
+      t.name AS team_name,
+      t.city,
+      t.state,
+      ${
+        isRate
+          ? `CASE WHEN SUM(bs.ab) > 0 THEN ROUND(SUM(bs.h)::numeric / SUM(bs.ab), 3) ELSE 0 END AS ${statCol}`
+          : `SUM(bs.${statCol}) AS ${statCol}`
+      }
+    FROM batting_stats bs
+    JOIN teams t ON t.id = bs.team_id
+    ${yearClause}
+    GROUP BY t.id, t.name, t.city, t.state
+    HAVING SUM(bs.ab) > 0
+    ORDER BY ${statCol} ${orderDir} NULLS LAST
+    LIMIT 10
+  `);
+
+      if (result.rows.length > 0) {
+        const top = result.rows[0];
+        const topVal = top[statCol];
+        const val = isRate ? parseFloat(topVal).toFixed(3) : topVal;
+
+        // Detect ties at the top
+        const tied = result.rows.filter(
+          (r) => String(r[statCol]) === String(topVal),
+        );
+
+        let answer;
+        if (tied.length > 1) {
+          const names = tied.map((r) => `**${r.team_name}**`).join(", ");
+          answer = `There is a **${tied.length}-way tie** for most ${statLabel}${yearLabel} with **${val}** each: ${names}.`;
+        } else {
+          answer = `The team with the most ${statLabel}${yearLabel} was the **${top.team_name}** with **${val}**.`;
+        }
+
+        return res.json({
+          success: true,
+          answer,
+          results: result.rows.map((r) => ({
+            team_id: r.team_id,
+            team_name: r.team_name,
+            city: r.city,
+            state: r.state,
+            count: isRate ? parseFloat(r[statCol]).toFixed(3) : r[statCol],
+            years: year ? [year] : [],
+          })),
+          queryType: "leaderboard",
+          intent: { type: "leaderboard" },
           count: result.rows.length,
         });
       }

@@ -1,7 +1,7 @@
 //frontend/src/pages/TeamYearDetail.js
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useParams, NavLink, Link } from "react-router-dom";
-import { Users, ChevronRight } from "lucide-react";
+import { Users, ChevronRight, ChevronUp, ChevronDown } from "lucide-react";
 import { Container } from "../components/common/Container";
 import { Card, CardBody } from "../components/common/Card";
 import { BannerError } from "../components/common/BannerError";
@@ -12,7 +12,7 @@ const API = process.env.REACT_APP_API_URL || "";
 function fmt3(v) {
   const n = parseFloat(v);
   if (isNaN(n)) return v ?? "—";
-  return n.toFixed(3).replace(/^0/, "");
+  return n.toFixed(3).replace(/^0\./, ".");
 }
 function fmt2(v) {
   const n = parseFloat(v);
@@ -38,7 +38,111 @@ function getPlayerLink(p) {
   return playerId ? `/players/${playerId}` : null;
 }
 
+// ── Sortable header cell ──────────────────────────────────────────────────
+function SortTh({
+  label,
+  tip,
+  col,
+  sortKey,
+  sortDir,
+  onSort,
+  align = "right",
+}) {
+  const active = sortKey === col;
+  return (
+    <th
+      title={tip || label}
+      onClick={() => onSort(col)}
+      className={`px-3 py-2 font-semibold cursor-pointer select-none transition-colors
+        ${active ? "text-blue-600" : "text-gray-600 hover:text-gray-900"}
+        ${col === "player" ? "text-left sticky left-0 bg-gray-50 min-w-[140px]" : "text-right"}
+      `}
+    >
+      <span className="inline-flex items-center gap-1 justify-end w-full">
+        {col === "player" && <span>{label}</span>}
+        {active ? (
+          sortDir === "asc" ? (
+            <ChevronUp size={11} />
+          ) : (
+            <ChevronDown size={11} />
+          )
+        ) : null}
+        {col !== "player" && <span>{label}</span>}
+      </span>
+    </th>
+  );
+}
+
+// ── Batting table ─────────────────────────────────────────────────────────
 function BattingTable({ rows }) {
+  const [sortKey, setSortKey] = useState("avg");
+  const [sortDir, setSortDir] = useState("desc");
+
+  const COLS = [
+    { label: "Player", col: "player", tip: "Player Name" },
+    { label: "GP", col: "gp", tip: "Games Played" },
+    { label: "AB", col: "ab", tip: "At Bats" },
+    { label: "H", col: "h", tip: "Hits" },
+    { label: "2B", col: "2b", tip: "Doubles" },
+    { label: "3B", col: "3b", tip: "Triples" },
+    { label: "HR", col: "hr", tip: "Home Runs" },
+    { label: "R", col: "r", tip: "Runs Scored" },
+    { label: "RBI", col: "rbi", tip: "Runs Batted In" },
+    { label: "BB", col: "bb", tip: "Walks (Base on Balls)" },
+    { label: "SO", col: "so", tip: "Strikeouts" },
+    { label: "SB", col: "sb", tip: "Stolen Bases" },
+    {
+      label: "AVG",
+      col: "avg",
+      tip: "Batting Average — Hits divided by At Bats",
+    },
+    {
+      label: "OBP",
+      col: "obp",
+      tip: "On-Base Percentage — How often a batter reaches base",
+    },
+    {
+      label: "SLG",
+      col: "slg",
+      tip: "Slugging Percentage — Total bases divided by At Bats",
+    },
+  ];
+
+  const handleSort = (col) => {
+    if (col === "player") {
+      setSortKey("player");
+      setSortDir((d) =>
+        sortKey === "player" ? (d === "asc" ? "desc" : "asc") : "asc",
+      );
+    } else {
+      if (sortKey === col) {
+        setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+      } else {
+        setSortKey(col);
+        setSortDir("desc");
+      }
+    }
+  };
+
+  const sorted = useMemo(() => {
+    const copy = [...rows];
+    copy.sort((a, b) => {
+      if (sortKey === "player") {
+        const an = getPlayerName(a).toLowerCase();
+        const bn = getPlayerName(b).toLowerCase();
+        return sortDir === "asc" ? an.localeCompare(bn) : bn.localeCompare(an);
+      }
+      const av = parseFloat(
+        a[sortKey] ?? a[sortKey === "gp" ? "g" : sortKey] ?? -1,
+      );
+      const bv = parseFloat(
+        b[sortKey] ?? b[sortKey === "gp" ? "g" : sortKey] ?? -1,
+      );
+      return sortDir === "asc" ? av - bv : bv - av;
+    });
+    return copy;
+  }, [rows, sortKey, sortDir]);
+
   if (!rows.length)
     return (
       <p className="text-gray-500 text-sm py-8 text-center">
@@ -50,43 +154,24 @@ function BattingTable({ rows }) {
     <div className="overflow-x-auto">
       <table className="w-full text-xs md:text-sm whitespace-nowrap">
         <thead>
-          <tr className="bg-gray-50 border-b text-left">
-            {[
-              ["Player", "Player Name"],
-              ["GP", "Games Played"],
-              ["AB", "At Bats"],
-              ["H", "Hits"],
-              ["2B", "Doubles"],
-              ["3B", "Triples"],
-              ["HR", "Home Runs"],
-              ["R", "Runs Scored"],
-              ["RBI", "Runs Batted In"],
-              ["BB", "Walks (Base on Balls)"],
-              ["SO", "Strikeouts"],
-              ["SB", "Stolen Bases"],
-              ["AVG", "Batting Average — Hits divided by At Bats"],
-              ["OBP", "On-Base Percentage — How often a batter reaches base"],
-              ["SLG", "Slugging Percentage — Total bases divided by At Bats"],
-            ].map(([h, tip]) => (
-              <th
-                key={h}
-                title={tip}
-                className={`px-3 py-2 font-semibold text-gray-600 ${
-                  h === "Player"
-                    ? "text-left sticky left-0 bg-gray-50 min-w-[140px]"
-                    : "text-right"
-                }`}
-              >
-                {h}
-              </th>
+          <tr className="bg-gray-50 border-b">
+            {COLS.map(({ label, col, tip }) => (
+              <SortTh
+                key={col}
+                label={label}
+                col={col}
+                tip={tip}
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onSort={handleSort}
+              />
             ))}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
-          {rows.map((p, i) => {
+          {sorted.map((p, i) => {
             const playerName = getPlayerName(p);
             const playerLink = getPlayerLink(p);
-
             return (
               <tr key={i} className="hover:bg-blue-50 transition-colors">
                 <td className="px-3 py-2 sticky left-0 bg-white">
@@ -133,7 +218,69 @@ function BattingTable({ rows }) {
   );
 }
 
+// ── Pitching table ────────────────────────────────────────────────────────
 function PitchingTable({ rows }) {
+  const [sortKey, setSortKey] = useState("era");
+  const [sortDir, setSortDir] = useState("asc");
+
+  const COLS = [
+    { label: "Player", col: "player", tip: "Player Name" },
+    { label: "APP", col: "app", tip: "Appearances (games pitched)" },
+    { label: "W", col: "w", tip: "Wins" },
+    { label: "L", col: "l", tip: "Losses" },
+    { label: "SV", col: "sv", tip: "Saves" },
+    { label: "IP", col: "ip", tip: "Innings Pitched" },
+    { label: "H", col: "h", tip: "Hits Allowed" },
+    { label: "R", col: "r", tip: "Runs Allowed" },
+    { label: "ER", col: "er", tip: "Earned Runs Allowed" },
+    { label: "BB", col: "bb", tip: "Walks (Base on Balls)" },
+    { label: "SO", col: "so", tip: "Strikeouts" },
+    { label: "CG", col: "cg", tip: "Complete Games" },
+    { label: "SHO", col: "sho", tip: "Shutouts" },
+    {
+      label: "ERA",
+      col: "era",
+      tip: "Earned Run Average — Earned runs allowed per 9 innings",
+    },
+    { label: "WHIP", col: "whip", tip: "Walks plus Hits per Inning Pitched" },
+  ];
+
+  const handleSort = (col) => {
+    if (col === "player") {
+      setSortKey("player");
+      setSortDir((d) =>
+        sortKey === "player" ? (d === "asc" ? "desc" : "asc") : "asc",
+      );
+    } else {
+      if (sortKey === col) {
+        setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+      } else {
+        setSortKey(col);
+        // ERA, WHIP, L default asc (lower is better); rest default desc
+        setSortDir(
+          ["era", "whip", "l", "bb", "er", "r", "h"].includes(col)
+            ? "asc"
+            : "desc",
+        );
+      }
+    }
+  };
+
+  const sorted = useMemo(() => {
+    const copy = [...rows];
+    copy.sort((a, b) => {
+      if (sortKey === "player") {
+        const an = getPlayerName(a).toLowerCase();
+        const bn = getPlayerName(b).toLowerCase();
+        return sortDir === "asc" ? an.localeCompare(bn) : bn.localeCompare(an);
+      }
+      const av = parseFloat(a[sortKey] ?? -1);
+      const bv = parseFloat(b[sortKey] ?? -1);
+      return sortDir === "asc" ? av - bv : bv - av;
+    });
+    return copy;
+  }, [rows, sortKey, sortDir]);
+
   if (!rows.length)
     return (
       <p className="text-gray-500 text-sm py-8 text-center">
@@ -145,43 +292,24 @@ function PitchingTable({ rows }) {
     <div className="overflow-x-auto">
       <table className="w-full text-xs md:text-sm whitespace-nowrap">
         <thead>
-          <tr className="bg-gray-50 border-b text-left">
-            {[
-              ["Player", "Player Name"],
-              ["APP", "Appearances (games pitched)"],
-              ["W", "Wins"],
-              ["L", "Losses"],
-              ["SV", "Saves"],
-              ["IP", "Innings Pitched"],
-              ["H", "Hits Allowed"],
-              ["R", "Runs Allowed"],
-              ["ER", "Earned Runs Allowed"],
-              ["BB", "Walks (Base on Balls)"],
-              ["SO", "Strikeouts"],
-              ["CG", "Complete Games"],
-              ["SHO", "Shutouts"],
-              ["ERA", "Earned Run Average — Earned runs allowed per 9 innings"],
-              ["WHIP", "Walks plus Hits per Inning Pitched"],
-            ].map(([h, tip]) => (
-              <th
-                key={h}
-                title={tip}
-                className={`px-3 py-2 font-semibold text-gray-600 ${
-                  h === "Player"
-                    ? "text-left sticky left-0 bg-gray-50 min-w-[140px]"
-                    : "text-right"
-                }`}
-              >
-                {h}
-              </th>
+          <tr className="bg-gray-50 border-b">
+            {COLS.map(({ label, col, tip }) => (
+              <SortTh
+                key={col}
+                label={label}
+                col={col}
+                tip={tip}
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onSort={handleSort}
+              />
             ))}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
-          {rows.map((p, i) => {
+          {sorted.map((p, i) => {
             const playerName = getPlayerName(p);
             const playerLink = getPlayerLink(p);
-
             return (
               <tr key={i} className="hover:bg-blue-50 transition-colors">
                 <td className="px-3 py-2 sticky left-0 bg-white">
@@ -230,6 +358,7 @@ function PitchingTable({ rows }) {
   );
 }
 
+// ── Main page ─────────────────────────────────────────────────────────────
 export default function TeamYearDetail() {
   const { teamSlug, year } = useParams();
 
@@ -375,6 +504,10 @@ export default function TeamYearDetail() {
           )}
         </CardBody>
       </Card>
+
+      <p className="text-xs text-gray-400 text-center">
+        Click any column header to sort. Hover for full stat definition.
+      </p>
     </Container>
   );
 }

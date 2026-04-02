@@ -41,12 +41,14 @@ async function getTeamNames(teamIds) {
 
 async function loadFinalBatting({ year, teamId }) {
   const r = await pool.query(
-    `
-    SELECT player_name, ab, r, h, rbi, bb, so
-    FROM championship_final_batting
-    WHERE year = $1 AND team_id = $2
-    ORDER BY id ASC
-    `,
+    `SELECT b.player_name,
+            p.id AS player_id,
+            b.ab, b.r, b.h, b.rbi, b.bb, b.so
+     FROM championship_final_batting b
+     LEFT JOIN players p
+       ON LOWER(TRIM(p.first_name || ' ' || p.last_name)) = LOWER(TRIM(b.player_name))
+     WHERE b.year = $1 AND b.team_id = $2
+     ORDER BY b.id ASC`,
     [year, teamId],
   );
   return r.rows || [];
@@ -54,12 +56,14 @@ async function loadFinalBatting({ year, teamId }) {
 
 async function loadFinalPitching({ year, teamId }) {
   const r = await pool.query(
-    `
-    SELECT player_name, ip, h, r, er, bb, so
-    FROM championship_final_pitching
-    WHERE year = $1 AND team_id = $2
-    ORDER BY id ASC
-    `,
+    `SELECT p2.player_name,
+            pl.id AS player_id,
+            p2.ip, p2.h, p2.r, p2.er, p2.bb, p2.so
+     FROM championship_final_pitching p2
+     LEFT JOIN players pl
+       ON LOWER(TRIM(pl.first_name || ' ' || pl.last_name)) = LOWER(TRIM(p2.player_name))
+     WHERE p2.year = $1 AND p2.team_id = $2
+     ORDER BY p2.id ASC`,
     [year, teamId],
   );
   return r.rows || [];

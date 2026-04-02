@@ -142,6 +142,105 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── Search Section ─────────────────────────────────────────────── */}
+      <section className="py-12 bg-white border-b border-gray-200">
+        <Container>
+          <div className="max-w-3xl mx-auto">
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md text-xs font-semibold mb-4 uppercase tracking-wide">
+                Tournament Database Search
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                Search Championship History
+              </h2>
+              <p className="text-gray-500 text-sm">
+                Query 91 years of tournament data, records, and statistics
+              </p>
+            </div>
+
+            <Card className="shadow-lg border border-gray-200">
+              <CardBody>
+                <form onSubmit={handleSearch} className="flex gap-3">
+                  <div className="relative flex-1">
+                    <Search
+                      size={18}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                    />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Enter your question about NBC World Series history..."
+                      className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-200 text-sm"
+                      disabled={searching}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={searching || !searchQuery.trim()}
+                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold px-6 py-3 rounded-lg transition-colors text-sm shadow-md hover:shadow-lg flex items-center gap-2 whitespace-nowrap"
+                  >
+                    {searching ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Searching...
+                      </>
+                    ) : (
+                      <>
+                        <Search size={16} />
+                        Search Database
+                      </>
+                    )}
+                  </button>
+                </form>
+
+                {searchError && (
+                  <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle
+                        className="text-red-600 flex-shrink-0 mt-0.5"
+                        size={18}
+                      />
+                      <p className="text-red-700 text-sm">{searchError}</p>
+                    </div>
+                  </div>
+                )}
+
+                {searchResults && (
+                  <SearchResults searchResults={searchResults} />
+                )}
+              </CardBody>
+            </Card>
+
+            <div className="mt-5 grid grid-cols-3 gap-3">
+              <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                <div className="text-xl font-bold text-blue-600">90+</div>
+                <div className="text-xs text-gray-500 mt-0.5 font-medium">
+                  Years of History
+                </div>
+              </div>
+              <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                <div className="text-xl font-bold text-green-600">800+</div>
+                <div className="text-xs text-gray-500 mt-0.5 font-medium">
+                  MLB Alumni
+                </div>
+              </div>
+              <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                <div className="text-xl font-bold text-purple-600">178</div>
+                <div className="text-xs text-gray-500 mt-0.5 font-medium">
+                  Teams
+                </div>
+              </div>
+            </div>
+
+            <p className="mt-4 text-center text-xs text-gray-400">
+              Search through championship records, player statistics, team
+              histories, and tournament milestones
+            </p>
+          </div>
+        </Container>
+      </section>
+
       {/* ── Quick Stats ────────────────────────────────────────────────── */}
       <section className="py-16 bg-gray-50">
         <Container>
@@ -267,7 +366,6 @@ export default function Home() {
           ) : (
             <div className="grid md:grid-cols-3 gap-6">
               {recent.map((r) => {
-                // mvp may be a string (old shape) or mvp_names array (new shape)
                 const mvpLabel =
                   Array.isArray(r.mvp_names) && r.mvp_names.length > 0
                     ? r.mvp_names.join(" & ")
@@ -288,11 +386,9 @@ export default function Home() {
                       <div className="w-16 h-16 rounded-2xl bg-yellow-100 flex items-center justify-center mb-4 mx-auto">
                         <Trophy className="w-8 h-8 text-yellow-600" />
                       </div>
-
                       <h3 className="text-xl font-bold text-gray-900 text-center mb-2">
                         {r.champion_name || r.champion}
                       </h3>
-
                       {(r.champion_city || r.city) && (
                         <p className="text-sm text-gray-600 text-center mb-4">
                           {r.champion_city || r.city},{" "}
@@ -316,7 +412,6 @@ export default function Home() {
                             </div>
                           </div>
                         )}
-
                         {mvpLabel && (
                           <div className="flex items-start gap-2">
                             <Award className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" />
@@ -336,8 +431,7 @@ export default function Home() {
                         to={`/championships/${r.year}`}
                         className="mt-6 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors text-sm"
                       >
-                        View Full Details
-                        <ChevronRight size={16} />
+                        View Full Details <ChevronRight size={16} />
                       </NavLink>
                     </CardBody>
                   </Card>
@@ -453,119 +547,6 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-        </Container>
-      </section>
-
-      {/* ── Search Section ─────────────────────────────────────────────── */}
-      <section className="py-16 bg-gray-50">
-        <Container>
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md text-xs font-semibold mb-4 uppercase tracking-wide">
-                Tournament Database Search
-              </div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-3">
-                Search Championship History
-              </h2>
-              <p className="text-gray-600 text-lg">
-                Query 91 years of tournament data, records, and statistics
-              </p>
-            </div>
-
-            <Card className="shadow-xl border-2 border-gray-300">
-              <CardBody>
-                <form onSubmit={handleSearch} className="space-y-4">
-                  <div className="relative">
-                    <Search
-                      size={20}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-                    />
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Enter your question about NBC World Series history..."
-                      className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-200 text-base"
-                      disabled={searching}
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={searching || !searchQuery.trim()}
-                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-3.5 rounded-lg transition-colors text-base shadow-md hover:shadow-lg flex items-center justify-center gap-2"
-                  >
-                    {searching ? (
-                      <>
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Searching...
-                      </>
-                    ) : (
-                      <>
-                        <Search size={18} />
-                        Search Database
-                      </>
-                    )}
-                  </button>
-                </form>
-
-                {searchError && (
-                  <div className="mt-4 p-4 bg-red-50 border-2 border-red-200 rounded-lg">
-                    <div className="flex items-start gap-3">
-                      <AlertCircle
-                        className="text-red-600 flex-shrink-0 mt-0.5"
-                        size={20}
-                      />
-                      <div>
-                        <p className="font-semibold text-red-900 text-sm">
-                          Search Error
-                        </p>
-                        <p className="text-red-700 text-sm mt-1">
-                          {searchError}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* ── Answer bubble + rich results via SearchResults ── */}
-                {searchResults && (
-                  <>
-                    {/* Rich results: leaderboards, champ details, rosters, etc. */}
-                    <SearchResults searchResults={searchResults} />
-                  </>
-                )}
-              </CardBody>
-            </Card>
-
-            <div className="mt-8 grid grid-cols-3 gap-4">
-              <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-200 text-center">
-                <div className="text-2xl font-bold text-blue-600">90+</div>
-                <div className="text-xs text-gray-600 mt-1 font-medium">
-                  Years of History
-                </div>
-              </div>
-              <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-200 text-center">
-                <div className="text-2xl font-bold text-green-600">800+</div>
-                <div className="text-xs text-gray-600 mt-1 font-medium">
-                  MLB Alumni
-                </div>
-              </div>
-              <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-200 text-center">
-                <div className="text-2xl font-bold text-purple-600">178</div>
-                <div className="text-xs text-gray-600 mt-1 font-medium">
-                  Teams
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-500">
-                Search through championship records, player statistics, team
-                histories, and tournament milestones
-              </p>
             </div>
           </div>
         </Container>
