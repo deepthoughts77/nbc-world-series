@@ -5,15 +5,8 @@
 // Data: GET /api/players/:id (same endpoint used by PlayerProfile)
 
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import {
-  Search,
-  X,
-  ArrowLeftRight,
-  User,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-} from "lucide-react";
+import { Link } from "react-router-dom";
+import { Search, X, ArrowLeftRight, User, TrendingUp } from "lucide-react";
 import { API } from "../api";
 import { Container } from "../components/common/Container";
 
@@ -24,19 +17,12 @@ const fmtAvg = (v) => {
   if (isNaN(n)) return ".000";
   return n.toFixed(3).replace(/^0\./, ".");
 };
-
 const fmtEra = (v) => {
   if (v === null || v === undefined || v === "") return "—";
   if (typeof v === "string" && v.toLowerCase().includes("inf")) return "∞";
   const n = parseFloat(v);
   return isNaN(n) ? "—" : n.toFixed(2);
 };
-
-const safeNum = (v) => {
-  if (v === null || v === undefined) return 0;
-  return Number(v) || 0;
-};
-
 const safeDisplay = (v, fallback = "—") =>
   v === null || v === undefined || v === "" ? fallback : v;
 
@@ -99,6 +85,7 @@ function PlayerSearchBox({ label, player, onSelect, onClear, accentColor }) {
     const hasPitching = player.pitching?.stats?.length > 0;
     const cb = player.batting?.career;
     const cp = player.pitching?.career;
+    const playerId = player.player?.id;
 
     return (
       <div
@@ -169,16 +156,36 @@ function PlayerSearchBox({ label, player, onSelect, onClear, accentColor }) {
           >
             {label}
           </div>
-          <div
-            style={{
-              fontSize: 20,
-              fontWeight: 800,
-              color: "#FFFFFF",
-              lineHeight: 1.2,
-            }}
-          >
-            {player.player.fullName}
-          </div>
+
+          {/* Clickable player name */}
+          {playerId ? (
+            <Link
+              to={`/players/${playerId}`}
+              style={{
+                fontSize: 20,
+                fontWeight: 800,
+                color: "#FFFFFF",
+                lineHeight: 1.2,
+                textDecoration: "underline",
+                textDecorationColor: "rgba(255,255,255,0.4)",
+                display: "block",
+              }}
+            >
+              {player.player.fullName}
+            </Link>
+          ) : (
+            <div
+              style={{
+                fontSize: 20,
+                fontWeight: 800,
+                color: "#FFFFFF",
+                lineHeight: 1.2,
+              }}
+            >
+              {player.player.fullName}
+            </div>
+          )}
+
           {player.player.isHallOfFame && (
             <div
               style={{
@@ -199,7 +206,7 @@ function PlayerSearchBox({ label, player, onSelect, onClear, accentColor }) {
           )}
         </div>
 
-        {/* Quick career stats */}
+        {/* Quick career stats + View Full Profile link */}
         <div style={{ padding: "14px 20px 16px", background: "#F8FAFC" }}>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {hasBatting &&
@@ -288,6 +295,29 @@ function PlayerSearchBox({ label, player, onSelect, onClear, accentColor }) {
                 </div>
               ))}
           </div>
+
+          {/* View full profile button */}
+          {playerId && (
+            <Link
+              to={`/players/${playerId}`}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                marginTop: 12,
+                fontSize: 11,
+                fontWeight: 700,
+                color: accentColor,
+                textDecoration: "none",
+                background: `${accentColor}12`,
+                borderRadius: 20,
+                padding: "4px 12px",
+                border: `1px solid ${accentColor}30`,
+              }}
+            >
+              View Full Profile →
+            </Link>
+          )}
         </div>
       </div>
     );
@@ -362,7 +392,6 @@ function PlayerSearchBox({ label, player, onSelect, onClear, accentColor }) {
             color: "#0F172A",
           }}
         />
-
         {open && (
           <div
             style={{
@@ -456,7 +485,6 @@ function CompareRow({ label, val1, val2, higherIsBetter = true, fmt, tip }) {
 
   return (
     <tr style={{ borderBottom: "1px solid #F1F5F9" }}>
-      {/* Player 1 value */}
       <td
         style={{
           padding: "10px 16px",
@@ -502,7 +530,6 @@ function CompareRow({ label, val1, val2, higherIsBetter = true, fmt, tip }) {
         )}
       </td>
 
-      {/* Label */}
       <td
         style={{
           padding: "10px 8px",
@@ -519,7 +546,6 @@ function CompareRow({ label, val1, val2, higherIsBetter = true, fmt, tip }) {
         {label}
       </td>
 
-      {/* Player 2 value */}
       <td
         style={{
           padding: "10px 16px",
@@ -597,7 +623,6 @@ export default function PlayerComparison() {
   const showBatting = hasBatting1 || hasBatting2;
   const showPitching = hasPitching1 || hasPitching2;
 
-  // Auto-switch tab if needed
   useEffect(() => {
     if (activeTab === "batting" && !showBatting && showPitching)
       setActiveTab("pitching");
@@ -612,7 +637,6 @@ export default function PlayerComparison() {
 
   const bothSelected = player1 && player2;
 
-  // Swap players
   const handleSwap = () => {
     const tmp = player1;
     setPlayer1(player2);
@@ -711,8 +735,6 @@ export default function PlayerComparison() {
               onClear={() => setPlayer1(null)}
               accentColor="#1D4ED8"
             />
-
-            {/* Swap button */}
             <div
               style={{
                 display: "flex",
@@ -742,7 +764,6 @@ export default function PlayerComparison() {
                 <ArrowLeftRight size={16} />
               </button>
             </div>
-
             <PlayerSearchBox
               label="Player 2"
               player={player2}
@@ -821,7 +842,7 @@ export default function PlayerComparison() {
                 </div>
               )}
 
-              {/* Column headers */}
+              {/* Column headers — clickable player names */}
               <div
                 style={{
                   display: "grid",
@@ -831,17 +852,19 @@ export default function PlayerComparison() {
                   borderBottom: "1px solid #E2E8F0",
                 }}
               >
-                <div
+                <Link
+                  to={`/players/${player1.player.id}`}
                   style={{
                     fontSize: 13,
                     fontWeight: 800,
                     color: "#1D4ED8",
                     textAlign: "right",
                     paddingRight: 8,
+                    textDecoration: "none",
                   }}
                 >
-                  {player1.player.fullName}
-                </div>
+                  {player1.player.fullName} ↗
+                </Link>
                 <div
                   style={{
                     fontSize: 10,
@@ -855,17 +878,19 @@ export default function PlayerComparison() {
                 >
                   vs
                 </div>
-                <div
+                <Link
+                  to={`/players/${player2.player.id}`}
                   style={{
                     fontSize: 13,
                     fontWeight: 800,
                     color: "#DC2626",
                     textAlign: "left",
                     paddingLeft: 8,
+                    textDecoration: "none",
                   }}
                 >
-                  {player2.player.fullName}
-                </div>
+                  ↗ {player2.player.fullName}
+                </Link>
               </div>
 
               {/* Stats table */}
@@ -1076,6 +1101,7 @@ export default function PlayerComparison() {
                   display: "flex",
                   gap: 20,
                   flexWrap: "wrap",
+                  alignItems: "center",
                 }}
               >
                 <div
@@ -1116,7 +1142,6 @@ export default function PlayerComparison() {
               </div>
             </div>
           ) : (
-            /* Empty state */
             <div
               style={{
                 textAlign: "center",
