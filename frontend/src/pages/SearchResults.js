@@ -262,9 +262,10 @@ function ResultGroup({ type, items, query }) {
 
 // ── NL Results table ──────────────────────────────────────────────────────
 function NLResultsTable({ data }) {
+  const navigate = useNavigate();
   if (!data || data.length === 0) return null;
 
-  const HIDDEN_KEYS = ["id", "player_id", "team_id"];
+  const HIDDEN_KEYS = ["id", "player_id", "team_id", "championship_id"];
   const keys = Object.keys(data[0]).filter((k) => !HIDDEN_KEYS.includes(k));
 
   const formatVal = (v) => {
@@ -278,6 +279,31 @@ function NLResultsTable({ data }) {
 
   const formatKey = (k) =>
     k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+  // Determine link for a row
+  const getRowLink = (row) => {
+    if (row.player_id) return `/players/${row.player_id}`;
+    if (row.team_id) return `/teams/${row.team_id}`;
+    if (row.year && (row.champion_name || row.champion_name === null))
+      return `/championships/${row.year}`;
+    return null;
+  };
+
+  // Determine if a cell value should be a link
+  const getCellLink = (row, key, value) => {
+    if ((key === "champion_name" || key === "team_name") && row.team_id)
+      return `/teams/${row.team_id}`;
+    if (key === "champion_name" && row.year)
+      return `/championships/${row.year}`;
+    if (key === "runner_up_name" && row.year)
+      return `/championships/${row.year}`;
+    if ((key === "mvp_names" || key === "mvp_name") && row.mvp_player_id)
+      return `/players/${row.mvp_player_id}`;
+    if (key === "year" && value) return `/championships/${value}`;
+    if (key === "player_name" && row.player_id)
+      return `/players/${row.player_id}`;
+    return null;
+  };
 
   return (
     <div
@@ -342,7 +368,6 @@ function NLResultsTable({ data }) {
                   letterSpacing: "0.08em",
                   textTransform: "uppercase",
                   color: "#94A3B8",
-                  whiteSpace: "nowrap",
                 }}
               >
                 #
@@ -367,43 +392,86 @@ function NLResultsTable({ data }) {
             </tr>
           </thead>
           <tbody>
-            {data.map((row, i) => (
-              <tr
-                key={i}
-                style={{
-                  background: i % 2 === 0 ? "#FFFFFF" : "#F8FAFC",
-                  borderBottom: "1px solid #F1F5F9",
-                }}
-              >
-                <td
+            {data.map((row, i) => {
+              const rowLink = getRowLink(row);
+              return (
+                <tr
+                  key={i}
                   style={{
-                    padding: "8px 12px",
-                    color: "#94A3B8",
-                    fontSize: 12,
-                    fontWeight: 600,
+                    background: i % 2 === 0 ? "#FFFFFF" : "#F8FAFC",
+                    borderBottom: "1px solid #F1F5F9",
+                    cursor: rowLink ? "pointer" : "default",
+                    transition: "background 0.15s",
+                  }}
+                  onClick={() => rowLink && navigate(rowLink)}
+                  onMouseEnter={(e) => {
+                    if (rowLink) e.currentTarget.style.background = "#EFF6FF";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background =
+                      i % 2 === 0 ? "#FFFFFF" : "#F8FAFC";
                   }}
                 >
-                  {i + 1}
-                </td>
-                {keys.map((k) => (
                   <td
-                    key={k}
                     style={{
                       padding: "8px 12px",
-                      color: "#374151",
-                      whiteSpace: "nowrap",
-                      fontWeight:
-                        k === "player_name" || k === "team_name" ? 600 : 400,
+                      color: "#94A3B8",
+                      fontSize: 12,
+                      fontWeight: 600,
                     }}
                   >
-                    {formatVal(row[k])}
+                    {i + 1}
                   </td>
-                ))}
-              </tr>
-            ))}
+                  {keys.map((k) => {
+                    const cellLink = getCellLink(row, k, row[k]);
+                    const display = formatVal(row[k]);
+                    return (
+                      <td
+                        key={k}
+                        style={{
+                          padding: "8px 12px",
+                          whiteSpace: "nowrap",
+                          fontWeight: [
+                            "champion_name",
+                            "player_name",
+                            "team_name",
+                          ].includes(k)
+                            ? 600
+                            : 400,
+                          color: cellLink ? "#1D4ED8" : "#374151",
+                        }}
+                        onClick={
+                          cellLink
+                            ? (e) => {
+                                e.stopPropagation();
+                                navigate(cellLink);
+                              }
+                            : undefined
+                        }
+                      >
+                        {display}
+                        {cellLink && (
+                          <span style={{ marginLeft: 4, fontSize: 10 }}>↗</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
+      <p
+        style={{
+          fontSize: 11,
+          color: "#94A3B8",
+          padding: "8px 16px",
+          margin: 0,
+        }}
+      >
+        Click any row to view details
+      </p>
     </div>
   );
 }
