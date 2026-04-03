@@ -1,3 +1,4 @@
+//frontend/src/pages/HallOfFame.js
 import React, { useMemo, useState } from "react";
 import {
   Trophy,
@@ -206,7 +207,6 @@ export default function HallOfFame() {
             <table style={s.table}>
               <thead>
                 <tr style={s.theadRow}>
-                  <th style={{ ...s.th, width: 48, textAlign: "right" }}>#</th>
                   <th
                     style={{ ...s.th, textAlign: "left", cursor: "pointer" }}
                     onClick={() => handleSort("name")}
@@ -251,14 +251,14 @@ export default function HallOfFame() {
                 {loading ? (
                   [...Array(10)].map((_, i) => (
                     <tr key={i} style={i % 2 === 0 ? s.trEven : s.trOdd}>
-                      <td colSpan={4} style={s.td}>
+                      <td colSpan={3} style={s.td}>
                         <Skeleton className="h-4 w-full" />
                       </td>
                     </tr>
                   ))
                 ) : rows.length === 0 ? (
                   <tr>
-                    <td colSpan={4} style={s.emptyCell}>
+                    <td colSpan={3} style={s.emptyCell}>
                       <Search
                         size={32}
                         style={{ color: "#9CA3AF", marginBottom: 10 }}
@@ -299,8 +299,6 @@ export default function HallOfFame() {
                             : s.trOdd.background)
                         }
                       >
-                        <td style={{ ...s.td, ...s.tdNum }}>{i + 1}</td>
-
                         <td style={{ ...s.td, ...s.tdName }}>
                           <Star
                             size={11}

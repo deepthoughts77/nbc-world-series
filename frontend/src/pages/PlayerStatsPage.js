@@ -465,7 +465,7 @@ export default function PlayerStatsPage() {
               value={playerSearchQuery}
               onChange={(e) => handlePlayerSearch(e.target.value)}
               className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Search by player name (e.g., 'Drew Bugner')"
+              placeholder="Search by player name "
             />
           </div>
 

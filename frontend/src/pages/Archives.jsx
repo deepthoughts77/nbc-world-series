@@ -3,9 +3,8 @@
 // Route: /archives
 // NBC World Series Document Archive — Digital access portal for
 // Wichita State University Libraries Special Collections.
-// Phase 3: Citation generator modal on each document card.
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   FileText,
   Search,
@@ -18,10 +17,6 @@ import {
   Clipboard,
   BarChart2,
   FolderOpen,
-  Quote,
-  Copy,
-  Check,
-  X,
 } from "lucide-react";
 import { API } from "../api";
 import { Container } from "../components/common/Container";
@@ -89,343 +84,8 @@ function formatBytes(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-// ── Citation generator ────────────────────────────────────────────────────
-function buildCitations(doc) {
-  const today = new Date();
-  const accessDate = today.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-  const accessDateMLA = today.toLocaleDateString("en-US", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-
-  const year = doc.display_year || doc.sort_year || doc.year || "n.d.";
-  const title = doc.title || "Untitled Document";
-  const source =
-    doc.source_name || "Wichita State University Libraries Special Collections";
-  const url = doc.file_url || "";
-  const publisher = "National Baseball Congress";
-  const location = "Wichita, KS";
-
-  // APA 7th edition
-  // Format: Source. (Year). Title. Publisher. URL
-  const apa =
-    `${source}. (${year}). *${title}*. ${publisher}, ${location}. ` +
-    `Retrieved ${accessDate}, from ${url}`;
-
-  // Chicago 17th edition (notes-bibliography)
-  // Format: Source. "Title." Publisher, Year. URL
-  const chicago =
-    `${source}. "${title}." ${publisher}, ${location}, ${year}. ` +
-    `Accessed ${accessDate}. ${url}`;
-
-  // MLA 9th edition
-  // Format: "Title." Source, Publisher, Year, URL. Accessed Day Mon. Year.
-  const mla =
-    `"${title}." *${source}*, ${publisher}, ${location}, ${year}, ` +
-    `${url}. Accessed ${accessDateMLA}.`;
-
-  return { apa, chicago, mla };
-}
-
-// ── Citation modal ────────────────────────────────────────────────────────
-function CitationModal({ doc, onClose }) {
-  const [activeTab, setActiveTab] = useState("apa");
-  const [copied, setCopied] = useState(false);
-  const citations = buildCitations(doc);
-
-  const currentCitation = citations[activeTab];
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(currentCitation);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // fallback
-      const ta = document.createElement("textarea");
-      ta.value = currentCitation;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      document.body.removeChild(ta);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  // Close on backdrop click
-  const handleBackdrop = (e) => {
-    if (e.target === e.currentTarget) onClose();
-  };
-
-  // Close on Escape
-  useEffect(() => {
-    const handler = (e) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [onClose]);
-
-  const TABS = [
-    {
-      key: "apa",
-      label: "APA 7th",
-      hint: "American Psychological Association",
-    },
-    { key: "chicago", label: "Chicago 17th", hint: "Chicago Manual of Style" },
-    { key: "mla", label: "MLA 9th", hint: "Modern Language Association" },
-  ];
-
-  // Render italic markdown (*text*) in citation
-  const renderCitation = (text) => {
-    const parts = text.split(/(\*[^*]+\*)/g);
-    return parts.map((part, i) =>
-      part.startsWith("*") && part.endsWith("*") ? (
-        <em key={i}>{part.slice(1, -1)}</em>
-      ) : (
-        <span key={i}>{part}</span>
-      ),
-    );
-  };
-
-  return (
-    <div
-      onClick={handleBackdrop}
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 1000,
-        background: "rgba(0,0,0,0.55)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 16,
-      }}
-    >
-      <div
-        style={{
-          background: "#FFFFFF",
-          borderRadius: 14,
-          width: "100%",
-          maxWidth: 580,
-          boxShadow: "0 24px 64px rgba(0,0,0,0.2)",
-          overflow: "hidden",
-        }}
-      >
-        {/* Modal header */}
-        <div
-          style={{
-            background: "linear-gradient(135deg, #1E293B, #0F172A)",
-            padding: "18px 20px",
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "space-between",
-            gap: 12,
-          }}
-        >
-          <div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                marginBottom: 6,
-              }}
-            >
-              <Quote size={16} color="#D97706" />
-              <span
-                style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  letterSpacing: "0.15em",
-                  textTransform: "uppercase",
-                  color: "#D97706",
-                }}
-              >
-                Cite this Document
-              </span>
-            </div>
-            <div
-              style={{
-                fontSize: 14,
-                fontWeight: 700,
-                color: "#F8FAFC",
-                lineHeight: 1.3,
-              }}
-            >
-              {doc.title}
-            </div>
-            {(doc.display_year || doc.year) && (
-              <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 3 }}>
-                {doc.display_year || doc.year}
-                {doc.source_name && ` · ${doc.source_name}`}
-              </div>
-            )}
-          </div>
-          <button
-            onClick={onClose}
-            style={{
-              background: "rgba(255,255,255,0.1)",
-              border: "none",
-              borderRadius: 6,
-              padding: "5px 7px",
-              cursor: "pointer",
-              color: "#94A3B8",
-              flexShrink: 0,
-            }}
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        {/* Format tabs */}
-        <div
-          style={{
-            display: "flex",
-            borderBottom: "2px solid #E2E8F0",
-            background: "#F8FAFC",
-          }}
-        >
-          {TABS.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => {
-                setActiveTab(tab.key);
-                setCopied(false);
-              }}
-              title={tab.hint}
-              style={{
-                flex: 1,
-                padding: "12px 8px",
-                background: activeTab === tab.key ? "#FFFFFF" : "transparent",
-                border: "none",
-                borderBottom:
-                  activeTab === tab.key
-                    ? "2px solid #1D4ED8"
-                    : "2px solid transparent",
-                marginBottom: -2,
-                fontSize: 12,
-                fontWeight: 700,
-                cursor: "pointer",
-                color: activeTab === tab.key ? "#1D4ED8" : "#64748B",
-                transition: "all 0.15s",
-              }}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Citation text */}
-        <div style={{ padding: "20px 20px 16px" }}>
-          <div
-            style={{
-              background: "#F8FAFC",
-              border: "1px solid #E2E8F0",
-              borderRadius: 8,
-              padding: "14px 16px",
-              fontSize: 13,
-              lineHeight: 1.9,
-              color: "#374151",
-              fontFamily: "'Georgia', serif",
-              minHeight: 80,
-            }}
-          >
-            {renderCitation(currentCitation)}
-          </div>
-
-          {/* Format note */}
-          <div
-            style={{
-              fontSize: 11,
-              color: "#94A3B8",
-              marginTop: 10,
-              lineHeight: 1.5,
-            }}
-          >
-            {activeTab === "apa" &&
-              "APA 7th edition format for an online archival document. Adjust retrieved date if needed."}
-            {activeTab === "chicago" &&
-              "Chicago 17th edition notes-bibliography format for a digital archival source."}
-            {activeTab === "mla" &&
-              "MLA 9th edition format for a digital archival document with institutional repository."}
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div
-          style={{
-            padding: "0 20px 20px",
-            display: "flex",
-            gap: 10,
-          }}
-        >
-          <button
-            onClick={handleCopy}
-            style={{
-              flex: 1,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              background: copied ? "#059669" : "#1D4ED8",
-              border: "none",
-              borderRadius: 8,
-              color: "#FFFFFF",
-              fontSize: 13,
-              fontWeight: 700,
-              padding: "10px 16px",
-              cursor: "pointer",
-              transition: "background 0.2s",
-            }}
-          >
-            {copied ? <Check size={15} /> : <Copy size={15} />}
-            {copied ? "Copied!" : "Copy Citation"}
-          </button>
-          <button
-            onClick={onClose}
-            style={{
-              padding: "10px 16px",
-              background: "#F1F5F9",
-              border: "1px solid #E2E8F0",
-              borderRadius: 8,
-              fontSize: 13,
-              fontWeight: 600,
-              color: "#374151",
-              cursor: "pointer",
-            }}
-          >
-            Close
-          </button>
-        </div>
-
-        {/* Library attribution */}
-        <div
-          style={{
-            padding: "10px 20px 14px",
-            borderTop: "1px solid #F1F5F9",
-            fontSize: 10,
-            color: "#B0BEC5",
-            textAlign: "center",
-            letterSpacing: "0.03em",
-          }}
-        >
-          Source: Wichita State University Libraries Special Collections · NBC
-          World Series Records
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Document card ─────────────────────────────────────────────────────────
-function DocCard({ doc, onPreview, isPreviewOpen, onCite }) {
+function DocCard({ doc, onPreview, isPreviewOpen }) {
   const meta = getTypeMeta(doc.doc_type);
   const Icon = meta.icon;
   const docUrl = getDocumentUrl(doc.file_url);
@@ -599,21 +259,6 @@ function DocCard({ doc, onPreview, isPreviewOpen, onCite }) {
         <a href={docUrl} download title="Download PDF" style={iconBtn}>
           <Download size={13} />
         </a>
-
-        {/* Cite button */}
-        <button
-          onClick={() => onCite(doc)}
-          title="Generate citation"
-          style={{
-            ...iconBtn,
-            background: "#FEF3C7",
-            border: "1px solid #F59E0B44",
-            color: "#B45309",
-            cursor: "pointer",
-          }}
-        >
-          <Quote size={13} />
-        </button>
       </div>
     </div>
   );
@@ -629,7 +274,6 @@ export default function Archives() {
   const [yearFilter, setYearFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [previewDoc, setPreviewDoc] = useState(null);
-  const [citeDoc, setCiteDoc] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -664,19 +308,10 @@ export default function Archives() {
     setPreviewDoc((prev) => (prev?.id === doc.id ? null : doc));
   };
 
-  const handleCite = useCallback((doc) => {
-    setCiteDoc(doc);
-  }, []);
-
   const previewUrl = previewDoc ? getDocumentUrl(previewDoc.file_url) : "";
 
   return (
     <div style={{ minHeight: "100vh", background: "#F8FAFC" }}>
-      {/* Citation modal */}
-      {citeDoc && (
-        <CitationModal doc={citeDoc} onClose={() => setCiteDoc(null)} />
-      )}
-
       {/* ── Header ──────────────────────────────────────────────────── */}
       <div
         style={{
@@ -1029,7 +664,6 @@ export default function Archives() {
                   doc={doc}
                   onPreview={handlePreview}
                   isPreviewOpen={previewDoc?.id === doc.id}
-                  onCite={handleCite}
                 />
               ))}
             </div>
