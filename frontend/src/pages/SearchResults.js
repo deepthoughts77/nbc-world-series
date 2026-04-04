@@ -265,7 +265,13 @@ function NLResultsTable({ data }) {
   const navigate = useNavigate();
   if (!data || data.length === 0) return null;
 
-  const HIDDEN_KEYS = ["id", "player_id", "team_id", "championship_id"];
+  const HIDDEN_KEYS = [
+    "id",
+    "player_id",
+    "team_id",
+    "championship_id",
+    "mvp_player_id",
+  ];
   const keys = Object.keys(data[0]).filter((k) => !HIDDEN_KEYS.includes(k));
 
   const formatVal = (v) => {
@@ -280,17 +286,20 @@ function NLResultsTable({ data }) {
   const formatKey = (k) =>
     k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
-  // Determine link for a row
+  // Determine link for a row — player_id checked first to avoid misrouting
   const getRowLink = (row) => {
     if (row.player_id) return `/players/${row.player_id}`;
     if (row.team_id) return `/teams/${row.team_id}`;
-    if (row.year && (row.champion_name || row.champion_name === null))
+    if (row.championship_id) return `/championships/${row.championship_id}`;
+    if (row.year && row.champion_name !== undefined)
       return `/championships/${row.year}`;
     return null;
   };
 
   // Determine if a cell value should be a link
   const getCellLink = (row, key, value) => {
+    if (key === "player_name" && row.player_id)
+      return `/players/${row.player_id}`;
     if ((key === "champion_name" || key === "team_name") && row.team_id)
       return `/teams/${row.team_id}`;
     if (key === "champion_name" && row.year)
@@ -300,8 +309,6 @@ function NLResultsTable({ data }) {
     if ((key === "mvp_names" || key === "mvp_name") && row.mvp_player_id)
       return `/players/${row.mvp_player_id}`;
     if (key === "year" && value) return `/championships/${value}`;
-    if (key === "player_name" && row.player_id)
-      return `/players/${row.player_id}`;
     return null;
   };
 
@@ -439,6 +446,7 @@ function NLResultsTable({ data }) {
                             ? 600
                             : 400,
                           color: cellLink ? "#1D4ED8" : "#374151",
+                          cursor: cellLink ? "pointer" : "inherit",
                         }}
                         onClick={
                           cellLink
@@ -462,16 +470,6 @@ function NLResultsTable({ data }) {
           </tbody>
         </table>
       </div>
-      <p
-        style={{
-          fontSize: 11,
-          color: "#94A3B8",
-          padding: "8px 16px",
-          margin: 0,
-        }}
-      >
-        Click any row to view details
-      </p>
     </div>
   );
 }
