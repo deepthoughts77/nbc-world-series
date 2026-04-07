@@ -561,8 +561,7 @@ export default function TeamHistoryTotals() {
 
       {/* Footer note */}
       <p className="text-xs text-gray-400 text-center">
-        Click any row to view individual player stats for that season. Hover any
-        column header to see its full definition.
+        Hover any column header to see its full definition.
       </p>
     </Container>
   );

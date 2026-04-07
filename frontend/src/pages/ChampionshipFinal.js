@@ -128,9 +128,6 @@ function BattingTable({ rows }) {
           ))}
         </tbody>
       </table>
-      <p className="text-xs text-gray-400 mt-1">
-        Click any column header to sort.
-      </p>
     </div>
   );
 }
@@ -230,9 +227,6 @@ function PitchingTable({ rows }) {
           ))}
         </tbody>
       </table>
-      <p className="text-xs text-gray-400 mt-1">
-        Click any column header to sort.
-      </p>
     </div>
   );
 }
