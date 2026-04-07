@@ -315,7 +315,7 @@ async function buildQuery(intent, searchQuery = "") {
     intent.type === "leaderboard" &&
     (lowerQuery.includes("mvp") || lowerQuery.includes("most valuable"))
   ) {
-    query = `SELECT p.first_name||' '||p.last_name AS player_name, COUNT(c.year) AS count, array_agg(c.year ORDER BY c.year DESC) AS years
+    query = `SELECT p.id AS player_id, p.first_name||' '||p.last_name AS player_name, COUNT(c.year) AS count, array_agg(c.year ORDER BY c.year DESC) AS years
            FROM championships c JOIN players p ON c.mvp_player_id=p.id WHERE c.mvp_player_id IS NOT NULL
            GROUP BY p.id,p.first_name,p.last_name ORDER BY count DESC LIMIT $1`;
     params = [intent.limit || 10];
@@ -391,12 +391,20 @@ async function buildQuery(intent, searchQuery = "") {
       query = `SELECT DISTINCT p.first_name||' '||p.last_name AS player_name,t.name AS team_name,ps.year,
              ps.era,ps.ip,ps.w,ps.l,ps.sv,ps.so,ps.bb,ps.cg,ps.sho,ps.app
              FROM ${pt} ps JOIN players p ON ps.player_id=p.id LEFT JOIN teams t ON ps.team_id=t.id
-             WHERE LOWER(COALESCE(t.name,'')) ILIKE $1 ${yc} ORDER BY ps.era ASC NULLS LAST LIMIT 50`;
+             WHERE (LOWER(COALESCE(t.name,'')) ILIKE $1
+               OR EXISTS (
+                 SELECT 1 FROM team_aliases ta
+                 WHERE ta.team_id = t.id AND LOWER(ta.alias) ILIKE $1
+               )) ${yc} ORDER BY ps.era ASC NULLS LAST LIMIT 50`;
     } else {
       query = `SELECT DISTINCT p.first_name||' '||p.last_name AS player_name,t.name AS team_name,bs.year,
              bs.avg,bs.obp,bs.slg,bs.hr,bs.rbi,bs.h,bs.r,bs.ab,bs.bb,bs.so,bs.sb,bs."2b",bs."3b",bs.tb,bs.gp
              FROM ${bt} bs JOIN players p ON bs.player_id=p.id LEFT JOIN teams t ON bs.team_id=t.id
-             WHERE LOWER(COALESCE(t.name,'')) ILIKE $1 ${yc} ORDER BY bs.avg DESC NULLS LAST LIMIT 50`;
+             WHERE (LOWER(COALESCE(t.name,'')) ILIKE $1
+               OR EXISTS (
+                 SELECT 1 FROM team_aliases ta
+                 WHERE ta.team_id = t.id AND LOWER(ta.alias) ILIKE $1
+               )) ${yc} ORDER BY bs.avg DESC NULLS LAST LIMIT 50`;
     }
     params = [`%${intent.team}%`];
     return { query, params };
@@ -627,7 +635,6 @@ function formatResponse(intent, results) {
     };
     const label =
       STAT_LABELS[intent.stat] || intent.stat?.toUpperCase() || "Stat";
-    // FIX: use intent.year not bare `year`
     const yearLabel = intent.year
       ? ` in the ${intent.year} Season`
       : " all time";
@@ -714,7 +721,7 @@ export const naturalLanguageSearch = async (req, res) => {
       )
     ) {
       const result = await pool.query(
-        `SELECT t.name AS team_name,t.city,t.state,COUNT(*) AS count,array_agg(c.year ORDER BY c.year DESC) AS years FROM championships c JOIN teams t ON c.champion_team_id=t.id WHERE c.champion_team_id IS NOT NULL GROUP BY t.id,t.name,t.city,t.state ORDER BY count DESC LIMIT 10`,
+        `SELECT t.id AS team_id, t.name AS team_name,t.city,t.state,COUNT(*) AS count,array_agg(c.year ORDER BY c.year DESC) AS years FROM championships c JOIN teams t ON c.champion_team_id=t.id WHERE c.champion_team_id IS NOT NULL GROUP BY t.id,t.name,t.city,t.state ORDER BY count DESC LIMIT 10`,
       );
       if (result.rows.length > 0) {
         const top = result.rows[0];
@@ -736,7 +743,7 @@ export const naturalLanguageSearch = async (req, res) => {
       )
     ) {
       const result = await pool.query(
-        `SELECT p.first_name||' '||p.last_name AS player_name,COUNT(*) AS count,array_agg(c.year ORDER BY c.year DESC) AS years FROM championships c JOIN players p ON c.mvp_player_id=p.id WHERE c.mvp_player_id IS NOT NULL GROUP BY p.id,p.first_name,p.last_name ORDER BY count DESC LIMIT 10`,
+        `SELECT p.id AS player_id, p.first_name||' '||p.last_name AS player_name,COUNT(*) AS count,array_agg(c.year ORDER BY c.year DESC) AS years FROM championships c JOIN players p ON c.mvp_player_id=p.id WHERE c.mvp_player_id IS NOT NULL GROUP BY p.id,p.first_name,p.last_name ORDER BY count DESC LIMIT 10`,
       );
       if (result.rows.length > 0) {
         const topCount = result.rows[0].count,
@@ -763,7 +770,6 @@ export const naturalLanguageSearch = async (req, res) => {
     }
 
     // ── INTERCEPT 3: Championship Streaks ─────────────────────────────────
-    // Catches: "streak", "consecutive", "winning streak", "most winning", etc.
     if (
       /\b(streak|consecutive|in\s+a\s+row|back.?to.?back|most\s+streak\w*|winning\s+streak|championship\s+streak|title\s+streak)\b/i.test(
         searchQuery,
@@ -804,7 +810,6 @@ export const naturalLanguageSearch = async (req, res) => {
     }
 
     // ── INTERCEPT 4: Team stat queries ────────────────────────────────────
-    // Guards: must have "team", a superlative, no streak words, no "player"
     if (
       /\bteam\b/i.test(searchQuery) &&
       /\b(most|highest|best|top|leading)\b/i.test(searchQuery) &&
@@ -896,9 +901,19 @@ export const naturalLanguageSearch = async (req, res) => {
       return res.json({ ...formatted, queryType: intent.type });
     }
 
-    // ── FINAL FALLBACK ────────────────────────────────────────────────────
+    // ── FINAL FALLBACK — also checks aliases ──────────────────────────────
     const finalFallback = await pool.query(
-      `SELECT t.name AS team_name,t.city,t.state,COUNT(c.id) AS titles FROM teams t LEFT JOIN championships c ON c.champion_team_id=t.id WHERE t.name ILIKE $1 OR t.city ILIKE $1 GROUP BY t.id,t.name,t.city,t.state ORDER BY titles DESC LIMIT 10`,
+      `SELECT t.id AS team_id, t.name AS team_name,t.city,t.state,COUNT(c.id) AS titles
+       FROM teams t
+       LEFT JOIN championships c ON c.champion_team_id=t.id
+       WHERE t.name ILIKE $1
+         OR t.city ILIKE $1
+         OR EXISTS (
+           SELECT 1 FROM team_aliases ta
+           WHERE ta.team_id = t.id AND ta.alias ILIKE $1
+         )
+       GROUP BY t.id,t.name,t.city,t.state
+       ORDER BY titles DESC LIMIT 10`,
       [`%${searchQuery}%`],
     );
     return res.json({

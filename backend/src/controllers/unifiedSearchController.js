@@ -63,6 +63,11 @@ export const unifiedSearch = async (req, res) => {
          FROM teams t
          LEFT JOIN championships c ON c.champion_team_id = t.id
          WHERE t.name ILIKE $1
+           OR EXISTS (
+             SELECT 1 FROM team_aliases ta
+             WHERE ta.team_id = t.id
+               AND ta.alias ILIKE $1
+           )
          GROUP BY t.id, t.name, t.city, t.state
          ORDER BY champ_count DESC, t.name ASC
          LIMIT $2`,
@@ -88,6 +93,11 @@ export const unifiedSearch = async (req, res) => {
            OR rt.name ILIKE $1
            OR (p.first_name || ' ' || p.last_name) ILIKE $1
            OR c.year::text ILIKE $1
+           OR EXISTS (
+             SELECT 1 FROM team_aliases ta
+             WHERE (ta.team_id = ct.id OR ta.team_id = rt.id)
+               AND ta.alias ILIKE $1
+           )
          ORDER BY c.year DESC
          LIMIT $2`,
         [term, MAX_PER_GROUP],
