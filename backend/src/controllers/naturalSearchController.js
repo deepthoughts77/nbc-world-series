@@ -79,8 +79,7 @@ const QUERY_PATTERNS = {
   completeGames: /complete games?|\bcg\b/i,
   appearances: /appearances?|\bapp\b/i,
   team: /(?:from|for|on|with|played for)\s+(?:the\s+)?([A-Z][a-z\s]+(?:Monarchs|Larks|Foresters|Studs|Stars|Cannons|Oilers|Pilots|Bee Jays|Broncos|Heat|Twins|A's|Kraken|Dawgs|Goldpanners))/i,
-  teamOnly:
-    /\b(Hutchinson Monarchs|Hays Larks|Santa Barbara Foresters|Liberal Bee Jays|Boulder Collegians|San Diego Stars|Wichita\s+\w+|Wellington|Derby|Fairbanks Goldpanners)\b/i,
+  teamOnly: /\b([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){1,4})\b/,
   year: /(?:in|for|during|of)\s+(?:the\s+)?(\d{4})|(\d{4})\s+(?:season|championship|mvp|winner|year)|year\s+(\d{4})/i,
   yearRange: /from\s+(\d{4})\s+to\s+(\d{4})|between\s+(\d{4})\s+and\s+(\d{4})/i,
   allTime: /all.?time|history|ever|career|all years/i,
@@ -886,6 +885,176 @@ export const naturalLanguageSearch = async (req, res) => {
           })),
           queryType: "leaderboard",
           intent: { type: "leaderboard" },
+          count: result.rows.length,
+        });
+      }
+    }
+
+    // ── INTERCEPT 5: Team championships count ────────────────────────────
+    // Catches: "How many championships has X won?", "X titles", "X championship history"
+    const champCountMatch = searchQuery.match(
+      /\b(how many|championships?|titles?|wins?)\b/i,
+    );
+    if (champCountMatch) {
+      const teamNameMatch = searchQuery.match(
+        /(?:has\s+)?(?:the\s+)?([A-Z][a-zA-Z\s]{3,40?}?)(?:\s+won|\s+have|\s+championships?|\s+titles?)/i,
+      );
+      if (teamNameMatch) {
+        const teamSearch = teamNameMatch[1].trim();
+        const result = await pool.query(
+          `SELECT t.id AS team_id, t.name AS team_name, t.city, t.state,
+             COUNT(c.id) AS championships,
+             array_agg(c.year ORDER BY c.year DESC) AS years
+           FROM teams t
+           LEFT JOIN championships c ON c.champion_team_id = t.id
+           WHERE t.name ILIKE $1
+             OR EXISTS (SELECT 1 FROM team_aliases ta WHERE ta.team_id = t.id AND ta.alias ILIKE $1)
+           GROUP BY t.id, t.name, t.city, t.state
+           HAVING COUNT(c.id) > 0
+           ORDER BY championships DESC LIMIT 5`,
+          [`%${teamSearch}%`],
+        );
+        if (result.rows.length > 0) {
+          const top = result.rows[0];
+          return res.json({
+            success: true,
+            answer: `The **${top.team_name}** have won **${top.championships}** championship${top.championships !== 1 ? "s" : ""}: ${top.years.slice(0, 10).join(", ")}.`,
+            results: result.rows,
+            queryType: "team_championships",
+            count: result.rows.length,
+          });
+        }
+      }
+    }
+
+    // ── INTERCEPT 6: Any team roster without year ─────────────────────────
+    // Catches: "Hutchinson Monarchs roster", "Liberal Bee Jays players"
+    if (/\b(roster|players|lineup|squad)\b/i.test(searchQuery)) {
+      const yearMatch2 = searchQuery.match(/\b(19|20)\d{2}\b/);
+      const year2 = yearMatch2 ? parseInt(yearMatch2[0]) : null;
+      const bt = (await getBattingTable()) || "batting_stats";
+      const yearClause2 = year2
+        ? `AND bs.year = ${year2}`
+        : "AND bs.year = (SELECT MAX(year) FROM batting_stats)";
+      const result = await pool.query(
+        `SELECT DISTINCT p.first_name||' '||p.last_name AS player_name,
+           t.name AS team_name, t.id AS team_id, bs.year,
+           bs.avg, bs.hr, bs.rbi, bs.h, bs.ab, bs.gp
+         FROM ${bt} bs
+         JOIN players p ON bs.player_id = p.id
+         JOIN teams t ON bs.team_id = t.id
+         WHERE (t.name ILIKE $1
+           OR EXISTS (SELECT 1 FROM team_aliases ta WHERE ta.team_id = t.id AND ta.alias ILIKE $1))
+           ${yearClause2}
+         ORDER BY bs.avg DESC NULLS LAST LIMIT 30`,
+        [
+          `%${searchQuery.replace(/\b(roster|players|lineup|squad)\b/gi, "").trim()}%`,
+        ],
+      );
+      if (result.rows.length > 0) {
+        const teamName = result.rows[0].team_name;
+        const yr = result.rows[0].year;
+        return res.json({
+          success: true,
+          answer: `Found **${result.rows.length}** players for **${teamName}** (${yr}).`,
+          results: result.rows,
+          queryType: "batting_stat",
+          count: result.rows.length,
+        });
+      }
+    }
+
+    // ── INTERCEPT 7: Runner-up lookup ─────────────────────────────────────
+    // Catches: "Who did X beat in 2025?", "Who lost to X?", "Who was runner up in 2025?"
+    if (
+      /\b(beat|defeated|runner.?up|lost to|second place)\b/i.test(searchQuery)
+    ) {
+      const yearMatch3 = searchQuery.match(/\b(19|20)\d{2}\b/);
+      const year3 = yearMatch3 ? parseInt(yearMatch3[0]) : null;
+      if (year3) {
+        const result = await pool.query(
+          `SELECT c.year, ct.name AS champion_name, rt.name AS runner_up_name,
+             c.championship_score
+           FROM championships c
+           LEFT JOIN teams ct ON ct.id = c.champion_team_id
+           LEFT JOIN teams rt ON rt.id = c.runner_up_team_id
+           WHERE c.year = $1 LIMIT 1`,
+          [year3],
+        );
+        if (result.rows.length > 0) {
+          const r = result.rows[0];
+          const score = r.championship_score
+            ? ` (${r.championship_score})`
+            : "";
+          return res.json({
+            success: true,
+            answer: `In ${year3}, the **${r.champion_name}** defeated the **${r.runner_up_name}**${score} to win the championship.`,
+            results: result.rows,
+            queryType: "championship_runnerup",
+            count: 1,
+          });
+        }
+      }
+    }
+
+    // ── INTERCEPT 8: Team history / profile ───────────────────────────────
+    // Catches: "Hutchinson Monarchs history", "Tell me about the Hays Larks"
+    if (/\b(history|about|profile|record|all time)\b/i.test(searchQuery)) {
+      const result = await pool.query(
+        `SELECT t.id AS team_id, t.name AS team_name, t.city, t.state,
+           COUNT(DISTINCT c_win.year) AS championships,
+           COUNT(DISTINCT c_fin.year) AS finals,
+           array_agg(DISTINCT c_win.year ORDER BY c_win.year DESC) 
+             FILTER (WHERE c_win.year IS NOT NULL) AS championship_years
+         FROM teams t
+         LEFT JOIN championships c_win ON c_win.champion_team_id = t.id
+         LEFT JOIN championships c_fin ON (c_fin.champion_team_id = t.id OR c_fin.runner_up_team_id = t.id)
+         WHERE t.name ILIKE $1
+           OR EXISTS (SELECT 1 FROM team_aliases ta WHERE ta.team_id = t.id AND ta.alias ILIKE $1)
+         GROUP BY t.id, t.name, t.city, t.state
+         ORDER BY championships DESC LIMIT 3`,
+        [
+          `%${searchQuery.replace(/\b(history|about|profile|record|all time|tell me|the)\b/gi, "").trim()}%`,
+        ],
+      );
+      if (result.rows.length > 0) {
+        const t = result.rows[0];
+        const loc = t.city && t.state ? ` from ${t.city}, ${t.state}` : "";
+        const yrs = t.championship_years?.length
+          ? ` Championship years: ${t.championship_years.slice(0, 10).join(", ")}.`
+          : "";
+        return res.json({
+          success: true,
+          answer: `The **${t.team_name}**${loc} have won **${t.championships}** championship${t.championships !== 1 ? "s" : ""} and appeared in **${t.finals}** finals.${yrs}`,
+          results: result.rows,
+          queryType: "team_championships",
+          count: result.rows.length,
+        });
+      }
+    }
+
+    // ── INTERCEPT 9: Recent champions list ───────────────────────────────
+    // Catches: "Show me all champions", "List of winners", "Recent champions"
+    if (
+      /\b(all champions|list.*winner|recent champion|past champion|show.*champion|champion.*list)\b/i.test(
+        searchQuery,
+      )
+    ) {
+      const result = await pool.query(
+        `SELECT c.year, t.name AS team_name, t.city, t.state, t.id AS team_id,
+           rt.name AS runner_up_name, c.championship_score
+         FROM championships c
+         JOIN teams t ON t.id = c.champion_team_id
+         LEFT JOIN teams rt ON rt.id = c.runner_up_team_id
+         WHERE c.year IS NOT NULL
+         ORDER BY c.year DESC LIMIT 20`,
+      );
+      if (result.rows.length > 0) {
+        return res.json({
+          success: true,
+          answer: `Here are the most recent **${result.rows.length}** NBC World Series champions.`,
+          results: result.rows,
+          queryType: "leaderboard",
           count: result.rows.length,
         });
       }
