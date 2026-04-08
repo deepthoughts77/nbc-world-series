@@ -47,7 +47,7 @@ const QUERY_PATTERNS = {
   mvp: /\bmvp\b|most valuable player/i,
   runnerUp: /runner.?up|second place|finalist/i,
   highest: /highest|best|top|most|leading|greatest/i,
-  lowest: /lowest|worst|fewest|minimum/i,
+  lowest: /lowest|worst|fewest|minimum|least/i,
   battingAvg: /batting average|\bbatting\b|avg|ba\b|average/i,
   homeRuns: /home runs?|\bhr\b|homers|dingers/i,
   rbi: /\brbi\b|runs batted in/i,
@@ -634,6 +634,7 @@ function formatResponse(intent, results) {
     };
     const label =
       STAT_LABELS[intent.stat] || intent.stat?.toUpperCase() || "Stat";
+    const isLowest = intent.order === "ASC";
     const yearLabel = intent.year
       ? ` in the ${intent.year} Season`
       : " all time";
@@ -649,9 +650,11 @@ function formatResponse(intent, results) {
     if (tied.length > 1) {
       const names = tied.map((r) => `**${r.player_name}**`).join(", ");
       answer = `${tied.length} players are tied in ${label} with **${formatted}**${yearLabel}: ${names}.`;
-    } else
-      answer = `**${top.player_name}** leads in ${label}${formatted != null ? ` with **${formatted}**` : ""}${yearLabel}.`;
-    message = `Top ${results.length} by ${label}${yearLabel}`;
+    } else {
+      const superlative = isLowest ? "fewest" : "most";
+      answer = `**${top.player_name}** had the ${superlative} ${label}${formatted != null ? ` with **${formatted}**` : ""}${yearLabel}.`;
+    }
+    message = `${isLowest ? "Fewest" : "Top"} ${results.length} by ${label}${yearLabel}`;
   }
 
   if (intent.type === "pitching_stat") {
@@ -811,12 +814,16 @@ export const naturalLanguageSearch = async (req, res) => {
     // ── INTERCEPT 4: Team stat queries ────────────────────────────────────
     if (
       /\bteam\b/i.test(searchQuery) &&
-      /\b(most|highest|best|top|leading)\b/i.test(searchQuery) &&
+      /\b(most|highest|best|top|leading|least|fewest|lowest|worst)\b/i.test(
+        searchQuery,
+      ) &&
       !/\b(streak|consecutive|winning|in a row)\b/i.test(searchQuery) &&
       !/\bplayer\b/i.test(searchQuery)
     ) {
       const yearMatch = searchQuery.match(/\b(19|20)\d{2}\b/);
       const year = yearMatch ? parseInt(yearMatch[0]) : null;
+      const isLowest = /lowest|worst|fewest|minimum|least/i.test(searchQuery);
+
       let statCol = "hr",
         statLabel = "Home Runs";
       if (/\bavg\b|batting average/i.test(searchQuery)) {
@@ -846,18 +853,23 @@ export const naturalLanguageSearch = async (req, res) => {
       } else if (/\bhome run|homer|\bhr\b/i.test(searchQuery)) {
         statCol = "hr";
         statLabel = "Home Runs";
+      } else if (/\bat.?bat|\bab\b/i.test(searchQuery)) {
+        statCol = "ab";
+        statLabel = "At Bats";
       }
 
       const isRate = ["avg", "obp", "slg"].includes(statCol);
       const yearClause = year ? `WHERE bs.year=${year}` : "";
       const yearLabel = year ? ` in the ${year} Season` : " all time";
+      const sortDir = isLowest ? "ASC" : "DESC";
+      const superlative = isLowest ? "fewest" : "most";
 
       const result = await pool.query(`
         SELECT t.id AS team_id,t.name AS team_name,t.city,t.state,
                ${isRate ? `CASE WHEN SUM(bs.ab)>0 THEN ROUND(SUM(bs.h)::numeric/SUM(bs.ab),3) ELSE 0 END AS ${statCol}` : `SUM(bs.${statCol}) AS ${statCol}`}
         FROM batting_stats bs JOIN teams t ON t.id=bs.team_id ${yearClause}
         GROUP BY t.id,t.name,t.city,t.state HAVING SUM(bs.ab)>0
-        ORDER BY ${statCol} DESC NULLS LAST LIMIT 10`);
+        ORDER BY ${statCol} ${sortDir} NULLS LAST LIMIT 10`);
 
       if (result.rows.length > 0) {
         const top = result.rows[0],
@@ -869,9 +881,10 @@ export const naturalLanguageSearch = async (req, res) => {
         let answer;
         if (tied.length > 1) {
           const names = tied.map((r) => `**${r.team_name}**`).join(", ");
-          answer = `There is a **${tied.length}-way tie** for most ${statLabel}${yearLabel} with **${val}** each: ${names}.`;
-        } else
-          answer = `The team with the most ${statLabel}${yearLabel} was the **${top.team_name}** with **${val}**.`;
+          answer = `There is a **${tied.length}-way tie** for ${superlative} ${statLabel}${yearLabel} with **${val}** each: ${names}.`;
+        } else {
+          answer = `The team with the ${superlative} ${statLabel}${yearLabel} was the **${top.team_name}** with **${val}**.`;
+        }
         return res.json({
           success: true,
           answer,
@@ -891,7 +904,6 @@ export const naturalLanguageSearch = async (req, res) => {
     }
 
     // ── INTERCEPT 5: Team championships count ────────────────────────────
-    // Catches: "How many championships has X won?", "X titles", "X championship history"
     const champCountMatch = searchQuery.match(
       /\b(how many|championships?|titles?|wins?)\b/i,
     );
@@ -928,7 +940,6 @@ export const naturalLanguageSearch = async (req, res) => {
     }
 
     // ── INTERCEPT 6: Any team roster without year ─────────────────────────
-    // Catches: "Hutchinson Monarchs roster", "Liberal Bee Jays players"
     if (/\b(roster|players|lineup|squad)\b/i.test(searchQuery)) {
       const yearMatch2 = searchQuery.match(/\b(19|20)\d{2}\b/);
       const year2 = yearMatch2 ? parseInt(yearMatch2[0]) : null;
@@ -965,7 +976,6 @@ export const naturalLanguageSearch = async (req, res) => {
     }
 
     // ── INTERCEPT 7: Runner-up lookup ─────────────────────────────────────
-    // Catches: "Who did X beat in 2025?", "Who lost to X?", "Who was runner up in 2025?"
     if (
       /\b(beat|defeated|runner.?up|lost to|second place)\b/i.test(searchQuery)
     ) {
@@ -998,7 +1008,6 @@ export const naturalLanguageSearch = async (req, res) => {
     }
 
     // ── INTERCEPT 8: Team history / profile ───────────────────────────────
-    // Catches: "Hutchinson Monarchs history", "Tell me about the Hays Larks"
     if (/\b(history|about|profile|record|all time)\b/i.test(searchQuery)) {
       const result = await pool.query(
         `SELECT t.id AS team_id, t.name AS team_name, t.city, t.state,
@@ -1034,7 +1043,6 @@ export const naturalLanguageSearch = async (req, res) => {
     }
 
     // ── INTERCEPT 9: Recent champions list ───────────────────────────────
-    // Catches: "Show me all champions", "List of winners", "Recent champions"
     if (
       /\b(all champions|list.*winner|recent champion|past champion|show.*champion|champion.*list)\b/i.test(
         searchQuery,
@@ -1124,6 +1132,7 @@ export const getSearchSuggestions = async (req, res) => {
       "Best ERA in 2025",
       "Most strikeouts 2025",
       "Top 5 RBI leaders 2024",
+      "Who had the least at-bats in 2025?",
       "Players with over 3 home runs in 2025",
       "Best slugging percentage 2025",
       "Hutchinson Monarchs roster 2025",
