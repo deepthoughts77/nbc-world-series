@@ -89,7 +89,7 @@ export default function Records() {
                           <div>
                             <div className="text-gray-500">Era</div>
                             <div className="text-lg font-bold text-gray-900">
-                              1935-2025
+                              1935–2025
                             </div>
                           </div>
                         </div>
@@ -108,7 +108,7 @@ export default function Records() {
                 </CardBody>
               </Card>
 
-              {/* Most Appearances */}
+              {/* Most Finals Appearances */}
               <Card className="overflow-hidden border-2 border-blue-200">
                 <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 border-b border-blue-200">
                   <div className="flex items-center gap-3 mb-2">
@@ -117,10 +117,10 @@ export default function Records() {
                     </div>
                     <div>
                       <h4 className="font-bold text-lg text-gray-900">
-                        Most Appearances
+                        Most Finals Appearances
                       </h4>
                       <p className="text-sm text-gray-600">
-                        Tournament participation
+                        Championship game appearances
                       </p>
                     </div>
                   </div>
@@ -132,7 +132,7 @@ export default function Records() {
                         <div className="text-5xl font-black text-blue-600">
                           {records.most_appearances.appearances}
                         </div>
-                        <div className="text-xl text-gray-500">times</div>
+                        <div className="text-xl text-gray-500">finals</div>
                       </div>
                       <div>
                         <div className="text-xl font-bold text-gray-900">
@@ -172,7 +172,7 @@ export default function Records() {
                 </CardBody>
               </Card>
 
-              {/* Most MVP Awards (FIXED to match backend: { name, mvps }) */}
+              {/* Most MVP Awards */}
               <Card className="overflow-hidden border-2 border-purple-200">
                 <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 border-b border-purple-200">
                   <div className="flex items-center gap-3 mb-2">
@@ -254,7 +254,7 @@ export default function Records() {
                         Years Active:
                       </span>
                       <span className="font-bold text-gray-900 text-lg">
-                        90 years
+                        90+ years
                       </span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-gray-100">
@@ -262,7 +262,7 @@ export default function Records() {
                         Total Tournaments:
                       </span>
                       <span className="font-bold text-gray-900 text-lg">
-                        {records?.total_tournaments || 89}
+                        {records?.total_tournaments || "—"}
                       </span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-gray-100">
@@ -290,7 +290,7 @@ export default function Records() {
           <div className="mb-12">
             <div className="mb-6">
               <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold mb-3">
-                2000-2025
+                2000–2025
               </div>
               <h3 className="text-2xl font-bold text-gray-900">
                 Modern Wood Era Records
@@ -321,11 +321,11 @@ export default function Records() {
                       Grant Nottlemann
                     </div>
                     <div className="text-sm text-gray-600">
-                      Great Bend KS Bat Cats
+                      Great Bend Bat Cats
                     </div>
                     <div className="text-xs text-gray-500">(2023)</div>
                     <div className="text-xs text-gray-400 mt-2">
-                      5 GP • 12 H • 16 AB
+                      5 GP · 12 H · 16 AB
                     </div>
                   </div>
                 </CardBody>
@@ -346,7 +346,9 @@ export default function Records() {
                   </div>
                   <div className="text-center space-y-1">
                     <div className="font-bold text-gray-900">Gavin Wehby</div>
-                    <div className="text-sm text-gray-600">Liberal KS</div>
+                    <div className="text-sm text-gray-600">
+                      Liberal Bee Jays
+                    </div>
                     <div className="text-xs text-gray-500">(2015)</div>
                     <div className="text-xs text-gray-400 mt-2">
                       11 games played
@@ -371,7 +373,7 @@ export default function Records() {
                   <div className="text-center space-y-1">
                     <div className="font-bold text-gray-900">Gunnar Glad</div>
                     <div className="text-sm text-gray-600">
-                      Anchorage AK Glacier Pilots
+                      Anchorage Glacier Pilots
                     </div>
                     <div className="text-xs text-gray-500">(2009)</div>
                     <div className="text-xs text-gray-400 mt-2">
@@ -396,7 +398,7 @@ export default function Records() {
                   </div>
                   <div className="text-center space-y-1">
                     <div className="font-bold text-gray-900">Nolan Reimold</div>
-                    <div className="text-sm text-gray-600">Hays KS Larks</div>
+                    <div className="text-sm text-gray-600">Hays Larks</div>
                     <div className="text-xs text-gray-500">(2004)</div>
                   </div>
                 </CardBody>
@@ -417,9 +419,7 @@ export default function Records() {
                   </div>
                   <div className="text-center space-y-1">
                     <div className="font-bold text-gray-900">Tommy Hanson</div>
-                    <div className="text-sm text-gray-600">
-                      Aloha OR Knights
-                    </div>
+                    <div className="text-sm text-gray-600">Aloha Knights</div>
                     <div className="text-xs text-gray-500">(2005)</div>
                   </div>
                 </CardBody>
@@ -442,7 +442,7 @@ export default function Records() {
                   </div>
                   <div className="text-center space-y-1">
                     <div className="font-bold text-gray-900">
-                      San Diego CA Stars
+                      San Diego Stars
                     </div>
                     <div className="text-xs text-gray-500">(2010)</div>
                     <div className="text-xs text-gray-400 mt-2">6 games</div>
@@ -474,7 +474,8 @@ export default function Records() {
                     First Tournament
                   </div>
                   <div className="text-xs text-gray-500">
-                    Duncan Cementers won the inaugural championship
+                    Bismarck Churchills won the inaugural championship, led by
+                    Satchel Paige
                   </div>
                 </CardBody>
               </Card>
@@ -482,13 +483,13 @@ export default function Records() {
               <Card className="text-center hover:shadow-lg transition-shadow border-2 border-yellow-200 bg-yellow-50">
                 <CardBody className="p-8">
                   <div className="text-5xl font-black text-yellow-600 mb-2">
-                    2025
+                    {records?.recent_champions?.[0]?.year || "—"}
                   </div>
                   <div className="text-sm font-semibold text-gray-700 mb-2">
                     Latest Champion
                   </div>
                   <div className="text-xs text-gray-500">
-                    Hutchinson Monarchs
+                    {records?.recent_champions?.[0]?.name || "—"}
                   </div>
                 </CardBody>
               </Card>
@@ -496,13 +497,13 @@ export default function Records() {
               <Card className="text-center hover:shadow-lg transition-shadow border-2 border-gray-200">
                 <CardBody className="p-8">
                   <div className="text-5xl font-black text-green-600 mb-2">
-                    ~45K
+                    {records?.total_tournaments || "—"}
                   </div>
                   <div className="text-sm font-semibold text-gray-700 mb-2">
-                    2024 Attendance
+                    Total Tournaments
                   </div>
                   <div className="text-xs text-gray-500">
-                    Total fans across all games
+                    Held annually in Wichita, KS since 1935
                   </div>
                 </CardBody>
               </Card>
