@@ -483,32 +483,22 @@ export const getPlayerById = async (req, res) => {
 
     // 8) All teams this player has appeared for
     const teamsResult = await pool.query(
-      `WITH team_years AS (
-        SELECT 
-          t.id,
-          t.name,
-          t.city,
-          t.state,
-          b.year AS b_year,
-          p.year AS p_year,
-          COALESCE(b.year, p.year) AS any_year
-        FROM teams t
-        LEFT JOIN batting_stats b ON t.id = b.team_id AND b.player_id = $1
-        LEFT JOIN pitching_stats p ON t.id = p.team_id AND p.player_id = $1
-        WHERE b.player_id = $1 OR p.player_id = $1
-      )
-      SELECT DISTINCT
-        name,
-        city,
-        state,
-        ARRAY_AGG(DISTINCT b_year ORDER BY b_year) 
-          FILTER (WHERE b_year IS NOT NULL) AS batting_years,
-        ARRAY_AGG(DISTINCT p_year ORDER BY p_year) 
-          FILTER (WHERE p_year IS NOT NULL) AS pitching_years,
-        MIN(any_year) AS first_year
-      FROM team_years
-      GROUP BY name, city, state
-      ORDER BY first_year`,
+      `SELECT
+     t.id,
+     t.name,
+     t.city,
+     t.state,
+     ARRAY_AGG(DISTINCT b.year ORDER BY b.year)
+       FILTER (WHERE b.year IS NOT NULL) AS batting_years,
+     ARRAY_AGG(DISTINCT p.year ORDER BY p.year)
+       FILTER (WHERE p.year IS NOT NULL) AS pitching_years,
+     MIN(COALESCE(b.year, p.year)) AS first_year
+   FROM teams t
+   LEFT JOIN batting_stats b ON t.id = b.team_id AND b.player_id = $1
+   LEFT JOIN pitching_stats p ON t.id = p.team_id AND p.player_id = $1
+   WHERE b.player_id = $1 OR p.player_id = $1
+   GROUP BY t.id, t.name, t.city, t.state
+   ORDER BY first_year`,
       [playerId],
     );
 

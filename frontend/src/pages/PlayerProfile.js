@@ -1,6 +1,7 @@
+//frontend/src/pages/PlayerProfile.js
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Trophy, Calendar, TrendingUp } from "lucide-react";
+import { ArrowLeft, Trophy, Calendar, TrendingUp, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import { API } from "../api";
 import { Container } from "../components/common/Container";
@@ -8,6 +9,136 @@ import { Card, CardBody } from "../components/common/Card";
 import { Skeleton } from "../components/common/Skeleton";
 import { BannerError } from "../components/common/BannerError";
 
+// ── Formatters ────────────────────────────────────────────────────────────
+function fmtAvg(v) {
+  const n = parseFloat(v);
+  if (!v || isNaN(n)) return ".000";
+  return n.toFixed(3).replace(/^0\./, ".");
+}
+function fmtEra(v) {
+  const n = parseFloat(v);
+  if (!v || isNaN(n)) return "0.00";
+  return n.toFixed(2);
+}
+
+// ── Career Summary Card ───────────────────────────────────────────────────
+function CareerSummary({ batting, pitching }) {
+  const hasBatCareer = batting?.career && Number(batting.career.seasons) > 0;
+  const hasPitCareer = pitching?.career && Number(pitching.career.seasons) > 0;
+
+  if (!hasBatCareer && !hasPitCareer) return null;
+
+  return (
+    <Card className="mb-8" style={{ border: "2px solid #1D4ED8" }}>
+      <CardBody>
+        <h2
+          className="text-xl font-bold mb-5 flex items-center gap-2"
+          style={{ color: "#1D4ED8" }}
+        >
+          <Star size={20} />
+          Career Summary
+        </h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Batting career */}
+          {hasBatCareer && (
+            <div>
+              <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">
+                ⚾ Batting
+              </h3>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: "Seasons", value: batting.career.seasons },
+                  { label: "Games", value: batting.career.total_gp },
+                  {
+                    label: "AVG",
+                    value: fmtAvg(batting.career.career_avg),
+                    highlight: true,
+                  },
+                  { label: "Hits", value: batting.career.total_h },
+                  { label: "HR", value: batting.career.total_hr },
+                  { label: "RBI", value: batting.career.total_rbi },
+                  { label: "Runs", value: batting.career.total_r },
+                  { label: "SB", value: batting.career.total_sb },
+                  { label: "OBP", value: fmtAvg(batting.career.career_obp) },
+                  { label: "SLG", value: fmtAvg(batting.career.career_slg) },
+                  { label: "AB", value: batting.career.total_ab },
+                  { label: "BB", value: batting.career.total_bb },
+                ].map(({ label, value, highlight }) => (
+                  <div
+                    key={label}
+                    className="text-center p-2 rounded-lg"
+                    style={{ background: "#F8FAFC" }}
+                  >
+                    <div
+                      className="text-lg font-bold"
+                      style={{ color: highlight ? "#1D4ED8" : "#0F172A" }}
+                    >
+                      {value ?? "—"}
+                    </div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wide">
+                      {label}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Pitching career */}
+          {hasPitCareer && (
+            <div>
+              <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">
+                🥎 Pitching
+              </h3>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: "Seasons", value: pitching.career.seasons },
+                  {
+                    label: "Record",
+                    value: `${pitching.career.total_w}-${pitching.career.total_l}`,
+                  },
+                  {
+                    label: "ERA",
+                    value: fmtEra(pitching.career.career_era),
+                    highlight: true,
+                  },
+                  { label: "APP", value: pitching.career.total_app },
+                  { label: "IP", value: pitching.career.total_ip },
+                  { label: "SO", value: pitching.career.total_so },
+                  { label: "SV", value: pitching.career.total_sv },
+                  { label: "BB", value: pitching.career.total_bb },
+                  { label: "H", value: pitching.career.total_h },
+                  { label: "ER", value: pitching.career.total_er },
+                  { label: "CG", value: pitching.career.total_cg },
+                  { label: "SHO", value: pitching.career.total_sho },
+                ].map(({ label, value, highlight }) => (
+                  <div
+                    key={label}
+                    className="text-center p-2 rounded-lg"
+                    style={{ background: "#F0FDF4" }}
+                  >
+                    <div
+                      className="text-lg font-bold"
+                      style={{ color: highlight ? "#059669" : "#0F172A" }}
+                    >
+                      {value ?? "—"}
+                    </div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wide">
+                      {label}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </CardBody>
+    </Card>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────
 export default function PlayerProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -32,9 +163,7 @@ export default function PlayerProfile() {
       }
     };
 
-    if (id) {
-      fetchPlayer();
-    }
+    if (id) fetchPlayer();
   }, [id]);
 
   function getTeamLink(stat) {
@@ -48,6 +177,7 @@ export default function PlayerProfile() {
     return (
       <Container className="py-12">
         <Skeleton className="h-12 w-64 mb-8" />
+        <Skeleton className="h-48 w-full mb-6" />
         <Skeleton className="h-96 w-full" />
       </Container>
     );
@@ -73,6 +203,20 @@ export default function PlayerProfile() {
   const hasBatting = player.batting?.stats?.length > 0;
   const hasPitching = player.pitching?.stats?.length > 0;
 
+  // Compute year range
+  const allYears = [
+    ...(player.batting?.stats?.map((s) => s.year) || []),
+    ...(player.pitching?.stats?.map((s) => s.year) || []),
+  ].filter(Boolean);
+  const minYear = allYears.length ? Math.min(...allYears) : null;
+  const maxYear = allYears.length ? Math.max(...allYears) : null;
+  const yearRange =
+    minYear && maxYear
+      ? minYear === maxYear
+        ? String(minYear)
+        : `${minYear} – ${maxYear}`
+      : null;
+
   return (
     <Container className="py-12">
       {/* Back Button */}
@@ -86,7 +230,7 @@ export default function PlayerProfile() {
 
       {/* Player Header */}
       <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
+        <div className="flex items-center gap-3 mb-2 flex-wrap">
           <h1 className="text-4xl font-bold text-gray-900">
             {player.player.fullName}
           </h1>
@@ -97,12 +241,25 @@ export default function PlayerProfile() {
             </div>
           )}
         </div>
-        {player.player.mlbTeam && (
-          <p className="text-lg text-gray-600">
-            MLB Alumni: {player.player.mlbTeam}
-          </p>
-        )}
+        <div className="flex items-center gap-4 text-gray-500 flex-wrap">
+          {player.player.mlbTeam && (
+            <span className="text-lg">MLB Alumni: {player.player.mlbTeam}</span>
+          )}
+          {yearRange && (
+            <span className="text-sm bg-gray-100 px-3 py-1 rounded-full">
+              {yearRange}
+            </span>
+          )}
+          {player.teams?.length > 0 && (
+            <span className="text-sm bg-gray-100 px-3 py-1 rounded-full">
+              {player.teams.length} team{player.teams.length !== 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
       </div>
+
+      {/* ── Career Summary (prominent, at top) ── */}
+      <CareerSummary batting={player.batting} pitching={player.pitching} />
 
       {/* Teams Played For */}
       {player.teams && player.teams.length > 0 && (
@@ -114,7 +271,7 @@ export default function PlayerProfile() {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {player.teams.map((team, idx) => {
-                const allYears = [
+                const allTeamYears = [
                   ...(team.batting_years || []),
                   ...(team.pitching_years || []),
                 ]
@@ -129,7 +286,7 @@ export default function PlayerProfile() {
                         ? `/teams/${team.id}`
                         : `/teams/${encodeURIComponent(team.name)}`
                     }
-                    className="block border border-gray-200 rounded-lg p-4 hover:border-blue-400 transition-colors text-inherit no-underline"
+                    className="block border border-gray-200 rounded-lg p-4 hover:border-blue-400 transition-colors"
                     style={{ textDecoration: "none", color: "inherit" }}
                   >
                     <h3 className="font-bold text-gray-900 hover:text-blue-600 transition-colors">
@@ -141,7 +298,7 @@ export default function PlayerProfile() {
                       </p>
                     )}
                     <p className="text-sm text-blue-600 mt-2">
-                      {allYears.join(", ")}
+                      {allTeamYears.join(", ")}
                     </p>
                   </Link>
                 );
@@ -159,86 +316,6 @@ export default function PlayerProfile() {
               <TrendingUp size={24} />
               Batting Statistics
             </h2>
-
-            {/* Career Totals */}
-            {player.batting.career &&
-              Number(player.batting.career.seasons) > 0 && (
-                <div className="mb-6 p-4 bg-blue-50 rounded-lg">
-                  <h3 className="font-bold text-gray-900 mb-3">
-                    Career Totals
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-600">Seasons:</span>
-                      <span className="ml-2 font-bold">
-                        {player.batting.career.seasons}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Teams:</span>
-                      <span className="ml-2 font-bold">
-                        {player.batting.career.teams_count}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Games:</span>
-                      <span className="ml-2 font-bold">
-                        {player.batting.career.total_gp}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">AVG:</span>
-                      <span className="ml-2 font-bold">
-                        {player.batting.career.career_avg || ".000"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Hits:</span>
-                      <span className="ml-2 font-bold">
-                        {player.batting.career.total_h}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">HR:</span>
-                      <span className="ml-2 font-bold">
-                        {player.batting.career.total_hr}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">RBI:</span>
-                      <span className="ml-2 font-bold">
-                        {player.batting.career.total_rbi}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Runs:</span>
-                      <span className="ml-2 font-bold">
-                        {player.batting.career.total_r}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">SB:</span>
-                      <span className="ml-2 font-bold">
-                        {player.batting.career.total_sb}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">OBP:</span>
-                      <span className="ml-2 font-bold">
-                        {player.batting.career.career_obp || ".000"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">SLG:</span>
-                      <span className="ml-2 font-bold">
-                        {player.batting.career.career_slg || ".000"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-            {/* Year by Year */}
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -261,7 +338,11 @@ export default function PlayerProfile() {
                     ].map((h) => (
                       <th
                         key={h}
-                        className={`px-4 py-3 text-xs font-medium text-gray-500 uppercase ${h === "Year" || h === "Team" ? "text-left" : "text-center"}`}
+                        className={`px-4 py-3 text-xs font-medium text-gray-500 uppercase ${
+                          h === "Year" || h === "Team"
+                            ? "text-left"
+                            : "text-center"
+                        }`}
                       >
                         {h}
                       </th>
@@ -289,7 +370,7 @@ export default function PlayerProfile() {
                         {stat.ab || 0}
                       </td>
                       <td className="px-4 py-3 text-sm text-center font-semibold text-blue-600">
-                        {stat.avg || ".000"}
+                        {fmtAvg(stat.avg)}
                       </td>
                       <td className="px-4 py-3 text-sm text-center">
                         {stat.h || 0}
@@ -335,69 +416,6 @@ export default function PlayerProfile() {
               <TrendingUp size={24} />
               Pitching Statistics
             </h2>
-
-            {/* Career Totals */}
-            {player.pitching.career &&
-              Number(player.pitching.career.seasons) > 0 && (
-                <div className="mb-6 p-4 bg-green-50 rounded-lg">
-                  <h3 className="font-bold text-gray-900 mb-3">
-                    Career Totals
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-600">Seasons:</span>
-                      <span className="ml-2 font-bold">
-                        {player.pitching.career.seasons}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Teams:</span>
-                      <span className="ml-2 font-bold">
-                        {player.pitching.career.teams_count}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Record:</span>
-                      <span className="ml-2 font-bold">
-                        {player.pitching.career.total_w}-
-                        {player.pitching.career.total_l}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">ERA:</span>
-                      <span className="ml-2 font-bold">
-                        {player.pitching.career.career_era || "0.00"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">APP:</span>
-                      <span className="ml-2 font-bold">
-                        {player.pitching.career.total_app}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">IP:</span>
-                      <span className="ml-2 font-bold">
-                        {player.pitching.career.total_ip}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">SO:</span>
-                      <span className="ml-2 font-bold">
-                        {player.pitching.career.total_so}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">SV:</span>
-                      <span className="ml-2 font-bold">
-                        {player.pitching.career.total_sv}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-            {/* Year by Year */}
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -420,7 +438,11 @@ export default function PlayerProfile() {
                     ].map((h) => (
                       <th
                         key={h}
-                        className={`px-4 py-3 text-xs font-medium text-gray-500 uppercase ${h === "Year" || h === "Team" ? "text-left" : "text-center"}`}
+                        className={`px-4 py-3 text-xs font-medium text-gray-500 uppercase ${
+                          h === "Year" || h === "Team"
+                            ? "text-left"
+                            : "text-center"
+                        }`}
                       >
                         {h}
                       </th>
@@ -448,7 +470,7 @@ export default function PlayerProfile() {
                         {stat.l || 0}
                       </td>
                       <td className="px-4 py-3 text-sm text-center font-semibold text-blue-600">
-                        {stat.era || "0.00"}
+                        {fmtEra(stat.era)}
                       </td>
                       <td className="px-4 py-3 text-sm text-center">
                         {stat.app || 0}
