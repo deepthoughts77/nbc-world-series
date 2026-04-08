@@ -515,13 +515,24 @@ export const getPlayerById = async (req, res) => {
         : null;
 
     // 9) Final JSON response
+    // 9) Check Hall of Fame
+    const hofResult = await pool.query(
+      `SELECT induction_year, category FROM hall_of_fame 
+       WHERE player_id = $1 LIMIT 1`,
+      [playerId],
+    );
+    const hofRow = hofResult.rows[0] || null;
+
+    // 10) Final JSON response
     res.json({
       player: {
         id: playerId,
         firstName,
         lastName,
         fullName: playerName,
-        isHallOfFame: false,
+        isHallOfFame: !!hofRow,
+        hofYear: hofRow?.induction_year || null,
+        hofCategory: hofRow?.category || null,
         mlbTeam: null,
       },
       batting: {

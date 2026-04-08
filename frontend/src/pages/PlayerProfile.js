@@ -237,7 +237,8 @@ export default function PlayerProfile() {
           {player.player.isHallOfFame && (
             <div className="flex items-center gap-1 bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-semibold">
               <Trophy size={16} />
-              Hall of Fame
+              Hall of Fame{" "}
+              {player.player.hofYear ? `(${player.player.hofYear})` : ""}
             </div>
           )}
         </div>
