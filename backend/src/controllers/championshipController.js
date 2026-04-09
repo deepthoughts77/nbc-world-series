@@ -105,10 +105,6 @@ export const getChampionshipByYear = async (req, res) => {
  * Query:
  *   ?team=runner_up  -> runner-up only
  *   default -> champion + runner-up
- *
- * NOTE:
- * Your tables championship_final_batting / championship_final_pitching are keyed by YEAR
- * (they have columns: id, year, team_id, ...). There is NO final_id column.
  */
 export const getChampionshipFinalStats = async (req, res) => {
   try {
@@ -158,36 +154,31 @@ export const getChampionshipFinalStats = async (req, res) => {
         ? [champ.runner_up_team_id]
         : [champ.champion_team_id, champ.runner_up_team_id];
 
-    // Batting: filter by YEAR (not final_id)
+    // Batting: use player_id column directly
     const battingRes = await pool.query(
       `SELECT b.team_id,
           t.name AS team_name,
           b.player_name,
-          pl.id AS player_id,
+          b.player_id,
           b.ab, b.r, b.h, b.rbi, b.bb, b.so, b.po, b.a, b.lob
-   FROM championship_final_batting b
-   LEFT JOIN teams t ON t.id = b.team_id
-   LEFT JOIN players pl
-     ON LOWER(TRIM(pl.first_name || ' ' || pl.last_name)) = LOWER(TRIM(b.player_name))
-   WHERE b.year = $1 AND b.team_id = ANY($2::int[])
-   ORDER BY t.name, b.player_name`,
-
+       FROM championship_final_batting b
+       LEFT JOIN teams t ON t.id = b.team_id
+       WHERE b.year = $1 AND b.team_id = ANY($2::int[])
+       ORDER BY t.name, b.player_name`,
       [yearInt, teamIds],
     );
 
-    // Pitching: filter by YEAR (not final_id)
+    // Pitching: use player_id column directly
     const pitchingRes = await pool.query(
       `SELECT p.team_id,
           t.name AS team_name,
           p.player_name,
-          pl.id AS player_id,
+          p.player_id,
           p.ip, p.h, p.r, p.er, p.bb, p.so
-   FROM championship_final_pitching p
-   LEFT JOIN teams t ON t.id = p.team_id
-   LEFT JOIN players pl
-     ON LOWER(TRIM(pl.first_name || ' ' || pl.last_name)) = LOWER(TRIM(p.player_name))
-   WHERE p.year = $1 AND p.team_id = ANY($2::int[])
-   ORDER BY t.name, p.player_name`,
+       FROM championship_final_pitching p
+       LEFT JOIN teams t ON t.id = p.team_id
+       WHERE p.year = $1 AND p.team_id = ANY($2::int[])
+       ORDER BY t.name, p.player_name`,
       [yearInt, teamIds],
     );
 
@@ -242,13 +233,6 @@ export const getChampionshipFinalStats = async (req, res) => {
 /**
  * @description Get MVP stats
  * @route GET /api/championships/:year/mvp
- *
- * Behavior:
- * 1) If championship_mvp_stats.stats_snapshot exists -> return it
- * 2) Else try to locate MVP in final batting/pitching tables
- *
- * NOTE:
- * Final tables are keyed by YEAR, so we search by b.year / p.year.
  */
 export const getChampionshipMvpStats = async (req, res) => {
   try {
