@@ -720,6 +720,9 @@ export const naturalLanguageSearch = async (req, res) => {
     if (
       /\b(most\s+champ\w*|who\s+(has|have)\s+won\s+the\s+most|team\s+with\s+most|most\s+titles?)\b/i.test(
         searchQuery,
+      ) &&
+      !/\b(streak|consecutive|in\s+a\s+row|back.?to.?back|winning\s+streak)\b/i.test(
+        searchQuery,
       )
     ) {
       const result = await pool.query(
