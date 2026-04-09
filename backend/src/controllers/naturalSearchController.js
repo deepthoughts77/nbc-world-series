@@ -1081,29 +1081,83 @@ export const naturalLanguageSearch = async (req, res) => {
       return res.json({ ...formatted, queryType: intent.type });
     }
 
-    // ── FINAL FALLBACK — also checks aliases ──────────────────────────────
-    const finalFallback = await pool.query(
-      `SELECT t.id AS team_id, t.name AS team_name,t.city,t.state,COUNT(c.id) AS titles
-       FROM teams t
-       LEFT JOIN championships c ON c.champion_team_id=t.id
-       WHERE t.name ILIKE $1
-         OR t.city ILIKE $1
-         OR EXISTS (
-           SELECT 1 FROM team_aliases ta
-           WHERE ta.team_id = t.id AND ta.alias ILIKE $1
-         )
-       GROUP BY t.id,t.name,t.city,t.state
-       ORDER BY titles DESC LIMIT 10`,
-      [`%${searchQuery}%`],
-    );
+    // ── FINAL FALLBACK — search players AND teams by name ─────────────────
+    const term = `%${searchQuery.toLowerCase()}%`;
+
+    const [playerFallback, teamFallback] = await Promise.all([
+      // Case-insensitive player name search across batting + pitching
+      pool.query(
+        `SELECT DISTINCT
+           p.id AS player_id,
+           p.first_name || ' ' || p.last_name AS player_name,
+           COALESCE(t1.name, t2.name) AS team_name,
+           COALESCE(t1.id, t2.id) AS team_id,
+           COALESCE(bs.year, ps.year) AS year,
+           bs.avg, bs.hr, bs.rbi, bs.h, bs.ab, bs.gp,
+           ps.era, ps.ip, ps.w, ps.l, ps.so, ps.sv, ps.app
+         FROM players p
+         LEFT JOIN batting_stats bs ON bs.player_id = p.id
+         LEFT JOIN pitching_stats ps ON ps.player_id = p.id
+         LEFT JOIN teams t1 ON t1.id = bs.team_id
+         LEFT JOIN teams t2 ON t2.id = ps.team_id
+         WHERE LOWER(p.first_name || ' ' || p.last_name) ILIKE $1
+           AND (bs.player_id IS NOT NULL OR ps.player_id IS NOT NULL)
+         ORDER BY COALESCE(bs.year, ps.year) DESC NULLS LAST
+         LIMIT 10`,
+        [term],
+      ),
+      // Team name / city search
+      pool.query(
+        `SELECT t.id AS team_id, t.name AS team_name, t.city, t.state,
+           COUNT(c.id) AS titles
+         FROM teams t
+         LEFT JOIN championships c ON c.champion_team_id = t.id
+         WHERE t.name ILIKE $1 OR t.city ILIKE $1
+           OR EXISTS (
+             SELECT 1 FROM team_aliases ta
+             WHERE ta.team_id = t.id AND ta.alias ILIKE $1
+           )
+         GROUP BY t.id, t.name, t.city, t.state
+         ORDER BY titles DESC LIMIT 5`,
+        [`%${searchQuery}%`],
+      ),
+    ]);
+
+    // Player match — show their stats
+    if (playerFallback.rows.length > 0) {
+      const firstName = playerFallback.rows[0].player_name;
+      const hasBatting = playerFallback.rows.some((r) => r.avg != null);
+      return res.json({
+        success: true,
+        answer: `Found **${playerFallback.rows.length}** result${playerFallback.rows.length !== 1 ? "s" : ""} for **${firstName}**.`,
+        results: playerFallback.rows,
+        queryType: hasBatting ? "batting_stat" : "pitching_stat",
+        intent: {
+          type: hasBatting ? "batting_stat" : "pitching_stat",
+          stat: hasBatting ? "avg" : "era",
+        },
+        count: playerFallback.rows.length,
+      });
+    }
+
+    // Team match
+    if (teamFallback.rows.length > 0) {
+      return res.json({
+        success: true,
+        answer: `Here are teams matching "${searchQuery}".`,
+        results: teamFallback.rows,
+        queryType: "fallback",
+        count: teamFallback.rows.length,
+      });
+    }
+
+    // Nothing found — helpful message, no MVP suggestion
     return res.json({
       success: true,
-      answer: finalFallback.rows.length
-        ? `I couldn't find a specific answer, but here are some teams matching "${searchQuery}".`
-        : `No results found for "${searchQuery}". Try asking about "Most MVPs" or a specific team.`,
-      results: finalFallback.rows,
+      answer: `No results found for "${searchQuery}". Try a player name, team name, or a question like "Who won in 2024?"`,
+      results: [],
       queryType: "fallback",
-      count: finalFallback.rows.length,
+      count: 0,
     });
   } catch (error) {
     console.error("Natural language search error:", error);
