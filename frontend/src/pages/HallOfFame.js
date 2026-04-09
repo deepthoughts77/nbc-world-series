@@ -1,5 +1,6 @@
 //frontend/src/pages/HallOfFame.js
 import React, { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Trophy,
   Users,
@@ -35,6 +36,7 @@ function SortIcon({ active, dir }) {
 }
 
 export default function HallOfFame() {
+  const navigate = useNavigate();
   const { members, loading, err } = useHallOfFame();
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [search, setSearch] = useState("");
@@ -285,11 +287,20 @@ export default function HallOfFame() {
                     const cat = m.category || "Contributor";
                     const meta = getCatMeta(cat);
                     const isEven = i % 2 === 0;
+                    const isClickable = !!m.player_id;
 
                     return (
                       <tr
                         key={m.id ?? `${name}-${i}`}
-                        style={isEven ? s.trEven : s.trOdd}
+                        style={{
+                          ...(isEven ? s.trEven : s.trOdd),
+                          cursor: isClickable ? "pointer" : "default",
+                        }}
+                        onClick={
+                          isClickable
+                            ? () => navigate(`/players/${m.player_id}`)
+                            : undefined
+                        }
                         onMouseEnter={(e) =>
                           (e.currentTarget.style.background = "#FEF3C7")
                         }
@@ -308,7 +319,14 @@ export default function HallOfFame() {
                               flexShrink: 0,
                             }}
                           />
-                          {name}
+                          {isClickable ? (
+                            <span style={s.nameLink}>{name}</span>
+                          ) : (
+                            <span>{name}</span>
+                          )}
+                          {isClickable && (
+                            <span style={s.profileHint}>View profile →</span>
+                          )}
                         </td>
 
                         <td style={s.td}>
@@ -335,7 +353,10 @@ export default function HallOfFame() {
 
           {!loading && rows.length > 0 && (
             <div style={s.footNote}>
-              NBC Hall of Fame · {stats.total} inductees · 1991–present
+              NBC Hall of Fame · {stats.total} inductees · 1991–present ·{" "}
+              <span style={{ color: "#1D4ED8" }}>
+                {rows.filter((m) => m.player_id).length} with player profiles
+              </span>
             </div>
           )}
         </div>
@@ -547,18 +568,12 @@ const s = {
     borderBottom: "1px solid #F3F4F6",
     verticalAlign: "middle",
   },
-  tdNum: {
-    color: "#D1D5DB",
-    fontSize: 11,
-    textAlign: "right",
-    fontVariantNumeric: "tabular-nums",
-    fontFamily: "'IBM Plex Mono', monospace",
-  },
   tdName: {
     color: "#111827",
     fontWeight: 600,
     display: "flex",
     alignItems: "center",
+    gap: 0,
   },
   tdYear: {
     textAlign: "right",
@@ -575,6 +590,16 @@ const s = {
     letterSpacing: "0.08em",
     padding: "3px 8px",
     borderRadius: 4,
+  },
+  nameLink: {
+    color: "#1D4ED8",
+    fontWeight: 600,
+  },
+  profileHint: {
+    fontSize: 10,
+    color: "#93C5FD",
+    marginLeft: 8,
+    fontWeight: 500,
   },
   emptyCell: {
     padding: "48px 16px",

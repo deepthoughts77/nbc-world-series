@@ -1,3 +1,4 @@
+//frontend/src/hooks/useHallOfFame.js
 import { useState, useEffect } from "react";
 import { API } from "../api/apiClient";
 import { pickArray } from "../utils/data";
