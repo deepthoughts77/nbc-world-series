@@ -8,6 +8,7 @@ import {
   Award,
   ChevronUp,
   ChevronDown,
+  ExternalLink,
 } from "lucide-react";
 import { useHallOfFame } from "../hooks/useHallOfFame";
 import { Container } from "../components/common/Container";
@@ -85,6 +86,8 @@ export default function HallOfFame() {
     });
     return out;
   }, [members, categoryFilter, search, sortCol, sortDir]);
+
+  const bioCount = rows.filter((m) => m.bio_url).length;
 
   return (
     <div style={s.page}>
@@ -285,11 +288,25 @@ export default function HallOfFame() {
                     const cat = m.category || "Contributor";
                     const meta = getCatMeta(cat);
                     const isEven = i % 2 === 0;
+                    const hasBio = !!m.bio_url;
 
                     return (
                       <tr
                         key={m.id ?? `${name}-${i}`}
-                        style={isEven ? s.trEven : s.trOdd}
+                        style={{
+                          ...(isEven ? s.trEven : s.trOdd),
+                          cursor: hasBio ? "pointer" : "default",
+                        }}
+                        onClick={
+                          hasBio
+                            ? () =>
+                                window.open(
+                                  m.bio_url,
+                                  "_blank",
+                                  "noopener,noreferrer",
+                                )
+                            : undefined
+                        }
                         onMouseEnter={(e) =>
                           (e.currentTarget.style.background = "#FEF3C7")
                         }
@@ -308,7 +325,22 @@ export default function HallOfFame() {
                               flexShrink: 0,
                             }}
                           />
-                          {name}
+                          {hasBio ? (
+                            <>
+                              <span style={s.nameLink}>{name}</span>
+                              <ExternalLink
+                                size={11}
+                                style={{
+                                  color: "#D97706",
+                                  marginLeft: 6,
+                                  flexShrink: 0,
+                                }}
+                              />
+                              <span style={s.bioHint}>NBC Bio</span>
+                            </>
+                          ) : (
+                            <span>{name}</span>
+                          )}
                         </td>
 
                         <td style={s.td}>
@@ -336,6 +368,11 @@ export default function HallOfFame() {
           {!loading && rows.length > 0 && (
             <div style={s.footNote}>
               NBC Hall of Fame · {stats.total} inductees · 1991–present
+              {bioCount > 0 && (
+                <span style={{ color: "#D97706", marginLeft: 8 }}>
+                  · {bioCount} with NBC bios
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -352,8 +389,6 @@ const s = {
     fontFamily: "'IBM Plex Sans', 'Segoe UI', sans-serif",
     color: "#111827",
   },
-
-  // Header
   pageHeader: {
     background: "#1F2937",
     borderBottom: "4px solid #D97706",
@@ -383,13 +418,10 @@ const s = {
     lineHeight: 1.7,
     margin: 0,
   },
-
   body: {
     paddingTop: 32,
     paddingBottom: 64,
   },
-
-  // Stat rail
   statRail: {
     display: "grid",
     gridTemplateColumns: "repeat(4, 1fr)",
@@ -426,8 +458,6 @@ const s = {
     color: "#6B7280",
     fontWeight: 600,
   },
-
-  // Toolbar
   toolbar: {
     display: "flex",
     flexWrap: "wrap",
@@ -508,8 +538,6 @@ const s = {
     color: "#9CA3AF",
     whiteSpace: "nowrap",
   },
-
-  // Table
   tableWrap: {
     border: "1px solid #E5E7EB",
     borderRadius: 8,
@@ -547,18 +575,12 @@ const s = {
     borderBottom: "1px solid #F3F4F6",
     verticalAlign: "middle",
   },
-  tdNum: {
-    color: "#D1D5DB",
-    fontSize: 11,
-    textAlign: "right",
-    fontVariantNumeric: "tabular-nums",
-    fontFamily: "'IBM Plex Mono', monospace",
-  },
   tdName: {
     color: "#111827",
     fontWeight: 600,
     display: "flex",
     alignItems: "center",
+    gap: 0,
   },
   tdYear: {
     textAlign: "right",
@@ -575,6 +597,17 @@ const s = {
     letterSpacing: "0.08em",
     padding: "3px 8px",
     borderRadius: 4,
+  },
+  nameLink: {
+    color: "#1D4ED8",
+    fontWeight: 600,
+  },
+  bioHint: {
+    fontSize: 10,
+    color: "#D97706",
+    marginLeft: 6,
+    fontWeight: 600,
+    letterSpacing: "0.04em",
   },
   emptyCell: {
     padding: "48px 16px",

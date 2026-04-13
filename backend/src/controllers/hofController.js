@@ -1,3 +1,4 @@
+// backend/src/controllers/hofController.js
 import { pool } from "../db.js";
 
 /**
@@ -20,7 +21,7 @@ export const getAllHallOfFameMembers = async (req, res) => {
 
     const countSql = `SELECT COUNT(*)::int AS count FROM hall_of_fame ${where}`;
     const listSql = `
-      SELECT id, inductee_name, induction_year, player_id, category, bio
+      SELECT id, inductee_name, induction_year, player_id, category, bio, bio_url
       FROM hall_of_fame
       ${where}
       ORDER BY induction_year DESC, inductee_name
@@ -59,7 +60,7 @@ export const getAllHallOfFameMembers = async (req, res) => {
 export const getHallOfFameMemberById = async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT id, inductee_name, induction_year, player_id, category, bio
+      `SELECT id, inductee_name, induction_year, player_id, category, bio, bio_url
        FROM hall_of_fame
        WHERE id = $1`,
       [req.params.id],
