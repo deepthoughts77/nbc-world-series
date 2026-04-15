@@ -1,4 +1,3 @@
-// backend/src/controllers/hofController.js
 import { pool } from "../db.js";
 
 /**
@@ -8,7 +7,7 @@ import { pool } from "../db.js";
 export const getAllHallOfFameMembers = async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit || "200", 10), 500);
-    const offset = parseInt(req.query.offset || "0", 10);
+    const offset = Math.max(parseInt(req.query.offset || "0", 10), 0);
     const q = (req.query.q || "").trim();
 
     let where = "";
@@ -21,10 +20,17 @@ export const getAllHallOfFameMembers = async (req, res) => {
 
     const countSql = `SELECT COUNT(*)::int AS count FROM hall_of_fame ${where}`;
     const listSql = `
-      SELECT id, inductee_name, induction_year, player_id, category, bio, bio_url
+      SELECT
+        id,
+        inductee_name,
+        induction_year,
+        player_id,
+        category,
+        COALESCE(bio, '') AS bio,
+        NULLIF(TRIM(COALESCE(bio_url, '')), '') AS bio_url
       FROM hall_of_fame
       ${where}
-      ORDER BY induction_year DESC, inductee_name
+      ORDER BY induction_year DESC NULLS LAST, inductee_name ASC
       LIMIT $${params.length + 1} OFFSET $${params.length + 2}
     `;
 
@@ -60,15 +66,25 @@ export const getAllHallOfFameMembers = async (req, res) => {
 export const getHallOfFameMemberById = async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT id, inductee_name, induction_year, player_id, category, bio, bio_url
-       FROM hall_of_fame
-       WHERE id = $1`,
+      `
+      SELECT
+        id,
+        inductee_name,
+        induction_year,
+        player_id,
+        category,
+        COALESCE(bio, '') AS bio,
+        NULLIF(TRIM(COALESCE(bio_url, '')), '') AS bio_url
+      FROM hall_of_fame
+      WHERE id = $1
+      `,
       [req.params.id],
     );
 
     if (rows.length === 0) {
       return res.status(404).json({ success: false, error: "Not found" });
     }
+
     res.json({ success: true, data: rows[0] });
   } catch (err) {
     console.error("HOF detail error:", err);

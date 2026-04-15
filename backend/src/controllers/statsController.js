@@ -1,4 +1,3 @@
-// backend/src/controllers/statsController.js
 import { pool } from "../db.js";
 
 /* ====================== OVERVIEW SUMMARY ====================== */
@@ -38,10 +37,7 @@ export const getStatsOverview = async (_req, res) => {
 };
 
 /* ====================== PLAYER (BATTING) STATS ====================== */
-/**
- * If year === 1966 → use legacy player_stats table.
- * Otherwise → use batting_stats + players + teams.
- */
+
 export const getPlayerStats = async (req, res) => {
   try {
     const { year, team } = req.query;
@@ -69,20 +65,8 @@ export const getPlayerStats = async (req, res) => {
 
       const sql = `
         SELECT
-          id,
-          year,
-          team_name,
-          player_name,
-          g,
-          ab,
-          r,
-          h,
-          "2b",
-          "3b",
-          hr,
-          sb,
-          sh,
-          rbi
+          id, year, team_name, player_name,
+          g, ab, r, h, "2b", "3b", hr, sb, sh, rbi
         FROM public.player_stats
         WHERE year = $1
         ${teamFilterSql}
@@ -124,29 +108,30 @@ export const getPlayerStats = async (req, res) => {
       return res.json(formatted);
     }
 
-    /* ---------- B) modern years → batting_stats path ---------- */
+    /* ---------- B) modern + historical years → batting_stats ---------- */
 
     const conditions = [];
     const params = [];
 
-    if (year) {
-      params.push(parseInt(year, 10));
-      conditions.push(`b.year = $${params.length}`);
-    }
+    params.push(y);
+    conditions.push(`b.year = $${params.length}`);
 
     if (team) {
       params.push(`%${team.toLowerCase()}%`);
-      conditions.push(`LOWER(t.name) LIKE $${params.length}`);
+      conditions.push(
+        `(LOWER(COALESCE(t.name, tc.full_name, b.team_code)) LIKE $${params.length})`,
+      );
     }
 
-    const whereSql =
-      conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    const whereSql = `WHERE ${conditions.join(" AND ")}`;
 
     const sql = `
       SELECT
         b.id,
         b.year,
-        t.name AS team_name,
+        COALESCE(t.name, tc.full_name, b.team_code) AS team_name,
+        t.city AS team_city,
+        t.state AS team_state,
         p.first_name,
         p.last_name,
         b.jersey_num,
@@ -178,9 +163,10 @@ export const getPlayerStats = async (req, res) => {
         b.fld
       FROM public.batting_stats AS b
       JOIN public.players AS p ON p.id = b.player_id
-      JOIN public.teams   AS t ON t.id = b.team_id
+      LEFT JOIN public.teams AS t ON t.id = b.team_id
+      LEFT JOIN public.team_codes AS tc ON tc.code = b.team_code
       ${whereSql}
-      ORDER BY b.year DESC, t.name, p.last_name, p.first_name
+      ORDER BY b.year DESC, team_name NULLS LAST, p.last_name, p.first_name
     `;
 
     const { rows } = await pool.query(sql, params);
@@ -226,18 +212,11 @@ export const getPlayerStats = async (req, res) => {
 
     return res.json(formatted);
   } catch (err) {
-    console.error(" /api/player-stats error:", err);
+    console.error("/api/player-stats error:", err);
     res.status(500).json({ error: "Failed to fetch player stats" });
   }
 };
 
-/**
- * Years for the Player Stats dropdown.
- * Union of:
- *  - legacy player_stats
- *  - batting_stats
- *  - pitching_stats (in case of extra years)
- */
 export const getPlayerStatsYears = async (_req, res) => {
   try {
     const years = new Set();
@@ -251,7 +230,7 @@ export const getPlayerStatsYears = async (_req, res) => {
 
     try {
       const r1 = await pool.query(
-        `SELECT DISTINCT year FROM public.player_stats`
+        `SELECT DISTINCT year FROM public.player_stats`,
       );
       collect(r1.rows);
     } catch (e) {
@@ -260,7 +239,7 @@ export const getPlayerStatsYears = async (_req, res) => {
 
     try {
       const r2 = await pool.query(
-        `SELECT DISTINCT year FROM public.batting_stats`
+        `SELECT DISTINCT year FROM public.batting_stats`,
       );
       collect(r2.rows);
     } catch (e) {
@@ -269,7 +248,7 @@ export const getPlayerStatsYears = async (_req, res) => {
 
     try {
       const r3 = await pool.query(
-        `SELECT DISTINCT year FROM public.pitching_stats`
+        `SELECT DISTINCT year FROM public.pitching_stats`,
       );
       collect(r3.rows);
     } catch (e) {
@@ -279,7 +258,7 @@ export const getPlayerStatsYears = async (_req, res) => {
     const sorted = Array.from(years).sort((a, b) => b - a);
     res.json(sorted);
   } catch (err) {
-    console.error(" /api/player-stats/years error:", err);
+    console.error("/api/player-stats/years error:", err);
     res.status(500).json({ error: "Failed to fetch years" });
   }
 };
@@ -299,7 +278,9 @@ export const getPitchingStats = async (req, res) => {
 
     if (team) {
       params.push(`%${team.toLowerCase()}%`);
-      conditions.push(`LOWER(t.name) LIKE $${params.length}`);
+      conditions.push(
+        `(LOWER(COALESCE(t.name, tc.full_name, ps.team_code)) LIKE $${params.length})`,
+      );
     }
 
     const whereSql =
@@ -309,7 +290,9 @@ export const getPitchingStats = async (req, res) => {
       SELECT
         ps.id,
         ps.year,
-        t.name AS team_name,
+        COALESCE(t.name, tc.full_name, ps.team_code) AS team_name,
+        t.city AS team_city,
+        t.state AS team_state,
         p.first_name,
         p.last_name,
         ps.jersey_num,
@@ -340,9 +323,10 @@ export const getPitchingStats = async (req, res) => {
         ps.sha
       FROM public.pitching_stats AS ps
       JOIN public.players AS p ON p.id = ps.player_id
-      JOIN public.teams   AS t ON t.id = ps.team_id
+      LEFT JOIN public.teams AS t ON t.id = ps.team_id
+      LEFT JOIN public.team_codes AS tc ON tc.code = ps.team_code
       ${whereSql}
-      ORDER BY ps.year DESC, t.name, p.last_name, p.first_name
+      ORDER BY ps.year DESC, team_name NULLS LAST, p.last_name, p.first_name
     `;
 
     const { rows } = await pool.query(sql, params);
@@ -383,19 +367,7 @@ export const getPitchingStats = async (req, res) => {
 
     res.json(formatted);
   } catch (err) {
-    console.error(" /api/pitching-stats error:", err);
+    console.error("/api/pitching-stats error:", err);
     res.status(500).json({ error: "Failed to fetch pitching stats" });
-  }
-};
-
-export const getPitchingStatsYears = async (_req, res) => {
-  try {
-    const { rows } = await pool.query(
-      `SELECT DISTINCT year FROM public.pitching_stats ORDER BY year DESC`
-    );
-    res.json(rows.map((r) => r.year));
-  } catch (err) {
-    console.error(" /api/pitching-stats/years error:", err);
-    res.status(500).json({ error: "Failed to fetch years" });
   }
 };
