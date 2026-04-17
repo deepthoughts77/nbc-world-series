@@ -21,6 +21,23 @@ function fmtEra(v) {
   return n.toFixed(2);
 }
 
+// ── Team link helpers ─────────────────────────────────────────────────────
+// Real teams (team_id set) → /teams/:id
+// Historical code-only teams → /player-stats?team=CODE
+// In future, aliases will map codes to real team IDs without breaking anything
+function getTeamLink(stat) {
+  if (stat?.team_id) return `/teams/${stat.team_id}`;
+  if (stat?.team_name)
+    return `/player-stats?team=${encodeURIComponent(stat.team_name)}`;
+  return "/player-stats";
+}
+
+function getTeamCardLink(team) {
+  if (team?.id) return `/teams/${team.id}`;
+  if (team?.name) return `/player-stats?team=${encodeURIComponent(team.name)}`;
+  return "/player-stats";
+}
+
 // ── Career Summary Card ───────────────────────────────────────────────────
 function CareerSummary({ batting, pitching }) {
   const hasBatCareer = batting?.career && Number(batting.career.seasons) > 0;
@@ -40,7 +57,6 @@ function CareerSummary({ batting, pitching }) {
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Batting career */}
           {hasBatCareer && (
             <div>
               <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">
@@ -85,7 +101,6 @@ function CareerSummary({ batting, pitching }) {
             </div>
           )}
 
-          {/* Pitching career */}
           {hasPitCareer && (
             <div>
               <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">
@@ -162,16 +177,8 @@ export default function PlayerProfile() {
         setLoading(false);
       }
     };
-
     if (id) fetchPlayer();
   }, [id]);
-
-  function getTeamLink(stat) {
-    if (stat?.team_id) return `/teams/${stat.team_id}`;
-    if (stat?.id) return `/teams/${stat.id}`;
-    if (stat?.team_name) return `/teams/${encodeURIComponent(stat.team_name)}`;
-    return "/teams";
-  }
 
   if (loading) {
     return (
@@ -203,7 +210,6 @@ export default function PlayerProfile() {
   const hasBatting = player.batting?.stats?.length > 0;
   const hasPitching = player.pitching?.stats?.length > 0;
 
-  // Compute year range
   const allYears = [
     ...(player.batting?.stats?.map((s) => s.year) || []),
     ...(player.pitching?.stats?.map((s) => s.year) || []),
@@ -219,7 +225,6 @@ export default function PlayerProfile() {
 
   return (
     <Container className="py-12">
-      {/* Back Button */}
       <button
         onClick={() => navigate("/player-stats")}
         className="mb-6 text-gray-600 hover:text-gray-900 flex items-center gap-2 transition-colors"
@@ -228,7 +233,6 @@ export default function PlayerProfile() {
         Back to Player Stats
       </button>
 
-      {/* Player Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2 flex-wrap">
           <h1 className="text-4xl font-bold text-gray-900">
@@ -259,7 +263,6 @@ export default function PlayerProfile() {
         </div>
       </div>
 
-      {/* ── Career Summary (prominent, at top) ── */}
       <CareerSummary batting={player.batting} pitching={player.pitching} />
 
       {/* Teams Played For */}
@@ -282,11 +285,7 @@ export default function PlayerProfile() {
                 return (
                   <Link
                     key={idx}
-                    to={
-                      team.id
-                        ? `/teams/${team.id}`
-                        : `/teams/${encodeURIComponent(team.name)}`
-                    }
+                    to={getTeamCardLink(team)}
                     className="block border border-gray-200 rounded-lg p-4 hover:border-blue-400 transition-colors"
                     style={{ textDecoration: "none", color: "inherit" }}
                   >
@@ -296,6 +295,11 @@ export default function PlayerProfile() {
                     {team.city && team.state && (
                       <p className="text-sm text-gray-600">
                         {team.city}, {team.state}
+                      </p>
+                    )}
+                    {!team.id && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        Historical team
                       </p>
                     )}
                     <p className="text-sm text-blue-600 mt-2">
@@ -339,11 +343,7 @@ export default function PlayerProfile() {
                     ].map((h) => (
                       <th
                         key={h}
-                        className={`px-4 py-3 text-xs font-medium text-gray-500 uppercase ${
-                          h === "Year" || h === "Team"
-                            ? "text-left"
-                            : "text-center"
-                        }`}
+                        className={`px-4 py-3 text-xs font-medium text-gray-500 uppercase ${h === "Year" || h === "Team" ? "text-left" : "text-center"}`}
                       >
                         {h}
                       </th>
@@ -411,7 +411,7 @@ export default function PlayerProfile() {
 
       {/* Pitching Stats */}
       {hasPitching && (
-        <Card>
+        <Card className="mb-8">
           <CardBody>
             <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
               <TrendingUp size={24} />
@@ -439,11 +439,7 @@ export default function PlayerProfile() {
                     ].map((h) => (
                       <th
                         key={h}
-                        className={`px-4 py-3 text-xs font-medium text-gray-500 uppercase ${
-                          h === "Year" || h === "Team"
-                            ? "text-left"
-                            : "text-center"
-                        }`}
+                        className={`px-4 py-3 text-xs font-medium text-gray-500 uppercase ${h === "Year" || h === "Team" ? "text-left" : "text-center"}`}
                       >
                         {h}
                       </th>
@@ -509,7 +505,6 @@ export default function PlayerProfile() {
         </Card>
       )}
 
-      {/* No stats */}
       {!hasBatting && !hasPitching && (
         <Card>
           <CardBody>

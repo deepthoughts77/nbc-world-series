@@ -1,3 +1,4 @@
+// backend/src/controllers/playerController.js
 import { pool } from "../db.js";
 
 const resolvePlayerId = async (rawId) => {
@@ -10,7 +11,6 @@ const resolvePlayerId = async (rawId) => {
   } catch (e) {
     console.warn("resolvePlayerId: players.id lookup failed:", e.message);
   }
-
   try {
     const r = await pool.query(
       `SELECT player_id FROM batting_stats WHERE id = $1 LIMIT 1`,
@@ -20,7 +20,6 @@ const resolvePlayerId = async (rawId) => {
   } catch (e) {
     console.warn("resolvePlayerId: batting_stats.id lookup failed:", e.message);
   }
-
   try {
     const r = await pool.query(
       `SELECT player_id FROM pitching_stats WHERE id = $1 LIMIT 1`,
@@ -33,7 +32,6 @@ const resolvePlayerId = async (rawId) => {
       e.message,
     );
   }
-
   return id;
 };
 
@@ -57,9 +55,7 @@ const getPlayerNameSafe = async (playerId) => {
 export const searchPlayers = async (req, res) => {
   const q = (req.query.q || "").trim();
   if (!q) return res.json([]);
-
   const term = `%${q.toLowerCase()}%`;
-
   try {
     const { rows } = await pool.query(
       `SELECT DISTINCT p.id, p.first_name, p.last_name,
@@ -75,7 +71,6 @@ export const searchPlayers = async (req, res) => {
        LIMIT 25`,
       [term],
     );
-
     return res.json(rows.map((r) => ({ id: r.id, full_name: r.full_name })));
   } catch (e) {
     console.warn("searchPlayers failed:", e.message);
@@ -101,7 +96,6 @@ export const getBattingLeaders = async (req, res) => {
       obp: "b.obp",
       slg: "b.slg",
     };
-
     const sortColumn = sortMap[sort] || "b.avg";
     const sortDir = order === "asc" ? "ASC" : "DESC";
 
@@ -122,18 +116,15 @@ export const getBattingLeaders = async (req, res) => {
     );
 
     let result = rows;
-
     if (teamId && !Number.isNaN(teamId)) {
       result = result.filter((row) => row.team_id === teamId);
     }
-
     if (sort === "team") {
       result = [...result].sort((a, b) => {
         const tn = (a.team_name || "").localeCompare(b.team_name || "");
         return tn !== 0 ? tn : (Number(b.avg) || 0) - (Number(a.avg) || 0);
       });
     }
-
     res.json({ players: result });
   } catch (err) {
     console.error("getBattingLeaders failed:", err);
@@ -156,7 +147,6 @@ export const getPitchingLeaders = async (req, res) => {
       sv: "p.sv",
       ip: "p.ip",
     };
-
     const sortColumn = sortMap[sort] || "p.era";
     const sortDir = order === "desc" ? "DESC" : "ASC";
 
@@ -177,11 +167,9 @@ export const getPitchingLeaders = async (req, res) => {
     );
 
     let result = rows;
-
     if (teamId && !Number.isNaN(teamId)) {
       result = result.filter((row) => row.team_id === teamId);
     }
-
     if (sort === "team") {
       result = [...result].sort((a, b) => {
         const tn = (a.team_name || "").localeCompare(b.team_name || "");
@@ -190,7 +178,6 @@ export const getPitchingLeaders = async (req, res) => {
           : (Number(a.era) || 9999) - (Number(b.era) || 9999);
       });
     }
-
     res.json({ players: result });
   } catch (err) {
     console.error("getPitchingLeaders failed:", err);
@@ -201,7 +188,6 @@ export const getPitchingLeaders = async (req, res) => {
 export const getPlayerById = async (req, res) => {
   const rawId = req.params.id;
   const numericId = Number(rawId);
-
   if (!Number.isInteger(numericId)) {
     return res.status(400).json({ error: "Invalid id" });
   }
@@ -213,7 +199,6 @@ export const getPlayerById = async (req, res) => {
       `SELECT id FROM players WHERE id = $1 LIMIT 1`,
       [playerId],
     );
-
     if (!playerExists.rows.length) {
       return res.status(404).json({ error: "Player not found" });
     }
@@ -223,6 +208,7 @@ export const getPlayerById = async (req, res) => {
     const firstName = nameParts[0] || "";
     const lastName = nameParts.slice(1).join(" ") || "";
 
+    // Batting stats
     const battingStatsResult = await pool.query(
       `SELECT
         b.year,
@@ -241,6 +227,7 @@ export const getPlayerById = async (req, res) => {
       [playerId],
     );
 
+    // Pitching stats
     const pitchingStatsResult = await pool.query(
       `SELECT
         p.year,
@@ -258,6 +245,7 @@ export const getPlayerById = async (req, res) => {
       [playerId],
     );
 
+    // Career batting totals
     const careerBattingResult = await pool.query(
       `SELECT
         COUNT(DISTINCT year) AS seasons,
@@ -277,11 +265,11 @@ export const getPlayerById = async (req, res) => {
         CASE WHEN SUM(ab) > 0 AND SUM(COALESCE(tb, 0)) > 0
           THEN ROUND(CAST(SUM(COALESCE(tb, 0)) AS DECIMAL) / SUM(ab), 3)::TEXT
           ELSE '.000' END AS career_slg
-       FROM batting_stats
-       WHERE player_id = $1`,
+       FROM batting_stats WHERE player_id = $1`,
       [playerId],
     );
 
+    // Career pitching totals
     const careerPitchingResult = await pool.query(
       `SELECT
         COUNT(DISTINCT year) AS seasons,
@@ -295,20 +283,19 @@ export const getPlayerById = async (req, res) => {
         CASE WHEN SUM(ip) > 0
           THEN ROUND(CAST(SUM(er) * 9 AS DECIMAL) / SUM(ip), 2)::TEXT
           ELSE '0.00' END AS career_era
-       FROM pitching_stats
-       WHERE player_id = $1`,
+       FROM pitching_stats WHERE player_id = $1`,
       [playerId],
     );
 
+    // Teams — real teams (team_id set) + historical code-only teams
+    // Codes stand as team names for now; aliases will merge them to real teams later
     const teamsResult = await pool.query(
-      `SELECT team_name, team_id, team_code, city, state,
-              batting_years, pitching_years, first_year
+      `SELECT team_id, team_name, city, state, batting_years, pitching_years
        FROM (
-         -- Named teams (team_id populated)
+         -- Real teams (team_id populated)
          SELECT
-           COALESCE(t.name, tc.full_name, b_sub.team_code) AS team_name,
            t.id AS team_id,
-           NULL::text AS team_code,
+           t.name AS team_name,
            t.city, t.state,
            ARRAY_AGG(DISTINCT b.year ORDER BY b.year)
              FILTER (WHERE b.year IS NOT NULL) AS batting_years,
@@ -318,24 +305,16 @@ export const getPlayerById = async (req, res) => {
          FROM teams t
          LEFT JOIN batting_stats b ON t.id = b.team_id AND b.player_id = $1
          LEFT JOIN pitching_stats p ON t.id = p.team_id AND p.player_id = $1
-         LEFT JOIN LATERAL (
-           SELECT team_code
-           FROM batting_stats
-           WHERE team_id = t.id AND player_id = $1
-           LIMIT 1
-         ) b_sub ON true
-         LEFT JOIN team_codes tc ON tc.code = b_sub.team_code
          WHERE b.player_id = $1 OR p.player_id = $1
-         GROUP BY t.id, t.name, t.city, t.state, tc.full_name, b_sub.team_code
+         GROUP BY t.id, t.name, t.city, t.state
 
          UNION ALL
 
-         -- Historical teams (team_id IS NULL, grouped by team_code)
+         -- Historical code-only teams (team_id IS NULL)
          SELECT
+           NULL::int AS team_id,
            COALESCE(MAX(tc_b.full_name), MAX(tc_p.full_name),
                     MAX(b.team_code), MAX(pi.team_code)) AS team_name,
-           NULL::int AS team_id,
-           COALESCE(MAX(b.team_code), MAX(pi.team_code)) AS team_code,
            NULL::varchar AS city,
            NULL::varchar AS state,
            ARRAY_AGG(DISTINCT b.year ORDER BY b.year)
@@ -343,16 +322,8 @@ export const getPlayerById = async (req, res) => {
            ARRAY_AGG(DISTINCT pi.year ORDER BY pi.year)
              FILTER (WHERE pi.year IS NOT NULL) AS pitching_years,
            MIN(COALESCE(b.year, pi.year)) AS first_year
-         FROM (
-           SELECT *
-           FROM batting_stats
-           WHERE player_id = $1 AND team_id IS NULL
-         ) b
-         FULL OUTER JOIN (
-           SELECT *
-           FROM pitching_stats
-           WHERE player_id = $1 AND team_id IS NULL
-         ) pi
+         FROM (SELECT * FROM batting_stats WHERE player_id = $1 AND team_id IS NULL) b
+         FULL OUTER JOIN (SELECT * FROM pitching_stats WHERE player_id = $1 AND team_id IS NULL) pi
            ON b.team_code = pi.team_code AND b.year = pi.year
          LEFT JOIN team_codes tc_b ON tc_b.code = b.team_code
          LEFT JOIN team_codes tc_p ON tc_p.code = pi.team_code
@@ -363,14 +334,11 @@ export const getPlayerById = async (req, res) => {
       [playerId],
     );
 
+    // HOF check
     const hofResult = await pool.query(
-      `SELECT induction_year, category
-       FROM hall_of_fame
-       WHERE player_id = $1
-       LIMIT 1`,
+      `SELECT induction_year, category FROM hall_of_fame WHERE player_id = $1 LIMIT 1`,
       [playerId],
     );
-
     const hofRow = hofResult.rows[0] || null;
     const careerBatting = careerBattingResult.rows[0];
     const careerPitching = careerPitchingResult.rows[0];
@@ -400,7 +368,15 @@ export const getPlayerById = async (req, res) => {
             ? careerPitching
             : null,
       },
-      teams: teamsResult.rows,
+      // Map team_name → name so frontend PlayerProfile.js receives the correct field
+      teams: teamsResult.rows.map((t) => ({
+        id: t.team_id,
+        name: t.team_name,
+        city: t.city,
+        state: t.state,
+        batting_years: t.batting_years,
+        pitching_years: t.pitching_years,
+      })),
     });
   } catch (err) {
     console.error("getPlayerById failed:", err);
