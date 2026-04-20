@@ -1,3 +1,4 @@
+// backend/src/controllers/playerStatsController.js
 import { pool } from "../db.js";
 
 async function tableExists(tableName) {
@@ -30,6 +31,7 @@ async function pickFirstExistingTable(candidates) {
   return null;
 }
 
+// ── Whitelisted columns (prevents SQL injection) ──────────────────────────
 const BATTING_COLS = new Set([
   "gp",
   "gs",
@@ -91,7 +93,10 @@ const PITCHING_COLS = new Set([
 ]);
 
 const LOWER_IS_BETTER = new Set(["era", "l", "hbp", "bk", "gdp", "e", "bb"]);
+
 const colExpr = (col) => (/^\d/.test(col) ? `"${col}"` : col);
+
+// ── Existing endpoints ────────────────────────────────────────────────────
 
 export const getPlayerStatsYears = async (_req, res) => {
   try {
@@ -99,9 +104,8 @@ export const getPlayerStatsYears = async (_req, res) => {
       ...BATTING_TABLE_CANDIDATES,
       ...PITCHING_TABLE_CANDIDATES,
     ]);
-    if (!table) {
+    if (!table)
       return res.json({ years: [], message: "No player stats tables found." });
-    }
 
     const result = await pool.query(
       `SELECT DISTINCT year FROM ${table} WHERE year IS NOT NULL ORDER BY year DESC`,
@@ -117,17 +121,15 @@ export const getPlayerStatsYears = async (_req, res) => {
 
 export const getPlayerStatsByYear = async (req, res) => {
   const { year } = req.params;
-
   try {
     const table = await pickFirstExistingTable(BATTING_TABLE_CANDIDATES);
-    if (!table) {
+    if (!table)
       return res.json({
         year: Number(year),
         count: 0,
         data: [],
         message: "No batting table found.",
       });
-    }
 
     const result = await pool.query(
       `SELECT ps.*,
@@ -136,14 +138,13 @@ export const getPlayerStatsByYear = async (req, res) => {
               t.state AS team_state,
               CONCAT(p.first_name, ' ', p.last_name) AS player_name
        FROM ${table} ps
-       LEFT JOIN teams t ON t.id = ps.team_id
+       LEFT JOIN teams      t  ON t.id = ps.team_id
        LEFT JOIN team_codes tc ON tc.code = ps.team_code
-       LEFT JOIN players p ON p.id = ps.player_id
+       LEFT JOIN players    p  ON p.id = ps.player_id
        WHERE ps.year = $1
        ORDER BY team_name NULLS LAST, player_name NULLS LAST`,
       [year],
     );
-
     res.json({
       year: Number(year),
       count: result.rows.length,
@@ -159,17 +160,15 @@ export const getPlayerStatsByYear = async (req, res) => {
 
 export const getPlayerPitchingStatsByYear = async (req, res) => {
   const { year } = req.params;
-
   try {
     const table = await pickFirstExistingTable(PITCHING_TABLE_CANDIDATES);
-    if (!table) {
+    if (!table)
       return res.json({
         year: Number(year),
         count: 0,
         data: [],
         message: "No pitching table found.",
       });
-    }
 
     const result = await pool.query(
       `SELECT ps.*,
@@ -178,14 +177,13 @@ export const getPlayerPitchingStatsByYear = async (req, res) => {
               t.state AS team_state,
               CONCAT(p.first_name, ' ', p.last_name) AS player_name
        FROM ${table} ps
-       LEFT JOIN teams t ON t.id = ps.team_id
+       LEFT JOIN teams      t  ON t.id = ps.team_id
        LEFT JOIN team_codes tc ON tc.code = ps.team_code
-       LEFT JOIN players p ON p.id = ps.player_id
+       LEFT JOIN players    p  ON p.id = ps.player_id
        WHERE ps.year = $1
        ORDER BY team_name NULLS LAST, player_name NULLS LAST`,
       [year],
     );
-
     res.json({
       year: Number(year),
       count: result.rows.length,
@@ -201,6 +199,7 @@ export const getPlayerPitchingStatsByYear = async (req, res) => {
 
 export const getAvailablePlayerStatsYears = getPlayerStatsYears;
 
+// ── Leaderboard ───────────────────────────────────────────────────────────
 export const getPlayerStatsLeaderboard = async (req, res) => {
   try {
     let { stat, order, limit, year, type } = req.query;
@@ -223,34 +222,36 @@ export const getPlayerStatsLeaderboard = async (req, res) => {
 
     const table = type === "pitching" ? "pitching_stats" : "batting_stats";
     const col = colExpr(stat);
+
     const params = [limit];
     const yearClause = year
-      ? `AND ps.year = $${params.push(parseInt(year, 10))}`
+      ? `AND ps.year = $${params.push(parseInt(year))}`
       : "";
 
-    const result = await pool.query(
-      `SELECT CONCAT(p.first_name, ' ', p.last_name) AS player_name,
-              p.id AS player_id,
-              COALESCE(t.name, tc.full_name, ps.team_code) AS team_name,
-              ps.year,
-              ps.${col} AS stat_value,
-              ps.*
-       FROM ${table} ps
-       LEFT JOIN players p ON p.id = ps.player_id
-       LEFT JOIN teams t ON t.id = ps.team_id
-       LEFT JOIN team_codes tc ON tc.code = ps.team_code
-       WHERE ps.${col} IS NOT NULL ${yearClause}
-       ORDER BY ps.${col} ${order.toUpperCase()} NULLS LAST
-       LIMIT $1`,
-      params,
-    );
+    const sql = `
+      SELECT CONCAT(p.first_name, ' ', p.last_name) AS player_name,
+             p.id   AS player_id,
+             COALESCE(t.name, tc.full_name, ps.team_code) AS team_name,
+             ps.year,
+             ps.${col} AS stat_value,
+             ps.*
+      FROM ${table} ps
+      LEFT JOIN players    p  ON p.id = ps.player_id
+      LEFT JOIN teams      t  ON t.id = ps.team_id
+      LEFT JOIN team_codes tc ON tc.code = ps.team_code
+      WHERE ps.${col} IS NOT NULL
+        ${yearClause}
+      ORDER BY ps.${col} ${order.toUpperCase()} NULLS LAST
+      LIMIT $1
+    `;
 
+    const result = await pool.query(sql, params);
     res.json({
       success: true,
       stat,
       type,
       order,
-      year: year ? parseInt(year, 10) : "all-time",
+      year: year ? parseInt(year) : "all-time",
       count: result.rows.length,
       data: result.rows,
     });
@@ -264,6 +265,7 @@ export const getPlayerStatsLeaderboard = async (req, res) => {
   }
 };
 
+// ── Flexible search ───────────────────────────────────────────────────────
 export const searchPlayerStats = async (req, res) => {
   try {
     let { q, year, stat, min, max, team, type, limit, order, sortBy } =
@@ -283,12 +285,15 @@ export const searchPlayerStats = async (req, res) => {
     if (stat && !validCols.has(stat)) {
       return res.status(400).json({
         success: false,
-        error: `Invalid stat "${stat}"`,
+        error: `Invalid stat "${stat}". Valid: ${[...validCols].sort().join(", ")}`,
       });
     }
-    if (sortBy && !validCols.has(sortBy)) sortBy = null;
+    if (sortBy && !validCols.has(sortBy)) {
+      sortBy = null;
+    }
 
     const sortCol = sortBy || stat || (type === "pitching" ? "era" : "avg");
+
     const conditions = [];
     const params = [];
     let pIdx = 1;
@@ -301,13 +306,13 @@ export const searchPlayerStats = async (req, res) => {
     }
     if (year) {
       conditions.push(`ps.year = $${pIdx++}`);
-      params.push(parseInt(year, 10));
+      params.push(parseInt(year));
     }
     if (team) {
       conditions.push(
-        `(LOWER(COALESCE(t.name, tc.full_name, ps.team_code)) ILIKE $${pIdx++})`,
+        `(t.name ILIKE $${pIdx} OR tc.full_name ILIKE $${pIdx} OR ps.team_code ILIKE $${pIdx++})`,
       );
-      params.push(`%${String(team).toLowerCase()}%`);
+      params.push(`%${team}%`);
     }
     if (stat && min !== undefined) {
       conditions.push(`ps.${colExpr(stat)} >= $${pIdx++}`);
@@ -322,27 +327,28 @@ export const searchPlayerStats = async (req, res) => {
       ? `WHERE ${conditions.join(" AND ")}`
       : "";
 
-    params.push(limit);
+    const sql = `
+      SELECT CONCAT(p.first_name, ' ', p.last_name) AS player_name,
+             p.id   AS player_id,
+             COALESCE(t.name, tc.full_name, ps.team_code) AS team_name,
+             ps.year,
+             ps.*
+      FROM ${table} ps
+      LEFT JOIN players    p  ON p.id = ps.player_id
+      LEFT JOIN teams      t  ON t.id = ps.team_id
+      LEFT JOIN team_codes tc ON tc.code = ps.team_code
+      ${whereClause}
+      ORDER BY ps.${colExpr(sortCol)} ${order.toUpperCase()} NULLS LAST
+      LIMIT $${pIdx}
+    `;
 
-    const result = await pool.query(
-      `SELECT CONCAT(p.first_name, ' ', p.last_name) AS player_name,
-              p.id AS player_id,
-              COALESCE(t.name, tc.full_name, ps.team_code) AS team_name,
-              ps.year,
-              ps.*
-       FROM ${table} ps
-       LEFT JOIN players p ON p.id = ps.player_id
-       LEFT JOIN teams t ON t.id = ps.team_id
-       LEFT JOIN team_codes tc ON tc.code = ps.team_code
-       ${whereClause}
-       ORDER BY ps.${colExpr(sortCol)} ${order.toUpperCase()} NULLS LAST
-       LIMIT $${params.length}`,
-      params,
-    );
+    params.push(limit);
+    const result = await pool.query(sql, params);
 
     res.json({
       success: true,
       count: result.rows.length,
+      filters: { q, year: year || "all", stat, min, max, team, type },
       data: result.rows,
     });
   } catch (err) {

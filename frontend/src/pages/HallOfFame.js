@@ -35,6 +35,13 @@ function SortIcon({ active, dir }) {
   );
 }
 
+// ── Bio link label helper ─────────────────────────────────────────────────
+function getBioLinkLabel(url) {
+  if (!url) return null;
+  if (url.includes("baseball-reference.com")) return "baseball-reference.com";
+  return "baseball-reference.com";
+}
+
 export default function HallOfFame() {
   const { members, loading, err } = useHallOfFame();
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -289,6 +296,7 @@ export default function HallOfFame() {
                     const meta = getCatMeta(cat);
                     const isEven = i % 2 === 0;
                     const hasBio = !!m.bio_url;
+                    const bioLabel = getBioLinkLabel(m.bio_url);
 
                     return (
                       <tr
@@ -336,7 +344,7 @@ export default function HallOfFame() {
                                   flexShrink: 0,
                                 }}
                               />
-                              <span style={s.bioHint}>NBC Bio</span>
+                              <span style={s.bioHint}>{bioLabel}</span>
                             </>
                           ) : (
                             <span>{name}</span>
@@ -370,7 +378,7 @@ export default function HallOfFame() {
               NBC Hall of Fame · {stats.total} inductees · 1991–present
               {bioCount > 0 && (
                 <span style={{ color: "#D97706", marginLeft: 8 }}>
-                  · {bioCount} with NBC bios
+                  · {bioCount} with bios
                 </span>
               )}
             </div>

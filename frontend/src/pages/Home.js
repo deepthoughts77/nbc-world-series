@@ -21,6 +21,14 @@ import { BannerError } from "../components/common/BannerError";
 import { Skeleton } from "../components/common/Skeleton";
 import SearchResults from "../components/SearchResults";
 
+// ── Next tournament dates ─────────────────────────────────────────────────
+// 92nd NBC World Series: July 23 – August 2, 2026
+// Update this object each year when official dates are announced.
+const NEXT_TOURNAMENT = {
+  year: 2026,
+  dates: "July 23 – August 2",
+};
+
 export default function Home() {
   const { stats, recent, loading, err } = useHome();
 
@@ -66,8 +74,6 @@ export default function Home() {
     }
   };
 
-  const currentYear = new Date().getFullYear();
-  const nextTournament = currentYear + 1;
   const mostChampsCount =
     recordsOverview?.most_championships?.championships != null
       ? `${recordsOverview.most_championships.championships}x`
@@ -488,7 +494,7 @@ export default function Home() {
                   <div>
                     <div className="font-semibold text-lg">Next Tournament</div>
                     <div className="text-gray-400">
-                      July 24 - August 2, {nextTournament}
+                      {NEXT_TOURNAMENT.dates}, {NEXT_TOURNAMENT.year}
                     </div>
                   </div>
                 </div>
