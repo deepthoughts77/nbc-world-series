@@ -1,4 +1,4 @@
-//frontend/src/pages/HallOfFame.js
+// frontend/src/pages/HallOfFame.js
 import React, { useMemo, useState } from "react";
 import {
   Trophy,
@@ -15,7 +15,6 @@ import { Container } from "../components/common/Container";
 import { BannerError } from "../components/common/BannerError";
 import { Skeleton } from "../components/common/Skeleton";
 
-// ── Category config ───────────────────────────────────────────────────────
 const CATEGORY_META = {
   Player: { color: "#1D4ED8", bg: "#EFF6FF", label: "PLAYER" },
   Coach: { color: "#065F46", bg: "#ECFDF5", label: "COACH" },
@@ -35,11 +34,33 @@ function SortIcon({ active, dir }) {
   );
 }
 
-// ── Bio link label helper ─────────────────────────────────────────────────
 function getBioLinkLabel(url) {
   if (!url) return null;
   if (url.includes("baseball-reference.com")) return "baseball-reference.com";
   return "baseball-reference.com";
+}
+
+function MicroBadge({ color, bg, border, children }) {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        fontSize: 9,
+        fontWeight: 700,
+        letterSpacing: "0.05em",
+        padding: "2px 5px",
+        borderRadius: 3,
+        color,
+        background: bg,
+        border: border || `1px solid ${color}33`,
+        marginLeft: 5,
+        flexShrink: 0,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {children}
+    </span>
+  );
 }
 
 export default function HallOfFame() {
@@ -74,8 +95,12 @@ export default function HallOfFame() {
     }
     if (search.trim()) {
       const t = search.toLowerCase();
-      out = out.filter((m) =>
-        (m.inductee_name || m.name || "").toLowerCase().includes(t),
+      out = out.filter(
+        (m) =>
+          (m.inductee_name || m.name || "").toLowerCase().includes(t) ||
+          (m.nbc_teams || "").toLowerCase().includes(t) ||
+          (m.nbc_awards || "").toLowerCase().includes(t) ||
+          (m.mlb_teams || "").toLowerCase().includes(t),
       );
     }
     out.sort((a, b) => {
@@ -98,7 +123,6 @@ export default function HallOfFame() {
 
   return (
     <div style={s.page}>
-      {/* ── Page header ─────────────────────────────────────────────── */}
       <div style={s.pageHeader}>
         <Container>
           <div style={s.eyebrow}>NBC WORLD SERIES · LEGACY</div>
@@ -163,11 +187,10 @@ export default function HallOfFame() {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search inductees…"
+                placeholder="Search by name, NBC team, award, or MLB team…"
                 style={s.searchInput}
               />
             </div>
-
             <div style={s.pillGroup}>
               {[
                 { val: "all", label: "All" },
@@ -187,7 +210,6 @@ export default function HallOfFame() {
                 </button>
               ))}
             </div>
-
             <div style={s.toolbarRight}>
               {(search || categoryFilter !== "all") && (
                 <button
@@ -231,13 +253,12 @@ export default function HallOfFame() {
                       ...s.th,
                       textAlign: "left",
                       cursor: "pointer",
-                      width: 150,
+                      width: 140,
                     }}
                     onClick={() => handleSort("cat")}
                   >
                     <span style={s.thInner}>
-                      Category{" "}
-                      <SortIcon active={sortCol === "cat"} dir={sortDir} />
+                      Role <SortIcon active={sortCol === "cat"} dir={sortDir} />
                     </span>
                   </th>
                   <th
@@ -245,7 +266,7 @@ export default function HallOfFame() {
                       ...s.th,
                       textAlign: "right",
                       cursor: "pointer",
-                      width: 120,
+                      width: 100,
                     }}
                     onClick={() => handleSort("year")}
                   >
@@ -297,6 +318,9 @@ export default function HallOfFame() {
                     const isEven = i % 2 === 0;
                     const hasBio = !!m.bio_url;
                     const bioLabel = getBioLinkLabel(m.bio_url);
+                    const roleLabel = m.primary_role
+                      ? m.primary_role.split(",")[0].trim()
+                      : meta.label;
 
                     return (
                       <tr
@@ -324,34 +348,112 @@ export default function HallOfFame() {
                             : s.trOdd.background)
                         }
                       >
-                        <td style={{ ...s.td, ...s.tdName }}>
-                          <Star
-                            size={11}
+                        {/* ── Name cell ─────────────────────────── */}
+                        <td style={{ ...s.td, verticalAlign: "top" }}>
+                          <div
                             style={{
-                              color: "#D97706",
-                              marginRight: 8,
-                              flexShrink: 0,
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 4,
                             }}
-                          />
-                          {hasBio ? (
-                            <>
-                              <span style={s.nameLink}>{name}</span>
-                              <ExternalLink
+                          >
+                            {/* Name + badges row */}
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                flexWrap: "wrap",
+                              }}
+                            >
+                              <Star
                                 size={11}
                                 style={{
                                   color: "#D97706",
-                                  marginLeft: 6,
+                                  marginRight: 7,
                                   flexShrink: 0,
                                 }}
                               />
-                              <span style={s.bioHint}>{bioLabel}</span>
-                            </>
-                          ) : (
-                            <span>{name}</span>
-                          )}
+                              <span style={hasBio ? s.nameLink : s.namePlain}>
+                                {name}
+                              </span>
+                              {m.deceased && (
+                                <MicroBadge color="#6B7280" bg="#F3F4F6">
+                                  †
+                                </MicroBadge>
+                              )}
+                              {m.cooperstown && (
+                                <MicroBadge color="#92400E" bg="#FEF3C7">
+                                  ⭐ COOP HOF
+                                </MicroBadge>
+                              )}
+                              {m.mlb_teams && (
+                                <MicroBadge color="#065F46" bg="#ECFDF5">
+                                  MLB
+                                </MicroBadge>
+                              )}
+                              {hasBio && (
+                                <>
+                                  <ExternalLink
+                                    size={10}
+                                    style={{
+                                      color: "#D97706",
+                                      marginLeft: 6,
+                                      flexShrink: 0,
+                                    }}
+                                  />
+                                  <span style={s.bioHint}>{bioLabel}</span>
+                                </>
+                              )}
+                            </div>
+
+                            {/* NBC teams */}
+                            {m.nbc_teams && (
+                              <div style={s.subLine}>
+                                <span style={s.subLabel}>NBC Teams: </span>
+                                <span style={{ color: "#374151" }}>
+                                  {m.nbc_teams}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Awards */}
+                            {m.nbc_awards && (
+                              <div style={s.subLine}>
+                                <span
+                                  style={{ ...s.subLabel, color: "#92400E" }}
+                                >
+                                  Awards:{" "}
+                                </span>
+                                <span style={{ color: "#B45309" }}>
+                                  {m.nbc_awards}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* MLB teams */}
+                            {m.mlb_teams && (
+                              <div style={s.subLine}>
+                                <span
+                                  style={{ ...s.subLabel, color: "#064E3B" }}
+                                >
+                                  MLB:{" "}
+                                </span>
+                                <span style={{ color: "#065F46" }}>
+                                  {m.mlb_teams}
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </td>
 
-                        <td style={s.td}>
+                        {/* ── Role cell ─────────────────────────── */}
+                        <td
+                          style={{
+                            ...s.td,
+                            verticalAlign: "top",
+                            paddingTop: 13,
+                          }}
+                        >
                           <span
                             style={{
                               ...s.badge,
@@ -360,11 +462,21 @@ export default function HallOfFame() {
                               border: `1px solid ${meta.color}33`,
                             }}
                           >
-                            {meta.label}
+                            {roleLabel.toUpperCase()}
                           </span>
                         </td>
 
-                        <td style={{ ...s.td, ...s.tdYear }}>{year}</td>
+                        {/* ── Year cell ─────────────────────────── */}
+                        <td
+                          style={{
+                            ...s.td,
+                            ...s.tdYear,
+                            verticalAlign: "top",
+                            paddingTop: 13,
+                          }}
+                        >
+                          {year}
+                        </td>
                       </tr>
                     );
                   })
@@ -389,7 +501,6 @@ export default function HallOfFame() {
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────
 const s = {
   page: {
     minHeight: "100vh",
@@ -426,10 +537,7 @@ const s = {
     lineHeight: 1.7,
     margin: 0,
   },
-  body: {
-    paddingTop: 32,
-    paddingBottom: 64,
-  },
+  body: { paddingTop: 32, paddingBottom: 64 },
   statRail: {
     display: "grid",
     gridTemplateColumns: "repeat(4, 1fr)",
@@ -461,11 +569,7 @@ const s = {
     letterSpacing: "-0.02em",
     marginBottom: 4,
   },
-  statLabel: {
-    fontSize: 12,
-    color: "#6B7280",
-    fontWeight: 600,
-  },
+  statLabel: { fontSize: 12, color: "#6B7280", fontWeight: 600 },
   toolbar: {
     display: "flex",
     flexWrap: "wrap",
@@ -478,11 +582,7 @@ const s = {
     borderRadius: 8,
     boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
   },
-  searchWrap: {
-    position: "relative",
-    flex: "1 1 200px",
-    minWidth: 180,
-  },
+  searchWrap: { position: "relative", flex: "1 1 200px", minWidth: 180 },
   searchIcon: {
     position: "absolute",
     left: 10,
@@ -503,11 +603,7 @@ const s = {
     outline: "none",
     boxSizing: "border-box",
   },
-  pillGroup: {
-    display: "flex",
-    gap: 6,
-    flexWrap: "wrap",
-  },
+  pillGroup: { display: "flex", gap: 6, flexWrap: "wrap" },
   pill: {
     background: "#F3F4F6",
     border: "1px solid #E5E7EB",
@@ -541,11 +637,7 @@ const s = {
     padding: "6px 12px",
     cursor: "pointer",
   },
-  resultCount: {
-    fontSize: 12,
-    color: "#9CA3AF",
-    whiteSpace: "nowrap",
-  },
+  resultCount: { fontSize: 12, color: "#9CA3AF", whiteSpace: "nowrap" },
   tableWrap: {
     border: "1px solid #E5E7EB",
     borderRadius: 8,
@@ -558,9 +650,7 @@ const s = {
     fontSize: 13,
     background: "#FFFFFF",
   },
-  theadRow: {
-    background: "#1F2937",
-  },
+  theadRow: { background: "#1F2937" },
   th: {
     padding: "12px 16px",
     fontSize: 11,
@@ -571,24 +661,13 @@ const s = {
     userSelect: "none",
     textTransform: "uppercase",
   },
-  thInner: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 4,
-  },
+  thInner: { display: "inline-flex", alignItems: "center", gap: 4 },
   trEven: { background: "#FFFFFF", transition: "background 0.1s" },
   trOdd: { background: "#F9FAFB", transition: "background 0.1s" },
   td: {
     padding: "11px 16px",
     borderBottom: "1px solid #F3F4F6",
     verticalAlign: "middle",
-  },
-  tdName: {
-    color: "#111827",
-    fontWeight: 600,
-    display: "flex",
-    alignItems: "center",
-    gap: 0,
   },
   tdYear: {
     textAlign: "right",
@@ -606,17 +685,17 @@ const s = {
     padding: "3px 8px",
     borderRadius: 4,
   },
-  nameLink: {
-    color: "#1D4ED8",
-    fontWeight: 600,
-  },
+  namePlain: { fontWeight: 600, color: "#111827" },
+  nameLink: { color: "#1D4ED8", fontWeight: 600 },
   bioHint: {
     fontSize: 10,
     color: "#D97706",
-    marginLeft: 6,
+    marginLeft: 4,
     fontWeight: 600,
     letterSpacing: "0.04em",
   },
+  subLine: { fontSize: 11, color: "#6B7280", lineHeight: 1.5, paddingLeft: 18 },
+  subLabel: { fontWeight: 700, color: "#9CA3AF", marginRight: 2 },
   emptyCell: {
     padding: "48px 16px",
     textAlign: "center",
