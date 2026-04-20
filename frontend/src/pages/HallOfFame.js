@@ -38,7 +38,7 @@ function SortIcon({ active, dir }) {
 function getBioLinkLabel(url) {
   if (!url) return null;
   if (url.includes("baseball-reference.com")) return "baseball-reference.com";
-  return "NBC Bio";
+  return "baseball-reference.com";
 }
 
 // ── Smart label for nbc_teams field based on role ─────────────────────────
