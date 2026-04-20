@@ -58,10 +58,18 @@ export const getAllTeams = async (_req, res) => {
       SELECT
         t.id, t.name, t.city, t.state, t.league,
         COUNT(DISTINCT c.id)                            AS championships_won,
-        (COUNT(DISTINCT c.id) + COUNT(DISTINCT ru.id)) AS finals_appearances
+        (COUNT(DISTINCT c.id) + COUNT(DISTINCT ru.id)) AS finals_appearances,
+        COUNT(DISTINCT sy.year)::int                    AS tournament_years,
+        MIN(sy.year)                                    AS first_year,
+        MAX(sy.year)                                    AS last_year
       FROM teams t
       LEFT JOIN championships c  ON t.id = c.champion_team_id
       LEFT JOIN championships ru ON t.id = ru.runner_up_team_id
+      LEFT JOIN (
+        SELECT team_id, year FROM batting_stats  WHERE team_id IS NOT NULL
+        UNION
+        SELECT team_id, year FROM pitching_stats WHERE team_id IS NOT NULL
+      ) sy ON t.id = sy.team_id
       GROUP BY t.id, t.name, t.city, t.state, t.league
       ORDER BY t.name
     `);
@@ -71,6 +79,9 @@ export const getAllTeams = async (_req, res) => {
       championships_won: Number(r.championships_won || 0),
       finals_appearances: Number(r.finals_appearances || 0),
       appearances: Number(r.finals_appearances || 0),
+      tournament_years: Number(r.tournament_years || 0),
+      first_year: r.first_year ? Number(r.first_year) : null,
+      last_year: r.last_year ? Number(r.last_year) : null,
     }));
 
     res.json(rows);
@@ -96,14 +107,20 @@ export const getTeamByName = async (req, res) => {
         t.city,
         t.state,
         t.league,
-        COUNT(DISTINCT c.id)  AS championships_won,
-        COUNT(DISTINCT ru.id) AS runner_up_finishes,
-        COUNT(DISTINCT c.id) + COUNT(DISTINCT ru.id) AS finals_appearances
+        COUNT(DISTINCT c.id)                           AS championships_won,
+        COUNT(DISTINCT ru.id)                          AS runner_up_finishes,
+        COUNT(DISTINCT c.id) + COUNT(DISTINCT ru.id)   AS finals_appearances,
+        COUNT(DISTINCT sy.year)::int                   AS tournament_years,
+        MIN(sy.year)                                   AS first_year,
+        MAX(sy.year)                                   AS last_year
       FROM teams t
-      LEFT JOIN championships c
-        ON t.id = c.champion_team_id
-      LEFT JOIN championships ru
-        ON t.id = ru.runner_up_team_id
+      LEFT JOIN championships c  ON t.id = c.champion_team_id
+      LEFT JOIN championships ru ON t.id = ru.runner_up_team_id
+      LEFT JOIN (
+        SELECT team_id, year FROM batting_stats  WHERE team_id IS NOT NULL
+        UNION
+        SELECT team_id, year FROM pitching_stats WHERE team_id IS NOT NULL
+      ) sy ON t.id = sy.team_id
       WHERE
         LOWER(t.name) = LOWER($1)
         OR LOWER(t.name) LIKE LOWER($2)
@@ -132,6 +149,9 @@ export const getTeamByName = async (req, res) => {
       runner_up_finishes: Number(rows[0].runner_up_finishes || 0),
       finals_appearances: Number(rows[0].finals_appearances || 0),
       appearances: Number(rows[0].finals_appearances || 0),
+      tournament_years: Number(rows[0].tournament_years || 0),
+      first_year: rows[0].first_year ? Number(rows[0].first_year) : null,
+      last_year: rows[0].last_year ? Number(rows[0].last_year) : null,
     });
   } catch (err) {
     console.error("getTeamByName error:", err);
@@ -149,10 +169,18 @@ export const getTeamById = async (req, res) => {
       `SELECT
          t.id, t.name, t.city, t.state, t.league,
          COUNT(DISTINCT c.id)                            AS championships_won,
-         (COUNT(DISTINCT c.id) + COUNT(DISTINCT ru.id)) AS finals_appearances
+         (COUNT(DISTINCT c.id) + COUNT(DISTINCT ru.id)) AS finals_appearances,
+         COUNT(DISTINCT sy.year)::int                    AS tournament_years,
+         MIN(sy.year)                                    AS first_year,
+         MAX(sy.year)                                    AS last_year
        FROM teams t
        LEFT JOIN championships c  ON t.id = c.champion_team_id
        LEFT JOIN championships ru ON t.id = ru.runner_up_team_id
+       LEFT JOIN (
+         SELECT team_id, year FROM batting_stats  WHERE team_id IS NOT NULL
+         UNION
+         SELECT team_id, year FROM pitching_stats WHERE team_id IS NOT NULL
+       ) sy ON t.id = sy.team_id
        WHERE t.id = $1
        GROUP BY t.id, t.name, t.city, t.state, t.league
        LIMIT 1`,
@@ -166,6 +194,9 @@ export const getTeamById = async (req, res) => {
       championships_won: Number(rows[0].championships_won || 0),
       finals_appearances: Number(rows[0].finals_appearances || 0),
       appearances: Number(rows[0].finals_appearances || 0),
+      tournament_years: Number(rows[0].tournament_years || 0),
+      first_year: rows[0].first_year ? Number(rows[0].first_year) : null,
+      last_year: rows[0].last_year ? Number(rows[0].last_year) : null,
     });
   } catch (err) {
     console.error("getTeamById error:", err);
@@ -363,7 +394,9 @@ export const getTeamYears = async (req, res) => {
 
     const { rows } = await pool.query(
       `
-      SELECT DISTINCT year
+      SELECT DISTINCT p.year,
+        CASE WHEN c1.year IS NOT NULL THEN true ELSE false END AS is_champion,
+        CASE WHEN c2.year IS NOT NULL THEN true ELSE false END AS is_runner_up
       FROM (
         SELECT bs.year
         FROM batting_stats bs
@@ -390,13 +423,21 @@ export const getTeamYears = async (req, res) => {
             OR LOWER(COALESCE(tc.full_name, t2.name, '')) = LOWER($3)
             OR ${normalizeNameForSql.replaceAll("name", "COALESCE(tc.full_name, t2.name, '')")} = LOWER($4)
           )
-      ) y
-      ORDER BY year DESC
+      ) p
+      LEFT JOIN championships c1 ON c1.year = p.year AND c1.champion_team_id  = $1
+      LEFT JOIN championships c2 ON c2.year = p.year AND c2.runner_up_team_id = $1
+      ORDER BY p.year DESC
       `,
       [team.id, codes, team.name, normalizedName],
     );
 
-    res.json(rows.map((r) => Number(r.year)).filter(Boolean));
+    res.json(
+      rows.map((r) => ({
+        year: Number(r.year),
+        is_champion: r.is_champion === true,
+        is_runner_up: r.is_runner_up === true,
+      })),
+    );
   } catch (err) {
     console.error("getTeamYears error:", err);
     res.status(500).json({ error: "server_error" });

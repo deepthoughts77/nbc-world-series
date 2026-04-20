@@ -1,4 +1,4 @@
-//frontend/src/pages/Teams.js
+// frontend/src/pages/Teams.js
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, ChevronRight } from "lucide-react";
@@ -30,103 +30,44 @@ const STYLES = `
 
   .ar { font-family: 'Source Serif 4', Georgia, serif; background: var(--parchment); color: var(--ink); }
 
-  /* Hero */
-  .ar-hero {
-    background: var(--navy);
-    position: relative;
-    overflow: hidden;
-  }
+  .ar-hero { background: var(--navy); position: relative; overflow: hidden; }
   .ar-hero-texture {
     position: absolute; inset: 0; pointer-events: none;
     background-image:
       repeating-linear-gradient(0deg, transparent, transparent 47px, rgba(184,146,42,0.07) 47px, rgba(184,146,42,0.07) 48px),
       repeating-linear-gradient(90deg, transparent, transparent 63px, rgba(184,146,42,0.04) 63px, rgba(184,146,42,0.04) 64px);
   }
-  .ar-hero-gold-line {
-    position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
-    background: linear-gradient(90deg, transparent 0%, var(--gold) 20%, var(--gold-light) 50%, var(--gold) 80%, transparent 100%);
-  }
+  .ar-hero-gold-line { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent 0%, var(--gold) 20%, var(--gold-light) 50%, var(--gold) 80%, transparent 100%); }
   .ar-hero-inner { position: relative; z-index: 1; }
 
-  /* Typography */
   .ar-display { font-family: 'Playfair Display', Georgia, serif; }
   .ar-mono    { font-family: 'JetBrains Mono', 'Courier New', monospace; }
   .ar-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--gold-light); }
   .ar-kicker  { font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); }
 
-  /* Medallion stats */
-  .ar-medallion {
-    border: 1px solid rgba(184,146,42,0.25);
-    background: rgba(255,255,255,0.05);
-    clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
-    padding: 14px 20px;
-  }
+  .ar-medallion { border: 1px solid rgba(184,146,42,0.25); background: rgba(255,255,255,0.05); clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px)); padding: 14px 20px; }
   .ar-medallion-val { font-family: 'Playfair Display', Georgia, serif; font-size: 2rem; font-weight: 900; color: white; line-height: 1; }
   .ar-medallion-label { font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-top: 3px; }
 
-  /* Controls bar */
-  .ar-controls {
-    background: var(--navy);
-    border-bottom: 2px solid var(--gold);
-    position: sticky; top: 0; z-index: 30;
-  }
+  .ar-controls { background: var(--navy); border-bottom: 2px solid var(--gold); position: sticky; top: 0; z-index: 30; }
 
-  /* Search */
-  .ar-search {
-    background: rgba(255,255,255,0.07);
-    border: 1px solid rgba(184,146,42,0.3);
-    color: white;
-    font-family: 'Source Serif 4', Georgia, serif;
-    font-style: italic;
-    font-size: 0.9rem;
-    padding: 8px 10px 8px 34px;
-    border-radius: 2px;
-    transition: all 0.2s;
-    width: 100%;
-  }
+  .ar-search { background: rgba(255,255,255,0.07); border: 1px solid rgba(184,146,42,0.3); color: white; font-family: 'Source Serif 4', Georgia, serif; font-style: italic; font-size: 0.9rem; padding: 8px 10px 8px 34px; border-radius: 2px; transition: all 0.2s; width: 100%; }
   .ar-search::placeholder { color: rgba(255,255,255,0.3); }
   .ar-search:focus { outline: none; border-color: var(--gold-light); background: rgba(255,255,255,0.11); box-shadow: 0 0 0 3px rgba(184,146,42,0.12); }
 
-  /* Sort pills */
-  .ar-pill {
-    font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; font-weight: 500;
-    letter-spacing: 0.1em; text-transform: uppercase;
-    padding: 5px 13px; border-radius: 2px;
-    border: 1px solid rgba(184,146,42,0.3);
-    color: rgba(255,255,255,0.5);
-    background: transparent;
-    cursor: pointer; transition: all 0.15s;
-  }
+  .ar-pill { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; padding: 5px 13px; border-radius: 2px; border: 1px solid rgba(184,146,42,0.3); color: rgba(255,255,255,0.5); background: transparent; cursor: pointer; transition: all 0.15s; }
   .ar-pill:hover { color: var(--gold-light); border-color: var(--gold); }
   .ar-pill.on { background: var(--gold); border-color: var(--gold); color: var(--navy); font-weight: 600; }
 
-  /* Team cards */
-  .ar-card {
-    background: white;
-    border: 1px solid var(--rule);
-    border-left: 4px solid var(--rule);
-    cursor: pointer;
-    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s;
-    position: relative;
-  }
+  .ar-card { background: white; border: 1px solid var(--rule); border-left: 4px solid var(--rule); cursor: pointer; transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s; position: relative; }
   .ar-card:hover { transform: translateY(-3px); box-shadow: 0 10px 40px rgba(12,27,58,0.13), 0 2px 8px rgba(12,27,58,0.07); border-color: var(--navy-mid); border-left-color: var(--gold); }
   .ar-card:focus { outline: 2px solid var(--gold); outline-offset: 2px; }
   .ar-card.dynasty { background: var(--champ-bg); border-color: #d4b86a; border-left-color: var(--gold); }
   .ar-card.finalist { background: var(--finalist-bg); border-color: #aabce0; border-left-color: var(--navy-soft); }
   .ar-card:hover .ar-card-chevron { transform: translateX(3px); color: var(--gold); }
 
-  .ar-card-badge-dynasty {
-    font-family: 'JetBrains Mono', monospace; font-size: 0.57rem; font-weight: 600;
-    letter-spacing: 0.14em; text-transform: uppercase;
-    background: var(--gold); color: var(--navy); padding: 2px 7px;
-    display: inline-block;
-  }
-  .ar-card-badge-finalist {
-    font-family: 'JetBrains Mono', monospace; font-size: 0.57rem; font-weight: 600;
-    letter-spacing: 0.14em; text-transform: uppercase;
-    background: var(--navy-soft); color: white; padding: 2px 7px;
-    display: inline-block;
-  }
+  .ar-card-badge-dynasty { font-family: 'JetBrains Mono', monospace; font-size: 0.57rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; background: var(--gold); color: var(--navy); padding: 2px 7px; display: inline-block; }
+  .ar-card-badge-finalist { font-family: 'JetBrains Mono', monospace; font-size: 0.57rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; background: var(--navy-soft); color: white; padding: 2px 7px; display: inline-block; }
 
   .ar-card-name { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; color: var(--ink); line-height: 1.25; transition: color 0.15s; }
   .ar-card:hover .ar-card-name { color: var(--navy-mid); }
@@ -143,15 +84,12 @@ const STYLES = `
 
   .ar-chevron-wrap { color: var(--ink-soft); transition: all 0.18s; }
 
-  /* Section label */
-  .ar-section-header {
-    border-bottom: 2px solid var(--rule);
-    padding-bottom: 10px; margin-bottom: 24px;
-  }
+  .ar-years-tag { font-family: 'JetBrains Mono', monospace; font-size: 0.58rem; letter-spacing: 0.06em; color: var(--ink-soft); background: var(--parch-dark); padding: 2px 6px; border-radius: 2px; display: inline-block; }
+
+  .ar-section-header { border-bottom: 2px solid var(--rule); padding-bottom: 10px; margin-bottom: 24px; }
   .ar-section-label { font-family: 'Playfair Display', Georgia, serif; font-size: 1.1rem; font-weight: 700; color: var(--ink-mid); }
   .ar-section-count { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; letter-spacing: 0.12em; color: var(--ink-soft); text-transform: uppercase; margin-top: 2px; }
 
-  /* Footer rules */
   .ar-rule1 { height: 2px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
   .ar-rule2 { height: 1px; background: linear-gradient(90deg, transparent, var(--rule), transparent); margin-top: 3px; }
 `;
@@ -180,6 +118,10 @@ export default function Teams() {
         );
       if (sortBy === "appearances")
         return (Number(b.appearances) || 0) - (Number(a.appearances) || 0);
+      if (sortBy === "years")
+        return (
+          (Number(b.tournament_years) || 0) - (Number(a.tournament_years) || 0)
+        );
       return (a.name || "").localeCompare(b.name || "");
     });
   }, [q, teams, sortBy]);
@@ -187,10 +129,6 @@ export default function Teams() {
   const stats = useMemo(() => {
     const totalChampionships = teams.reduce(
       (s, t) => s + (Number(t.championships_won) || 0),
-      0,
-    );
-    const totalAppearances = teams.reduce(
-      (s, t) => s + (Number(t.appearances) || 0),
       0,
     );
     const topTeam = [...teams].sort(
@@ -203,7 +141,6 @@ export default function Teams() {
     return {
       totalTeams: teams.length,
       totalChampionships,
-      totalAppearances,
       topTeam,
       champTeams,
     };
@@ -223,6 +160,9 @@ export default function Teams() {
   const TeamCard = ({ team }) => {
     const wins = Number(team.championships_won) || 0;
     const appearances = Number(team.appearances) || 0;
+    const tourneyYears = Number(team.tournament_years) || 0;
+    const firstYear = team.first_year;
+    const lastYear = team.last_year;
     const winRate =
       appearances > 0 ? Math.round((wins / appearances) * 100) : 0;
     const tier = getTier(wins);
@@ -272,6 +212,20 @@ export default function Teams() {
               {[team.city, team.state].filter(Boolean).join(", ")}
             </div>
           )}
+
+          {/* Years participated tag */}
+          {tourneyYears > 0 && (
+            <div style={{ marginTop: 7 }}>
+              <span className="ar-years-tag">
+                {tourneyYears} {tourneyYears === 1 ? "season" : "seasons"}
+                {firstYear && lastYear && firstYear !== lastYear
+                  ? ` · ${firstYear}–${lastYear}`
+                  : firstYear
+                    ? ` · ${firstYear}`
+                    : ""}
+              </span>
+            </div>
+          )}
         </div>
 
         <hr className="ar-divider" />
@@ -293,7 +247,7 @@ export default function Teams() {
               </div>
               <div className="ar-stat-lbl">Finals</div>
             </div>
-            {appearances > 0 && (
+            {tourneyYears > 0 && (
               <>
                 <div
                   style={{
@@ -307,9 +261,9 @@ export default function Teams() {
                     className="ar-stat-num"
                     style={{ color: "var(--ink-mid)" }}
                   >
-                    {winRate}%
+                    {tourneyYears}
                   </div>
-                  <div className="ar-stat-lbl">Win Rate</div>
+                  <div className="ar-stat-lbl">Seasons</div>
                 </div>
               </>
             )}
@@ -440,6 +394,7 @@ export default function Teams() {
             {[
               ["championships", "Titles"],
               ["appearances", "Finals"],
+              ["years", "Seasons"],
               ["name", "A–Z"],
             ].map(([v, l]) => (
               <button
@@ -529,7 +484,6 @@ export default function Teams() {
           !err &&
           filtered.length > 0 &&
           (sortBy === "championships" ? (
-            // Grouped by tier when sorted by titles
             <>
               {dynasties.length > 0 && (
                 <div style={{ marginBottom: 40 }}>
@@ -593,7 +547,6 @@ export default function Teams() {
               )}
             </>
           ) : (
-            // Flat grid for other sorts
             <div
               style={{
                 display: "grid",
@@ -608,7 +561,6 @@ export default function Teams() {
           ))}
       </div>
 
-      {/* Footer rules */}
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 32px 48px" }}>
         <div className="ar-rule1" />
         <div className="ar-rule2" />
