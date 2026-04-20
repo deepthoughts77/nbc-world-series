@@ -15,10 +15,11 @@ import { Container } from "../components/common/Container";
 import { BannerError } from "../components/common/BannerError";
 import { Skeleton } from "../components/common/Skeleton";
 
+// ── Category config ───────────────────────────────────────────────────────
 const CATEGORY_META = {
   Player: { color: "#1D4ED8", bg: "#EFF6FF", label: "PLAYER" },
-  Coach: { color: "#065F46", bg: "#ECFDF5", label: "COACH" },
-  Contributor: { color: "#6B21A8", bg: "#F5F3FF", label: "CONTRIB." },
+  Manager: { color: "#065F46", bg: "#ECFDF5", label: "MANAGER" },
+  Contributor: { color: "#6B21A8", bg: "#F5F3FF", label: "CONTRIBUTOR" },
 };
 
 function getCatMeta(cat) {
@@ -37,10 +38,33 @@ function SortIcon({ active, dir }) {
 function getBioLinkLabel(url) {
   if (!url) return null;
   if (url.includes("baseball-reference.com")) return "baseball-reference.com";
-  return "baseball-reference.com";
+  return "NBC Bio";
 }
 
-function MicroBadge({ color, bg, border, children }) {
+// ── Smart label for nbc_teams field based on role ─────────────────────────
+function getNbcAssociationLabel(primaryRole) {
+  if (!primaryRole) return "NBC Teams";
+  const role = primaryRole.toLowerCase();
+  if (role.includes("umpire")) return "NBC Role";
+  if (role.includes("staff")) return "NBC Role";
+  if (role.includes("owner")) return "NBC Role";
+  if (role.includes("founder")) return "NBC Role";
+  if (role.includes("commissioner")) return "NBC Role";
+  if (role.includes("director")) return "NBC Role";
+  if (role.includes("scout")) return "NBC Role";
+  if (role.includes("registrar")) return "NBC Role";
+  if (role.includes("administrator")) return "NBC Role";
+  if (role.includes("author")) return "NBC Role";
+  if (role.includes("fan")) return "NBC Role";
+  if (role.includes("ceremonies")) return "NBC Role";
+  if (role.includes("scorekeeper")) return "NBC Role";
+  if (role.includes("statistician")) return "NBC Role";
+  if (role.includes("general manager") && !role.includes("player"))
+    return "NBC Role";
+  return "NBC Teams";
+}
+
+function MicroBadge({ color, bg, children }) {
   return (
     <span
       style={{
@@ -52,7 +76,7 @@ function MicroBadge({ color, bg, border, children }) {
         borderRadius: 3,
         color,
         background: bg,
-        border: border || `1px solid ${color}33`,
+        border: `1px solid ${color}33`,
         marginLeft: 5,
         flexShrink: 0,
         whiteSpace: "nowrap",
@@ -80,10 +104,11 @@ export default function HallOfFame() {
   }
 
   const stats = useMemo(() => {
-    const byCategory = { Player: 0, Coach: 0, Contributor: 0 };
+    const byCategory = { Player: 0, Manager: 0, Contributor: 0 };
     members.forEach((m) => {
       const c = m.category || "Contributor";
-      byCategory[c] = (byCategory[c] || 0) + 1;
+      if (byCategory[c] !== undefined) byCategory[c]++;
+      else byCategory.Contributor++;
     });
     return { total: members.length, byCategory };
   }, [members]);
@@ -123,6 +148,7 @@ export default function HallOfFame() {
 
   return (
     <div style={s.page}>
+      {/* ── Page header ─────────────────────────────────────────────── */}
       <div style={s.pageHeader}>
         <Container>
           <div style={s.eyebrow}>NBC WORLD SERIES · LEGACY</div>
@@ -152,8 +178,8 @@ export default function HallOfFame() {
                 accent: "#1D4ED8",
               },
               {
-                label: "Coaches",
-                value: stats.byCategory.Coach,
+                label: "Managers",
+                value: stats.byCategory.Manager,
                 icon: <Award size={22} color="#065F46" />,
                 accent: "#065F46",
               },
@@ -195,7 +221,7 @@ export default function HallOfFame() {
               {[
                 { val: "all", label: "All" },
                 { val: "Player", label: "Players" },
-                { val: "Coach", label: "Coaches" },
+                { val: "Manager", label: "Managers" },
                 { val: "Contributor", label: "Contributors" },
               ].map(({ val, label }) => (
                 <button
@@ -321,6 +347,7 @@ export default function HallOfFame() {
                     const roleLabel = m.primary_role
                       ? m.primary_role.split(",")[0].trim()
                       : meta.label;
+                    const nbcLabel = getNbcAssociationLabel(m.primary_role);
 
                     return (
                       <tr
@@ -357,7 +384,7 @@ export default function HallOfFame() {
                               gap: 4,
                             }}
                           >
-                            {/* Name + badges row */}
+                            {/* Name + badges */}
                             <div
                               style={{
                                 display: "flex",
@@ -406,10 +433,10 @@ export default function HallOfFame() {
                               )}
                             </div>
 
-                            {/* NBC teams */}
+                            {/* NBC teams / role */}
                             {m.nbc_teams && (
                               <div style={s.subLine}>
-                                <span style={s.subLabel}>NBC Teams: </span>
+                                <span style={s.subLabel}>{nbcLabel}: </span>
                                 <span style={{ color: "#374151" }}>
                                   {m.nbc_teams}
                                 </span>
@@ -430,7 +457,7 @@ export default function HallOfFame() {
                               </div>
                             )}
 
-                            {/* MLB teams */}
+                            {/* MLB */}
                             {m.mlb_teams && (
                               <div style={s.subLine}>
                                 <span
@@ -446,7 +473,7 @@ export default function HallOfFame() {
                           </div>
                         </td>
 
-                        {/* ── Role cell ─────────────────────────── */}
+                        {/* ── Role badge cell ───────────────────── */}
                         <td
                           style={{
                             ...s.td,
@@ -501,6 +528,7 @@ export default function HallOfFame() {
   );
 }
 
+// ── Styles ────────────────────────────────────────────────────────────────
 const s = {
   page: {
     minHeight: "100vh",
