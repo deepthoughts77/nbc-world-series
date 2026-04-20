@@ -28,6 +28,7 @@ const PlayerComparison = React.lazy(() => import("./pages/PlayerComparison"));
 const LeadingPitchers = React.lazy(() => import("./pages/LeadingPitchers"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 const Archives = React.lazy(() => import("./pages/Archives"));
+const DocumentSearch = React.lazy(() => import("./pages/DocumentSearch"));
 
 function PageLoader() {
   return (
@@ -85,6 +86,9 @@ export default function App() {
 
             {/* Archives */}
             <Route path="/archives" element={<Archives />} />
+
+            {/* Document Search */}
+            <Route path="/document-search" element={<DocumentSearch />} />
 
             {/* 404 */}
             <Route path="*" element={<NotFound />} />

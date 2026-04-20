@@ -17,6 +17,10 @@ import searchRoutes from "./searchRoutes.js"; // contains /natural and /ask
 import playerRoutes from "./playerRoutes.js";
 import leadingPitchersRoutes from "./leadingPitchers.js";
 import tournamentRoutes from "./tournamentRoutes.js";
+import {
+  searchDocuments,
+  getIndexedYears,
+} from "../controllers/documentSearchController.js";
 
 const router = Router();
 
@@ -50,6 +54,11 @@ router.use("/pitching-stats", (req, res, next) => {
 router.use("/player-stats", playerStatsRoutes);
 router.use("/hall-of-fame", hofRoutes);
 router.use("/records", recordsRoutes);
+
+// Document search — must come BEFORE the generic documents router
+// so /documents/search is not swallowed by the documents router
+router.get("/documents/search", searchDocuments);
+router.get("/documents/search/years", getIndexedYears);
 router.use("/documents", documentsRouter);
 
 // Search — ALL search traffic goes through searchRoutes.

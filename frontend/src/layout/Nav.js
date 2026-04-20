@@ -30,7 +30,6 @@ export function Nav() {
   const searchInputRef = useRef(null);
   const searchBtnRef = useRef(null);
 
-  // Close dropdowns on outside click
   useEffect(() => {
     function handleClickOutside(e) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target))
@@ -42,7 +41,6 @@ export function Nav() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Escape closes any open overlay and returns focus
   useEffect(() => {
     function handleKeyDown(e) {
       if (e.key !== "Escape") return;
@@ -54,9 +52,7 @@ export function Nav() {
         setSearchOpen(false);
         searchBtnRef.current?.focus();
       }
-      if (open) {
-        setOpen(false);
-      }
+      if (open) setOpen(false);
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
@@ -77,7 +73,6 @@ export function Nav() {
 
   return (
     <>
-      {/* ── Skip navigation link (visible on focus) ───────────────────── */}
       <a
         href="#main-content"
         style={{
@@ -118,7 +113,7 @@ export function Nav() {
             </span>
           </div>
 
-          {/* ── Desktop nav ───────────────────────────────────────────── */}
+          {/* ── Desktop nav ─────────────────────────────────────────── */}
           <div className="hidden md:block">
             <nav aria-label="Main navigation">
               <ul
@@ -194,7 +189,6 @@ export function Nav() {
                           rotate: "45deg",
                         }}
                       />
-
                       <NavLink
                         to="/teams"
                         end
@@ -248,7 +242,6 @@ export function Nav() {
                               >
                                 Team Registry
                               </div>
-                              {/* contrast fix: #64748B on white = 4.6:1 ✓ */}
                               <div
                                 style={{
                                   fontSize: 11,
@@ -362,7 +355,14 @@ export function Nav() {
                   </NavLink>
                 </li>
 
-                {/* Search */}
+                {/* ── Doc Search ──────────────────────────────────────── */}
+                <li role="none">
+                  <NavLink to="/document-search" className={activeClass}>
+                    Doc Search
+                  </NavLink>
+                </li>
+
+                {/* Search icon */}
                 <li
                   role="none"
                   ref={searchRef}
@@ -469,7 +469,7 @@ export function Nav() {
           </button>
         </Container>
 
-        {/* ── Mobile sheet ───────────────────────────────────────────────── */}
+        {/* ── Mobile sheet ─────────────────────────────────────────────── */}
         {open && (
           <div
             id="mobile-nav"
@@ -486,6 +486,7 @@ export function Nav() {
                     { to: "/records", label: "Records" },
                     { to: "/player-stats", label: "Player Stats" },
                     { to: "/leaders/pitching", label: "Leading Pitchers" },
+                    { to: "/document-search", label: "Doc Search" },
                   ].map(({ to, label, end }) => (
                     <li key={to} role="none">
                       <NavLink
@@ -510,7 +511,6 @@ export function Nav() {
                         border: "1px solid #F1F5F9",
                       }}
                     >
-                      {/* contrast fix: #475569 on #F8FAFC = 5.9:1 ✓ (was #94A3B8 = 2.6:1 ✗) */}
                       <div
                         style={{
                           padding: "8px 12px 4px",
