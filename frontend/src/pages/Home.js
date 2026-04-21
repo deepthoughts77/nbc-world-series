@@ -22,11 +22,11 @@ import { Skeleton } from "../components/common/Skeleton";
 import SearchResults from "../components/SearchResults";
 
 // ── Next tournament dates ─────────────────────────────────────────────────
-// 92nd NBC World Series: July 23 – August 2, 2026
+// 92nd NBC World Series: July 23 – August 1, 2026
 // Update this object each year when official dates are announced.
 const NEXT_TOURNAMENT = {
   year: 2026,
-  dates: "July 23 – August 2",
+  dates: "July 23 – August 1",
 };
 
 export default function Home() {
