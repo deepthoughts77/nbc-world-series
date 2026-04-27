@@ -42,7 +42,7 @@ export default function DocumentSearch() {
           <div style={s.eyebrow}>NBC WORLD SERIES · ARCHIVES</div>
           <h1 style={s.h1}>Document Search</h1>
           <p style={s.subtitle}>
-            Search the full text of all scanned NBC World Series documents —
+            Search the full text of all scanned NBC World Series documents,
             tournament programs, annuals, and historical records from the WSU
             Libraries Special Collections.
           </p>
@@ -77,10 +77,7 @@ export default function DocumentSearch() {
                 {loading ? "Searching…" : "Search"}
               </button>
             </div>
-            <p style={s.hint}>
-              Try names like "Satchel Paige", team names, or topics like
-              "batting average" or "championship"
-            </p>
+            <p style={s.hint}></p>
           </form>
 
           {error && (
@@ -136,7 +133,7 @@ export default function DocumentSearch() {
               <h3 style={s.infoTitle}>Search the Historical Archive</h3>
               <p style={s.infoText}>
                 This search box queries the full text of all scanned documents
-                in the NBC World Series archive — including Official Baseball
+                in the NBC World Series archive, including Official Baseball
                 Annuals dating back to 1935, tournament programs, and historical
                 records held by WSU Libraries Special Collections. Results show
                 the exact pages where your search term was found.
