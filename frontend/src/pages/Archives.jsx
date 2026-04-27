@@ -416,7 +416,7 @@ export default function Archives() {
                   style={{ fontSize: 13, color: "#94A3B8", lineHeight: 1.5 }}
                 >
                   Looking for a player name, team, or topic? Search the full
-                  text of all scanned documents — not just their titles.
+                  text of all scanned documents, not just their titles.
                 </div>
               </div>
             </div>
