@@ -2,10 +2,11 @@
 import { pool } from "../db.js";
 
 /**
- * GET /api/documents/search?q=satchel+paige&year=1947&type=tournament_program
+ * GET /api/documents/search?q=satchel+paige&year=1947&type=other
  *
- * Full-text search across all scanned NBC document archives.
- * Uses PostgreSQL tsvector index on ocr_text + title + description.
+ * Full-text search across all scanned NBC document pages.
+ * Returns each matching document with the specific page numbers that matched,
+ * plus a snippet from the best matching page.
  */
 export const searchDocuments = async (req, res) => {
   try {
@@ -22,21 +23,21 @@ export const searchDocuments = async (req, res) => {
     const params = [];
     let pIdx = 1;
 
-    const conditions = ["d.is_public = true", "d.search_vector IS NOT NULL"];
-
+    const docConditions = ["d.is_public = true"];
     if (year) {
-      conditions.push(`d.year = $${pIdx++}`);
+      docConditions.push(`d.year = $${pIdx++}`);
       params.push(parseInt(year));
     }
     if (type) {
-      conditions.push(`d.doc_type = $${pIdx++}`);
+      docConditions.push(`d.doc_type = $${pIdx++}`);
       params.push(type);
     }
 
-    // Add search term as final param
+    // Add the search term as the last param
     params.push(terms);
     const tsParam = `$${pIdx}`;
 
+    // Query document_pages for matching pages, group by document
     const sql = `
       SELECT
         d.id,
@@ -47,17 +48,32 @@ export const searchDocuments = async (req, res) => {
         d.file_url,
         d.page_count,
         d.source_name,
-        ts_rank(d.search_vector, to_tsquery('english', ${tsParam})) AS rank,
-        ts_headline(
-          'english',
-          COALESCE(d.ocr_text, d.description, ''),
-          to_tsquery('english', ${tsParam}),
-          'MaxWords=40, MinWords=20, ShortWord=3, MaxFragments=2, FragmentDelimiter=" … "'
+        MAX(ts_rank(dp.search_vector, to_tsquery('english', ${tsParam}))) AS rank,
+        -- Collect matching page numbers sorted ascending
+        array_agg(DISTINCT dp.page_number ORDER BY dp.page_number ASC)
+          FILTER (WHERE dp.search_vector @@ to_tsquery('english', ${tsParam}))
+          AS matching_pages,
+        -- Snippet from the highest-ranking page
+        (
+          SELECT ts_headline(
+            'english',
+            dp2.page_text,
+            to_tsquery('english', ${tsParam}),
+            'MaxWords=35, MinWords=15, ShortWord=3, MaxFragments=2, FragmentDelimiter=" … "'
+          )
+          FROM document_pages dp2
+          WHERE dp2.document_id = d.id
+            AND dp2.search_vector @@ to_tsquery('english', ${tsParam})
+          ORDER BY ts_rank(dp2.search_vector, to_tsquery('english', ${tsParam})) DESC
+          LIMIT 1
         ) AS snippet
       FROM documents d
-      WHERE ${conditions.join(" AND ")}
-        AND d.search_vector @@ to_tsquery('english', ${tsParam})
-      ORDER BY rank DESC, d.sort_year ASC
+      JOIN document_pages dp ON dp.document_id = d.id
+      WHERE ${docConditions.join(" AND ")}
+        AND dp.search_vector @@ to_tsquery('english', ${tsParam})
+      GROUP BY d.id, d.title, d.year, d.display_year, d.doc_type,
+               d.file_url, d.page_count, d.source_name
+      ORDER BY rank DESC, d.year ASC
       LIMIT ${Math.min(parseInt(limit) || 20, 50)}
     `;
 
@@ -81,15 +97,18 @@ export const searchDocuments = async (req, res) => {
 
 /**
  * GET /api/documents/search/years
- * Returns distinct years that have indexed documents (for filter dropdown)
+ * Returns distinct years that have indexed pages (for filter dropdown)
  */
 export const getIndexedYears = async (req, res) => {
   try {
     const { rows } = await pool.query(`
-      SELECT DISTINCT year, display_year
-      FROM documents
-      WHERE is_public = true AND search_vector IS NOT NULL
-      ORDER BY year
+      SELECT DISTINCT d.year, d.display_year
+      FROM documents d
+      WHERE d.is_public = true
+        AND EXISTS (
+          SELECT 1 FROM document_pages dp WHERE dp.document_id = d.id
+        )
+      ORDER BY d.year
     `);
     res.json({ success: true, data: rows });
   } catch (err) {

@@ -1,9 +1,9 @@
 """
-NBC Document Archive — OCR Extraction Script
-============================================
+NBC Document Archive — OCR Extraction Script (Per-Page Version)
+===============================================================
 Downloads each PDF from libasimages.wichita.edu, runs OCR on every page,
-and stores the extracted text in the documents.ocr_text column.
-Builds a PostgreSQL tsvector search index automatically.
+and stores text PER PAGE in the document_pages table.
+Also updates documents.ocr_text with the full combined text.
 
 Usage:
   python ocr_documents.py                  # process all unprocessed docs
@@ -12,12 +12,10 @@ Usage:
 
 Requirements:
   pip install pymupdf pytesseract pillow psycopg2-binary requests
-  tesseract must be installed (brew install tesseract / apt install tesseract-ocr)
+  tesseract must be installed (apt install tesseract-ocr)
 """
 
 import argparse
-import io
-import sys
 import time
 
 import fitz           # PyMuPDF
@@ -27,7 +25,6 @@ import requests
 from PIL import Image
 
 # ── Database connection ───────────────────────────────────────────────────
-# Update this to point at your LOCAL nbc_world_series database
 DB_CONFIG = {
     "host":     "127.0.0.1",
     "port":     5432,
@@ -36,13 +33,11 @@ DB_CONFIG = {
     "password": "Ghostweep147@",
 }
 
-# OCR settings
-DPI = 200          # 200 is fast; raise to 300 for better accuracy on small text
-LANG = "eng"       # Tesseract language
+DPI  = 200
+LANG = "eng"
 
 
 def ensure_columns(cur):
-    """Add ocr_text and search_vector columns if they don't exist yet."""
     cur.execute("""
         ALTER TABLE documents ADD COLUMN IF NOT EXISTS ocr_text TEXT;
         ALTER TABLE documents ADD COLUMN IF NOT EXISTS search_vector tsvector;
@@ -51,11 +46,24 @@ def ensure_columns(cur):
         CREATE INDEX IF NOT EXISTS idx_documents_search
         ON documents USING GIN(search_vector);
     """)
-    print("✅ Columns and index ready")
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS document_pages (
+          id            SERIAL PRIMARY KEY,
+          document_id   INTEGER NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+          page_number   INTEGER NOT NULL,
+          page_text     TEXT,
+          search_vector TSVECTOR,
+          UNIQUE(document_id, page_number)
+        );
+        CREATE INDEX IF NOT EXISTS idx_document_pages_search
+          ON document_pages USING GIN(search_vector);
+        CREATE INDEX IF NOT EXISTS idx_document_pages_doc_id
+          ON document_pages(document_id);
+    """)
+    print("✅ Schema ready")
 
 
 def get_documents(cur, doc_id=None, reprocess=False):
-    """Fetch documents to process."""
     if doc_id:
         cur.execute(
             "SELECT id, title, year, file_url FROM documents WHERE id = %s",
@@ -68,59 +76,76 @@ def get_documents(cur, doc_id=None, reprocess=False):
             "ORDER BY sort_year"
         )
     else:
+        # Process docs that have no pages yet
         cur.execute(
-            "SELECT id, title, year, file_url FROM documents "
-            "WHERE file_url IS NOT NULL AND is_public = true "
-            "AND (ocr_text IS NULL OR ocr_text = '') "
-            "ORDER BY sort_year"
+            "SELECT d.id, d.title, d.year, d.file_url FROM documents d "
+            "WHERE d.file_url IS NOT NULL AND d.is_public = true "
+            "AND NOT EXISTS ("
+            "  SELECT 1 FROM document_pages dp WHERE dp.document_id = d.id"
+            ") "
+            "ORDER BY d.sort_year"
         )
     return cur.fetchall()
 
 
 def download_pdf(url):
-    """Download PDF bytes from URL."""
     print(f"  ↓ Downloading {url}")
     r = requests.get(url, timeout=120)
     r.raise_for_status()
     return r.content
 
 
-def ocr_pdf(pdf_bytes, title):
-    """Extract text from all pages of a PDF using OCR."""
+def ocr_pdf_pages(pdf_bytes):
+    """Returns list of (page_number, page_text) tuples, 1-indexed."""
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-    total_pages = len(doc)
-    all_text = []
+    total = len(doc)
+    pages = []
 
-    print(f"  📄 {total_pages} pages — running OCR...")
-    for page_num in range(total_pages):
-        page = doc[page_num]
+    print(f"  📄 {total} pages — running OCR...")
+    for i in range(total):
+        page_num = i + 1
+        page = doc[i]
 
-        # First try native text extraction (fast, works for text-based PDFs)
-        native_text = page.get_text().strip()
-        if len(native_text) > 50:
-            all_text.append(native_text)
+        # Try native text first
+        native = page.get_text().strip()
+        if len(native) > 50:
+            pages.append((page_num, native))
             continue
 
-        # Fall back to OCR for scanned/image pages
+        # Fall back to OCR
         mat = fitz.Matrix(DPI / 72, DPI / 72)
-        clip = page.rect
-        pix = page.get_pixmap(matrix=mat, clip=clip)
+        pix = page.get_pixmap(matrix=mat, clip=page.rect)
         img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
         text = pytesseract.image_to_string(img, lang=LANG)
-        all_text.append(text)
+        pages.append((page_num, text))
 
-        if (page_num + 1) % 10 == 0:
-            print(f"    ... page {page_num + 1}/{total_pages}")
+        if page_num % 10 == 0:
+            print(f"    ... page {page_num}/{total}")
 
     doc.close()
-    combined = "\n\n".join(all_text)
-    word_count = len(combined.split())
-    print(f"  ✅ Extracted ~{word_count:,} words")
-    return combined
+    total_words = sum(len(t.split()) for _, t in pages)
+    print(f"  ✅ Extracted ~{total_words:,} words across {total} pages")
+    return pages
 
 
-def save_to_db(cur, doc_id, ocr_text):
-    """Save OCR text and update search vector."""
+def save_to_db(cur, doc_id, pages):
+    """Save per-page rows and update the document's combined ocr_text."""
+
+    # Delete existing pages for this doc (clean reprocess)
+    cur.execute("DELETE FROM document_pages WHERE document_id = %s", (doc_id,))
+
+    # Insert each page
+    for page_num, page_text in pages:
+        cur.execute("""
+            INSERT INTO document_pages (document_id, page_number, page_text, search_vector)
+            VALUES (%s, %s, %s, to_tsvector('english', COALESCE(%s, '')))
+            ON CONFLICT (document_id, page_number) DO UPDATE
+              SET page_text     = EXCLUDED.page_text,
+                  search_vector = EXCLUDED.search_vector
+        """, (doc_id, page_num, page_text, page_text))
+
+    # Update full-text on documents table too
+    combined = "\n\n".join(text for _, text in pages)
     cur.execute("""
         UPDATE documents
         SET ocr_text = %s,
@@ -131,13 +156,13 @@ def save_to_db(cur, doc_id, ocr_text):
             ),
             updated_at = NOW()
         WHERE id = %s
-    """, (ocr_text, ocr_text, doc_id))
+    """, (combined, combined, doc_id))
 
 
 def main():
-    parser = argparse.ArgumentParser(description="OCR NBC document archive")
+    parser = argparse.ArgumentParser(description="OCR NBC document archive (per-page)")
     parser.add_argument("--doc-id", type=int, help="Process a single document by ID")
-    parser.add_argument("--reprocess", action="store_true", help="Reprocess all documents")
+    parser.add_argument("--reprocess", action="store_true", help="Reprocess all")
     args = parser.parse_args()
 
     conn = psycopg2.connect(**DB_CONFIG)
@@ -159,21 +184,19 @@ def main():
             print(f"[{i}/{len(docs)}] {year} — {title} (id={doc_id})")
             try:
                 pdf_bytes = download_pdf(file_url)
-                ocr_text = ocr_pdf(pdf_bytes, title)
-                save_to_db(cur, doc_id, ocr_text)
+                pages     = ocr_pdf_pages(pdf_bytes)
+                save_to_db(cur, doc_id, pages)
                 conn.commit()
-                print(f"  💾 Saved to database\n")
+                print(f"  💾 Saved {len(pages)} pages to database\n")
             except Exception as e:
                 conn.rollback()
                 print(f"  ❌ Error: {e}\n")
                 continue
 
-            # Small pause between documents to be polite to the server
             if i < len(docs):
                 time.sleep(2)
 
-        print("✅ OCR extraction complete!")
-        print("\nNext: sync local → Neon, then the search endpoint will work.")
+        print("✅ OCR complete! Sync local → Neon when ready.")
 
     finally:
         cur.close()
