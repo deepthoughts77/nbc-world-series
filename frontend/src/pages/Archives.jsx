@@ -5,6 +5,7 @@
 // Wichita State University Libraries Special Collections.
 
 import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   FileText,
   Search,
@@ -17,6 +18,7 @@ import {
   Clipboard,
   BarChart2,
   FolderOpen,
+  FileSearch,
 } from "lucide-react";
 import { API } from "../api";
 import { Container } from "../components/common/Container";
@@ -266,6 +268,7 @@ function DocCard({ doc, onPreview, isPreviewOpen }) {
 
 // ── Main page ─────────────────────────────────────────────────────────────
 export default function Archives() {
+  const navigate = useNavigate();
   const [docs, setDocs] = useState([]);
   const [years, setYears] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -365,6 +368,81 @@ export default function Archives() {
 
       <Container>
         <div style={{ paddingTop: 32, paddingBottom: 64 }}>
+          {/* ── Doc Search callout banner ────────────────────────────── */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 16,
+              padding: "18px 24px",
+              background: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
+              border: "1px solid #334155",
+              borderLeft: "4px solid #D97706",
+              borderRadius: 10,
+              marginBottom: 24,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 8,
+                  background: "rgba(217,119,6,0.15)",
+                  border: "1px solid rgba(217,119,6,0.3)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <FileSearch size={22} color="#D97706" />
+              </div>
+              <div>
+                <div
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 700,
+                    color: "#F8FAFC",
+                    marginBottom: 3,
+                  }}
+                >
+                  Search Inside the Documents
+                </div>
+                <div
+                  style={{ fontSize: 13, color: "#94A3B8", lineHeight: 1.5 }}
+                >
+                  Looking for a player name, team, or topic? Search the full
+                  text of all scanned documents — not just their titles.
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate("/document-search")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "10px 20px",
+                background: "#D97706",
+                border: "none",
+                borderRadius: 7,
+                color: "#FFFFFF",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+              }}
+            >
+              <Search size={14} />
+              Search Document Contents
+            </button>
+          </div>
+
           {/* ── Stats bar ──────────────────────────────────────────── */}
           <div
             style={{
@@ -431,7 +509,7 @@ export default function Archives() {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search documents…"
+                placeholder="Search documents by title or description…"
                 style={{
                   width: "100%",
                   background: "#F8FAFC",
