@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/no-redundant-roles */
 // src/layout/Nav.js
 import React, { useState, useRef, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
@@ -9,6 +10,7 @@ import {
   BarChart3,
   ArrowLeftRight,
   Search,
+  Swords,
 } from "lucide-react";
 import { Container } from "../components/common/Container";
 
@@ -131,7 +133,7 @@ export function Nav() {
                   </NavLink>
                 </li>
 
-                {/* Teams dropdown */}
+                {/* Teams dropdown — includes Team Registry, Team Totals, Head-to-Head */}
                 <li role="none" className="relative" ref={dropdownRef}>
                   <button
                     ref={teamsButtonRef}
@@ -168,7 +170,7 @@ export function Nav() {
                         border: "1px solid #E2E8F0",
                         borderRadius: 10,
                         boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-                        minWidth: 200,
+                        minWidth: 210,
                         zIndex: 100,
                         overflow: "hidden",
                       }}
@@ -189,6 +191,8 @@ export function Nav() {
                           rotate: "45deg",
                         }}
                       />
+
+                      {/* Team Registry */}
                       <NavLink
                         to="/teams"
                         end
@@ -256,6 +260,7 @@ export function Nav() {
                         )}
                       </NavLink>
 
+                      {/* Team Totals */}
                       <NavLink
                         to="/team-totals"
                         role="menuitem"
@@ -270,6 +275,7 @@ export function Nav() {
                               gap: 10,
                               padding: "12px 16px",
                               background: isActive ? "#EFF6FF" : "#FFFFFF",
+                              borderBottom: "1px solid #F1F5F9",
                               cursor: "pointer",
                               transition: "background 0.15s",
                             }}
@@ -320,6 +326,72 @@ export function Nav() {
                           </div>
                         )}
                       </NavLink>
+
+                      {/* Head-to-Head */}
+                      <NavLink
+                        to="/head-to-head"
+                        role="menuitem"
+                        onClick={() => setTeamsDropdown(false)}
+                        style={{ textDecoration: "none" }}
+                      >
+                        {({ isActive }) => (
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 10,
+                              padding: "12px 16px",
+                              background: isActive ? "#EFF6FF" : "#FFFFFF",
+                              cursor: "pointer",
+                              transition: "background 0.15s",
+                            }}
+                            onMouseEnter={(e) =>
+                              (e.currentTarget.style.background = "#F8FAFC")
+                            }
+                            onMouseLeave={(e) =>
+                              (e.currentTarget.style.background = isActive
+                                ? "#EFF6FF"
+                                : "#FFFFFF")
+                            }
+                          >
+                            <div
+                              style={{
+                                width: 32,
+                                height: 32,
+                                borderRadius: 8,
+                                background: "#FEF3C7",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                              }}
+                              aria-hidden="true"
+                            >
+                              <Swords size={16} color="#D97706" />
+                            </div>
+                            <div>
+                              <div
+                                style={{
+                                  fontSize: 13,
+                                  fontWeight: 700,
+                                  color: "#0F172A",
+                                }}
+                              >
+                                Head-to-Head
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: 11,
+                                  color: "#64748B",
+                                  marginTop: 1,
+                                }}
+                              >
+                                All-time matchup records
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </NavLink>
                     </div>
                   )}
                 </li>
@@ -354,8 +426,6 @@ export function Nav() {
                     Leading Pitchers
                   </NavLink>
                 </li>
-
-                {/* ── Doc Search ──────────────────────────────────────── */}
                 <li role="none">
                   <NavLink to="/document-search" className={activeClass}>
                     Doc Search
@@ -502,7 +572,7 @@ export function Nav() {
                     </li>
                   ))}
 
-                  {/* Mobile Teams group */}
+                  {/* Mobile Teams group — includes Head-to-Head */}
                   <li role="none">
                     <div
                       style={{
@@ -542,6 +612,15 @@ export function Nav() {
                         onClick={() => setOpen(false)}
                       >
                         <BarChart3 size={15} aria-hidden="true" /> Team Totals
+                      </NavLink>
+                      <NavLink
+                        to="/head-to-head"
+                        className={({ isActive }) =>
+                          `flex items-center gap-2 px-3 py-2 text-sm font-medium ${isActive ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50 text-gray-700"}`
+                        }
+                        onClick={() => setOpen(false)}
+                      >
+                        <Swords size={15} aria-hidden="true" /> Head-to-Head
                       </NavLink>
                     </div>
                   </li>

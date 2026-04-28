@@ -29,6 +29,7 @@ const LeadingPitchers = React.lazy(() => import("./pages/LeadingPitchers"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 const Archives = React.lazy(() => import("./pages/Archives"));
 const DocumentSearch = React.lazy(() => import("./pages/DocumentSearch"));
+const HeadToHead = React.lazy(() => import("./pages/HeadToHead"));
 
 function PageLoader() {
   return (
@@ -73,7 +74,7 @@ export default function App() {
               element={<ChampionshipDetail />}
             />
 
-            {/* Team Pages — order matters: /totals before /:year */}
+            {/* Team Pages — order matters: specific paths before /:year */}
             <Route
               path="/teams/:teamSlug/totals"
               element={<TeamHistoryTotals />}
@@ -89,6 +90,9 @@ export default function App() {
 
             {/* Document Search */}
             <Route path="/document-search" element={<DocumentSearch />} />
+
+            {/* Head-to-Head */}
+            <Route path="/head-to-head" element={<HeadToHead />} />
 
             {/* 404 */}
             <Route path="*" element={<NotFound />} />

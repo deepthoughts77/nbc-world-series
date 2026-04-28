@@ -13,7 +13,7 @@ import statsRoutes from "./statsRoutes.js";
 import playerStatsRoutes from "./playerStatsRoutes.js";
 import hofRoutes from "./hofRoutes.js";
 import recordsRoutes from "./recordsRoutes.js";
-import searchRoutes from "./searchRoutes.js"; // contains /natural and /ask
+import searchRoutes from "./searchRoutes.js";
 import playerRoutes from "./playerRoutes.js";
 import leadingPitchersRoutes from "./leadingPitchers.js";
 import tournamentRoutes from "./tournamentRoutes.js";
@@ -21,6 +21,10 @@ import {
   searchDocuments,
   getIndexedYears,
 } from "../controllers/documentSearchController.js";
+import {
+  getHeadToHead,
+  getTeamList,
+} from "../controllers/headToHeadController.js";
 
 const router = Router();
 
@@ -55,17 +59,16 @@ router.use("/player-stats", playerStatsRoutes);
 router.use("/hall-of-fame", hofRoutes);
 router.use("/records", recordsRoutes);
 
-// Document search — must come BEFORE the generic documents router
-// so /documents/search is not swallowed by the documents router
+// Document search — MUST come before router.use("/documents", ...)
 router.get("/documents/search", searchDocuments);
 router.get("/documents/search/years", getIndexedYears);
 router.use("/documents", documentsRouter);
 
-// Search — ALL search traffic goes through searchRoutes.
-// searchRoutes registers both /natural and /ask so the full
-// naturalLanguageSearch controller handles every query.
-// Do NOT add a separate router.post("/search/ask", handleAiQuery) here —
-// that would shadow the search controller with the raw Gemini SQL handler.
+// Head-to-head
+router.get("/head-to-head/teams", getTeamList);
+router.get("/head-to-head", getHeadToHead);
+
+// Search
 router.use("/search", searchRoutes);
 
 router.use("/players", playerRoutes);
