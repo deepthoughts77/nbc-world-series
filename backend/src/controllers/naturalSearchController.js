@@ -27,7 +27,6 @@ async function resolveTable(candidates) {
 
 let _battingTable = null;
 let _pitchingTable = null;
-
 async function getBattingTable() {
   if (!_battingTable)
     _battingTable = await resolveTable(TABLE_CANDIDATES.batting);
@@ -78,13 +77,9 @@ const QUERY_PATTERNS = {
   shutouts: /shutouts?|\bsho\b/i,
   completeGames: /complete games?|\bcg\b/i,
   appearances: /appearances?|\bapp\b/i,
-  team: /(?:from|for|on|with|played for)\s+(?:the\s+)?([A-Z][a-z\s]+(?:Monarchs|Larks|Foresters|Studs|Stars|Cannons|Oilers|Pilots|Bee Jays|Broncos|Heat|Twins|A's|Kraken|Dawgs|Goldpanners))/i,
-  teamOnly: /\b([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){1,4})\b/,
   year: /(?:in|for|during|of)\s+(?:the\s+)?(\d{4})|(\d{4})\s+(?:season|championship|mvp|winner|year)|year\s+(\d{4})/i,
   yearRange: /from\s+(\d{4})\s+to\s+(\d{4})|between\s+(\d{4})\s+and\s+(\d{4})/i,
   allTime: /all.?time|history|ever|career|all years/i,
-  over: /over|above|more than|greater than|at least\s+(\d+)/i,
-  under: /under|below|less than|fewer than|no more than\s+(\d+)/i,
   comparison: /compare|versus|vs\.?|against|better than/i,
   roster:
     /roster|players|lineup|team members|list.*stats|stats.*for.*team|batting.*for.*team|pitching.*for.*team/i,
@@ -104,7 +99,6 @@ function parseQuery(query) {
     yearEnd: null,
     threshold: null,
     limit: 10,
-    position: null,
     allTime: false,
   };
   const lowerQuery = query.toLowerCase();
@@ -139,35 +133,6 @@ function parseQuery(query) {
     return intent;
   }
 
-  if (
-    QUERY_PATTERNS.roster.test(lowerQuery) ||
-    /for team|stats.*for|for the\b/i.test(lowerQuery)
-  ) {
-    const tm =
-      query.match(QUERY_PATTERNS.team) ||
-      query.match(QUERY_PATTERNS.teamOnly) ||
-      query.match(/['"]([^'"]+)['"]/);
-    if (tm && intent.year) {
-      intent.team = tm[1].trim();
-      intent.statGroup = /pitch/i.test(lowerQuery) ? "pitching" : "batting";
-      intent.type = "team_roster";
-      return intent;
-    }
-  }
-
-  if (
-    (lowerQuery.includes("championships") || lowerQuery.includes("won")) &&
-    lowerQuery.includes("many")
-  ) {
-    const tm =
-      query.match(QUERY_PATTERNS.team) || query.match(QUERY_PATTERNS.teamOnly);
-    if (tm) {
-      intent.team = tm[1].trim();
-      intent.type = "team_championships";
-      return intent;
-    }
-  }
-
   const tnm = query.match(QUERY_PATTERNS.twoPlayerNames);
   if (tnm && QUERY_PATTERNS.comparison.test(lowerQuery)) {
     intent.playerName = tnm[1];
@@ -181,10 +146,6 @@ function parseQuery(query) {
     intent.playerName = nm[1];
     intent.type = "player_lookup";
   }
-
-  const tm2 =
-    query.match(QUERY_PATTERNS.team) || query.match(QUERY_PATTERNS.teamOnly);
-  if (tm2) intent.team = tm2[1].trim();
 
   if (!intent.type) {
     if (QUERY_PATTERNS.obp.test(lowerQuery)) {
@@ -295,11 +256,6 @@ function parseQuery(query) {
     }
   }
 
-  const om = query.match(QUERY_PATTERNS.over);
-  const um = query.match(QUERY_PATTERNS.under);
-  if (om) intent.threshold = { operator: ">=", value: parseInt(om[1]) };
-  else if (um) intent.threshold = { operator: "<=", value: parseInt(um[1]) };
-
   return intent;
 }
 
@@ -315,8 +271,8 @@ async function buildQuery(intent, searchQuery = "") {
     (lowerQuery.includes("mvp") || lowerQuery.includes("most valuable"))
   ) {
     query = `SELECT p.id AS player_id, p.first_name||' '||p.last_name AS player_name, COUNT(c.year) AS count, array_agg(c.year ORDER BY c.year DESC) AS years
-           FROM championships c JOIN players p ON c.mvp_player_id=p.id WHERE c.mvp_player_id IS NOT NULL
-           GROUP BY p.id,p.first_name,p.last_name ORDER BY count DESC LIMIT $1`;
+             FROM championships c JOIN players p ON c.mvp_player_id=p.id WHERE c.mvp_player_id IS NOT NULL
+             GROUP BY p.id,p.first_name,p.last_name ORDER BY count DESC LIMIT $1`;
     params = [intent.limit || 10];
     return { query, params };
   }
@@ -355,11 +311,11 @@ async function buildQuery(intent, searchQuery = "") {
         "CASE WHEN p1.id IS NOT NULL THEN ARRAY[p1.first_name||' '||p1.last_name] ELSE ARRAY[]::text[] END AS mvp_names,";
     else mvpCols = "ARRAY[]::text[] AS mvp_names,";
     query = `SELECT c.year,${champCols}${ruCols}${mvpCols}${scoreCols}c.id FROM championships c
-           ${hasCT ? "LEFT JOIN teams t1 ON c.champion_team_id=t1.id" : ""}
-           ${hasRU ? "LEFT JOIN teams t2 ON c.runner_up_team_id=t2.id" : ""}
-           ${hasMvp ? "LEFT JOIN players p1 ON c.mvp_player_id=p1.id" : ""}
-           ${hasMvp2 ? "LEFT JOIN players p2 ON c.mvp_player_id2=p2.id" : ""}
-           WHERE c.year=$1 LIMIT 1`;
+             ${hasCT ? "LEFT JOIN teams t1 ON c.champion_team_id=t1.id" : ""}
+             ${hasRU ? "LEFT JOIN teams t2 ON c.runner_up_team_id=t2.id" : ""}
+             ${hasMvp ? "LEFT JOIN players p1 ON c.mvp_player_id=p1.id" : ""}
+             ${hasMvp2 ? "LEFT JOIN players p2 ON c.mvp_player_id2=p2.id" : ""}
+             WHERE c.year=$1 LIMIT 1`;
     params = [intent.year];
     return { query, params };
   }
@@ -370,42 +326,13 @@ async function buildQuery(intent, searchQuery = "") {
     const yc = intent.year
       ? `AND COALESCE(bs.year,ps.year)=${parseInt(intent.year)}`
       : "";
-    query = `SELECT p.first_name||' '||p.last_name AS player_name,COALESCE(bt.name,pt.name) AS team_name,COALESCE(bs.year,ps.year) AS year,
-           bs.avg,bs.obp,bs.slg,bs.hr,bs.rbi,bs.h,bs.r,bs.bb,bs.so,bs.sb,bs.ab,bs.gp,bs."2b",bs."3b",bs.tb,bs.hbp,bs.sh,bs.gdp,bs.e,bs.fld,
-           ps.era,ps.ip,ps.w,ps.l,ps.sv,ps.so AS p_so,ps.bb AS p_bb,ps.cg,ps.sho,ps.app,ps.whip
-           FROM players p LEFT JOIN ${bt} bs ON p.id=bs.player_id LEFT JOIN ${pt} ps ON p.id=ps.player_id
-           LEFT JOIN teams bt ON bs.team_id=bt.id LEFT JOIN teams pt ON ps.team_id=pt.id
-           WHERE p.first_name||' '||p.last_name ILIKE $1 ${yc} ORDER BY COALESCE(bs.year,ps.year) DESC LIMIT 10`;
+    query = `SELECT p.id AS player_id, p.first_name||' '||p.last_name AS player_name,COALESCE(bt.name,pt.name) AS team_name,COALESCE(bt.id,pt.id) AS team_id,COALESCE(bs.year,ps.year) AS year,
+             bs.avg,bs.obp,bs.slg,bs.hr,bs.rbi,bs.h,bs.r,bs.bb,bs.so,bs.sb,bs.ab,bs.gp,bs."2b",bs."3b",bs.tb,bs.hbp,bs.sh,bs.gdp,bs.e,bs.fld,
+             ps.era,ps.ip,ps.w,ps.l,ps.sv,ps.so AS p_so,ps.bb AS p_bb,ps.cg,ps.sho,ps.app,ps.whip
+             FROM players p LEFT JOIN ${bt} bs ON p.id=bs.player_id LEFT JOIN ${pt} ps ON p.id=ps.player_id
+             LEFT JOIN teams bt ON bs.team_id=bt.id LEFT JOIN teams pt ON ps.team_id=pt.id
+             WHERE p.first_name||' '||p.last_name ILIKE $1 ${yc} ORDER BY COALESCE(bs.year,ps.year) DESC LIMIT 10`;
     params = [`%${intent.playerName}%`];
-    return { query, params };
-  }
-
-  if (intent.type === "team_roster") {
-    const bt = (await getBattingTable()) || "batting_stats",
-      pt = (await getPitchingTable()) || "pitching_stats";
-    const yc = intent.year
-      ? `AND COALESCE(bs.year,ps.year)=${parseInt(intent.year)}`
-      : "";
-    if (intent.statGroup === "pitching") {
-      query = `SELECT DISTINCT p.first_name||' '||p.last_name AS player_name,t.name AS team_name,ps.year,
-             ps.era,ps.ip,ps.w,ps.l,ps.sv,ps.so,ps.bb,ps.cg,ps.sho,ps.app
-             FROM ${pt} ps JOIN players p ON ps.player_id=p.id LEFT JOIN teams t ON ps.team_id=t.id
-             WHERE (LOWER(COALESCE(t.name,'')) ILIKE $1
-               OR EXISTS (
-                 SELECT 1 FROM team_aliases ta
-                 WHERE ta.team_id = t.id AND LOWER(ta.alias) ILIKE $1
-               )) ${yc} ORDER BY ps.era ASC NULLS LAST LIMIT 50`;
-    } else {
-      query = `SELECT DISTINCT p.first_name||' '||p.last_name AS player_name,t.name AS team_name,bs.year,
-             bs.avg,bs.obp,bs.slg,bs.hr,bs.rbi,bs.h,bs.r,bs.ab,bs.bb,bs.so,bs.sb,bs."2b",bs."3b",bs.tb,bs.gp
-             FROM ${bt} bs JOIN players p ON bs.player_id=p.id LEFT JOIN teams t ON bs.team_id=t.id
-             WHERE (LOWER(COALESCE(t.name,'')) ILIKE $1
-               OR EXISTS (
-                 SELECT 1 FROM team_aliases ta
-                 WHERE ta.team_id = t.id AND LOWER(ta.alias) ILIKE $1
-               )) ${yc} ORDER BY bs.avg DESC NULLS LAST LIMIT 50`;
-    }
-    params = [`%${intent.team}%`];
     return { query, params };
   }
 
@@ -417,10 +344,10 @@ async function buildQuery(intent, searchQuery = "") {
     const defaultOrder = ["so", "gdp", "e", "hbp"].includes(stat)
       ? "ASC"
       : "DESC";
-    query = `SELECT CONCAT(p.first_name,' ',p.last_name) AS player_name,t.name AS team_name,bs.year,bs.*
-           FROM ${bt} bs JOIN players p ON bs.player_id=p.id LEFT JOIN teams t ON bs.team_id=t.id
-           WHERE ($1::int IS NULL OR bs.year=$1) AND bs.${col} IS NOT NULL
-           ORDER BY bs.${col} ${intent.order || defaultOrder} NULLS LAST LIMIT $2`;
+    query = `SELECT p.id AS player_id, CONCAT(p.first_name,' ',p.last_name) AS player_name,t.name AS team_name,t.id AS team_id,bs.year,bs.*
+             FROM ${bt} bs JOIN players p ON bs.player_id=p.id LEFT JOIN teams t ON bs.team_id=t.id
+             WHERE ($1::int IS NULL OR bs.year=$1) AND bs.${col} IS NOT NULL
+             ORDER BY bs.${col} ${intent.order || defaultOrder} NULLS LAST LIMIT $2`;
     params = [intent.year, intent.limit];
     return { query, params };
   }
@@ -430,11 +357,11 @@ async function buildQuery(intent, searchQuery = "") {
     if (!pt) return { query: null, params: [] };
     const stat = intent.stat || "era";
     if (stat === "whip") {
-      query = `SELECT CONCAT(p.first_name,' ',p.last_name) AS player_name,t.name AS team_name,ps.year,
-             ROUND(((COALESCE(ps.bb,0)+COALESCE(ps.h,0))/NULLIF(ps.ip,0))::numeric,3) AS whip,ps.*
-             FROM ${pt} ps JOIN players p ON ps.player_id=p.id LEFT JOIN teams t ON ps.team_id=t.id
-             WHERE ($1::int IS NULL OR ps.year=$1) AND ps.ip>0
-             ORDER BY ((COALESCE(ps.bb,0)+COALESCE(ps.h,0))/NULLIF(ps.ip,0)) ${intent.order || "ASC"} NULLS LAST LIMIT $2`;
+      query = `SELECT p.id AS player_id, CONCAT(p.first_name,' ',p.last_name) AS player_name,t.name AS team_name,t.id AS team_id,ps.year,
+               ROUND(((COALESCE(ps.bb,0)+COALESCE(ps.h,0))/NULLIF(ps.ip,0))::numeric,3) AS whip,ps.*
+               FROM ${pt} ps JOIN players p ON ps.player_id=p.id LEFT JOIN teams t ON ps.team_id=t.id
+               WHERE ($1::int IS NULL OR ps.year=$1) AND ps.ip>0
+               ORDER BY ((COALESCE(ps.bb,0)+COALESCE(ps.h,0))/NULLIF(ps.ip,0)) ${intent.order || "ASC"} NULLS LAST LIMIT $2`;
       params = [intent.year, intent.limit];
       return { query, params };
     }
@@ -444,10 +371,10 @@ async function buildQuery(intent, searchQuery = "") {
       : stat === "era"
         ? "ASC"
         : "DESC";
-    query = `SELECT CONCAT(p.first_name,' ',p.last_name) AS player_name,t.name AS team_name,ps.year,ps.*
-           FROM ${pt} ps JOIN players p ON ps.player_id=p.id LEFT JOIN teams t ON ps.team_id=t.id
-           WHERE ($1::int IS NULL OR ps.year=$1) AND ps.${col} IS NOT NULL AND ps.ip>0
-           ORDER BY ps.${col} ${intent.order || defaultOrder} NULLS LAST LIMIT $2`;
+    query = `SELECT p.id AS player_id, CONCAT(p.first_name,' ',p.last_name) AS player_name,t.name AS team_name,t.id AS team_id,ps.year,ps.*
+             FROM ${pt} ps JOIN players p ON ps.player_id=p.id LEFT JOIN teams t ON ps.team_id=t.id
+             WHERE ($1::int IS NULL OR ps.year=$1) AND ps.${col} IS NOT NULL AND ps.ip>0
+             ORDER BY ps.${col} ${intent.order || defaultOrder} NULLS LAST LIMIT $2`;
     params = [intent.year, intent.limit];
     return { query, params };
   }
@@ -544,58 +471,6 @@ function formatResponse(intent, results) {
     };
   }
 
-  if (intent.type === "team_roster") {
-    const yearLabel = intent.year ? ` – ${intent.year}` : "",
-      groupLabel = intent.statGroup === "pitching" ? "Pitching" : "Batting",
-      teamName = results[0]?.team_name || intent.team;
-    return {
-      success: true,
-      answer: `Found **${results.length}** players with ${groupLabel} stats for **${teamName}**${yearLabel}.`,
-      data: results,
-      message: `${groupLabel} Stats – ${teamName}${yearLabel}`,
-      results,
-      queryType:
-        intent.statGroup === "pitching" ? "pitching_stat" : "batting_stat",
-      intent: {
-        ...intent,
-        stat: intent.statGroup === "pitching" ? "era" : "avg",
-      },
-      count: results.length,
-    };
-  }
-
-  if (intent.type === "team_championships") {
-    const t = results[0];
-    answer = `The ${t.team_name} have won ${t.championships} championship${t.championships !== 1 ? "s" : ""}.`;
-    if (t.years?.length)
-      answer += ` Years: ${t.years.slice(0, 10).join(", ")}${t.years.length > 10 ? "..." : ""}.`;
-    return {
-      success: true,
-      answer,
-      data: t,
-      message: `${t.team_name} Championships`,
-      results,
-      intent,
-      count: 1,
-    };
-  }
-
-  if (intent.type === "player_comparison") {
-    answer =
-      results.length === 2
-        ? `Comparing **${results[0].player_name}** and **${results[1].player_name}**${intent.year ? ` – ${intent.year} Season` : ""}`
-        : `Found ${results.length} player(s) for comparison.`;
-    return {
-      success: true,
-      answer,
-      data: results,
-      message: answer,
-      results,
-      intent,
-      count: results.length,
-    };
-  }
-
   if (intent.type === "player_lookup") {
     const p = results[0];
     message = `Stats for **${p.player_name}** (${p.team_name || "Unknown Team"})${intent.year ? ` – ${intent.year}` : ""}`;
@@ -651,8 +526,7 @@ function formatResponse(intent, results) {
       const names = tied.map((r) => `**${r.player_name}**`).join(", ");
       answer = `${tied.length} players are tied in ${label} with **${formatted}**${yearLabel}: ${names}.`;
     } else {
-      const superlative = isLowest ? "fewest" : "most";
-      answer = `**${top.player_name}** had the ${superlative} ${label}${formatted != null ? ` with **${formatted}**` : ""}${yearLabel}.`;
+      answer = `**${top.player_name}** had the ${isLowest ? "fewest" : "most"} ${label}${formatted != null ? ` with **${formatted}**` : ""}${yearLabel}.`;
     }
     message = `${isLowest ? "Fewest" : "Top"} ${results.length} by ${label}${yearLabel}`;
   }
@@ -707,8 +581,8 @@ function formatResponse(intent, results) {
 export const naturalLanguageSearch = async (req, res) => {
   try {
     const { query, question } = req.body;
-    const searchQuery = query || question;
-    if (!searchQuery || typeof searchQuery !== "string")
+    const searchQuery = (query || question || "").trim();
+    if (!searchQuery)
       return res
         .status(400)
         .json({ success: false, error: "Query string is required" });
@@ -721,12 +595,15 @@ export const naturalLanguageSearch = async (req, res) => {
       /\b(most\s+champ\w*|who\s+(has|have)\s+won\s+the\s+most|team\s+with\s+most|most\s+titles?)\b/i.test(
         searchQuery,
       ) &&
-      !/\b(streak|consecutive|in\s+a\s+row|back.?to.?back|winning\s+streak)\b/i.test(
+      !/\b(streaks?|consecutive|in\s+a\s+row|back.?to.?back|winning\s+streaks?)\b/i.test(
         searchQuery,
       )
     ) {
       const result = await pool.query(
-        `SELECT t.id AS team_id, t.name AS team_name,t.city,t.state,COUNT(*) AS count,array_agg(c.year ORDER BY c.year DESC) AS years FROM championships c JOIN teams t ON c.champion_team_id=t.id WHERE c.champion_team_id IS NOT NULL GROUP BY t.id,t.name,t.city,t.state ORDER BY count DESC LIMIT 10`,
+        `SELECT t.id AS team_id,t.name AS team_name,t.city,t.state,COUNT(*) AS count,array_agg(c.year ORDER BY c.year DESC) AS years
+         FROM championships c JOIN teams t ON c.champion_team_id=t.id
+         WHERE c.champion_team_id IS NOT NULL
+         GROUP BY t.id,t.name,t.city,t.state ORDER BY count DESC LIMIT 10`,
       );
       if (result.rows.length > 0) {
         const top = result.rows[0];
@@ -748,21 +625,19 @@ export const naturalLanguageSearch = async (req, res) => {
       )
     ) {
       const result = await pool.query(
-        `SELECT p.id AS player_id, p.first_name||' '||p.last_name AS player_name,COUNT(*) AS count,array_agg(c.year ORDER BY c.year DESC) AS years FROM championships c JOIN players p ON c.mvp_player_id=p.id WHERE c.mvp_player_id IS NOT NULL GROUP BY p.id,p.first_name,p.last_name ORDER BY count DESC LIMIT 10`,
+        `SELECT p.id AS player_id,p.first_name||' '||p.last_name AS player_name,COUNT(*) AS count,array_agg(c.year ORDER BY c.year DESC) AS years
+         FROM championships c JOIN players p ON c.mvp_player_id=p.id
+         WHERE c.mvp_player_id IS NOT NULL GROUP BY p.id,p.first_name,p.last_name ORDER BY count DESC LIMIT 10`,
       );
       if (result.rows.length > 0) {
         const topCount = result.rows[0].count,
           tied = result.rows.filter(
             (r) => String(r.count) === String(topCount),
           );
-        let answer;
-        if (tied.length === 1) {
-          const top = tied[0];
-          answer = `The player with the most MVPs is **${top.player_name}** with **${top.count}** award${top.count !== 1 ? "s" : ""} (${top.years.slice(0, 3).join(", ")}).`;
-        } else {
-          const names = tied.map((r) => `**${r.player_name}**`).join(", ");
-          answer = `There is a **${tied.length}-way tie** for most MVPs with **${topCount}** award${topCount !== 1 ? "s" : ""} each: ${names}.`;
-        }
+        const answer =
+          tied.length === 1
+            ? `The player with the most MVPs is **${tied[0].player_name}** with **${topCount}** award${topCount !== 1 ? "s" : ""} (${tied[0].years.slice(0, 3).join(", ")}).`
+            : `There is a **${tied.length}-way tie** for most MVPs with **${topCount}** awards each: ${tied.map((r) => `**${r.player_name}**`).join(", ")}.`;
         return res.json({
           success: true,
           answer,
@@ -776,33 +651,28 @@ export const naturalLanguageSearch = async (req, res) => {
 
     // ── INTERCEPT 3: Championship Streaks ─────────────────────────────────
     if (
-      /\b(streak|consecutive|in\s+a\s+row|back.?to.?back|most\s+streak\w*|winning\s+streak|championship\s+streak|title\s+streak)\b/i.test(
+      /\b(streaks?|consecutive|in\s+a\s+row|back.?to.?back|most\s+streaks?\w*|winning\s+streaks?|championship\s+streaks?|title\s+streaks?)\b/i.test(
         searchQuery,
       ) ||
       (/\bmost\b/i.test(searchQuery) && /\bwinning\b/i.test(searchQuery))
     ) {
       const result = await pool.query(`
         WITH streak_data AS (
-          SELECT t.name AS team_name,c.year,c.year-ROW_NUMBER() OVER (PARTITION BY c.champion_team_id ORDER BY c.year) AS streak_group
+          SELECT t.id AS team_id,t.name AS team_name,c.year,
+                 c.year-ROW_NUMBER() OVER (PARTITION BY c.champion_team_id ORDER BY c.year) AS streak_group
           FROM championships c JOIN teams t ON c.champion_team_id=t.id
         ),
-        streaks AS (SELECT team_name,MIN(year) AS start_year,MAX(year) AS end_year,COUNT(*) AS consecutive_wins FROM streak_data GROUP BY team_name,streak_group)
+        streaks AS (SELECT team_id,team_name,MIN(year) AS start_year,MAX(year) AS end_year,COUNT(*) AS consecutive_wins FROM streak_data GROUP BY team_id,team_name,streak_group)
         SELECT * FROM streaks WHERE consecutive_wins>1 ORDER BY consecutive_wins DESC,end_year DESC LIMIT 10`);
       if (result.rows.length > 0) {
         const topWins = result.rows[0].consecutive_wins,
           tiedStreaks = result.rows.filter(
             (r) => String(r.consecutive_wins) === String(topWins),
           );
-        let streakAnswer;
-        if (tiedStreaks.length === 1) {
-          const top = tiedStreaks[0];
-          streakAnswer = `The longest championship streak belongs to the **${top.team_name}** with **${top.consecutive_wins}** consecutive titles (${top.start_year}–${top.end_year}).`;
-        } else {
-          const names = tiedStreaks
-            .map((r) => `**${r.team_name}** (${r.start_year}–${r.end_year})`)
-            .join(", ");
-          streakAnswer = `There is a **${tiedStreaks.length}-way tie** for the longest streak with **${topWins}** consecutive titles: ${names}.`;
-        }
+        const streakAnswer =
+          tiedStreaks.length === 1
+            ? `The longest championship streak belongs to the **${tiedStreaks[0].team_name}** with **${tiedStreaks[0].consecutive_wins}** consecutive titles (${tiedStreaks[0].start_year}–${tiedStreaks[0].end_year}).`
+            : `There is a **${tiedStreaks.length}-way tie** for the longest streak with **${topWins}** consecutive titles: ${tiedStreaks.map((r) => `**${r.team_name}** (${r.start_year}–${r.end_year})`).join(", ")}.`;
         return res.json({
           success: true,
           answer: streakAnswer,
@@ -826,7 +696,6 @@ export const naturalLanguageSearch = async (req, res) => {
       const yearMatch = searchQuery.match(/\b(19|20)\d{2}\b/);
       const year = yearMatch ? parseInt(yearMatch[0]) : null;
       const isLowest = /lowest|worst|fewest|minimum|least/i.test(searchQuery);
-
       let statCol = "hr",
         statLabel = "Home Runs";
       if (/\bavg\b|batting average/i.test(searchQuery)) {
@@ -860,20 +729,15 @@ export const naturalLanguageSearch = async (req, res) => {
         statCol = "ab";
         statLabel = "At Bats";
       }
-
       const isRate = ["avg", "obp", "slg"].includes(statCol);
       const yearClause = year ? `WHERE bs.year=${year}` : "";
       const yearLabel = year ? ` in the ${year} Season` : " all time";
-      const sortDir = isLowest ? "ASC" : "DESC";
-      const superlative = isLowest ? "fewest" : "most";
-
       const result = await pool.query(`
         SELECT t.id AS team_id,t.name AS team_name,t.city,t.state,
                ${isRate ? `CASE WHEN SUM(bs.ab)>0 THEN ROUND(SUM(bs.h)::numeric/SUM(bs.ab),3) ELSE 0 END AS ${statCol}` : `SUM(bs.${statCol}) AS ${statCol}`}
         FROM batting_stats bs JOIN teams t ON t.id=bs.team_id ${yearClause}
         GROUP BY t.id,t.name,t.city,t.state HAVING SUM(bs.ab)>0
-        ORDER BY ${statCol} ${sortDir} NULLS LAST LIMIT 10`);
-
+        ORDER BY ${statCol} ${isLowest ? "ASC" : "DESC"} NULLS LAST LIMIT 10`);
       if (result.rows.length > 0) {
         const top = result.rows[0],
           topVal = top[statCol],
@@ -881,13 +745,10 @@ export const naturalLanguageSearch = async (req, res) => {
         const tied = result.rows.filter(
           (r) => String(r[statCol]) === String(topVal),
         );
-        let answer;
-        if (tied.length > 1) {
-          const names = tied.map((r) => `**${r.team_name}**`).join(", ");
-          answer = `There is a **${tied.length}-way tie** for ${superlative} ${statLabel}${yearLabel} with **${val}** each: ${names}.`;
-        } else {
-          answer = `The team with the ${superlative} ${statLabel}${yearLabel} was the **${top.team_name}** with **${val}**.`;
-        }
+        const answer =
+          tied.length > 1
+            ? `There is a **${tied.length}-way tie** for ${isLowest ? "fewest" : "most"} ${statLabel}${yearLabel} with **${val}** each: ${tied.map((r) => `**${r.team_name}**`).join(", ")}.`
+            : `The team with the ${isLowest ? "fewest" : "most"} ${statLabel}${yearLabel} was the **${top.team_name}** with **${val}**.`;
         return res.json({
           success: true,
           answer,
@@ -906,79 +767,7 @@ export const naturalLanguageSearch = async (req, res) => {
       }
     }
 
-    // ── INTERCEPT 5: Team championships count ────────────────────────────
-    const champCountMatch = searchQuery.match(
-      /\b(how many|championships?|titles?|wins?)\b/i,
-    );
-    if (champCountMatch) {
-      const teamNameMatch = searchQuery.match(
-        /(?:has\s+)?(?:the\s+)?([A-Z][a-zA-Z\s]{3,40?}?)(?:\s+won|\s+have|\s+championships?|\s+titles?)/i,
-      );
-      if (teamNameMatch) {
-        const teamSearch = teamNameMatch[1].trim();
-        const result = await pool.query(
-          `SELECT t.id AS team_id, t.name AS team_name, t.city, t.state,
-             COUNT(c.id) AS championships,
-             array_agg(c.year ORDER BY c.year DESC) AS years
-           FROM teams t
-           LEFT JOIN championships c ON c.champion_team_id = t.id
-           WHERE t.name ILIKE $1
-             OR EXISTS (SELECT 1 FROM team_aliases ta WHERE ta.team_id = t.id AND ta.alias ILIKE $1)
-           GROUP BY t.id, t.name, t.city, t.state
-           HAVING COUNT(c.id) > 0
-           ORDER BY championships DESC LIMIT 5`,
-          [`%${teamSearch}%`],
-        );
-        if (result.rows.length > 0) {
-          const top = result.rows[0];
-          return res.json({
-            success: true,
-            answer: `The **${top.team_name}** have won **${top.championships}** championship${top.championships !== 1 ? "s" : ""}: ${top.years.slice(0, 10).join(", ")}.`,
-            results: result.rows,
-            queryType: "team_championships",
-            count: result.rows.length,
-          });
-        }
-      }
-    }
-
-    // ── INTERCEPT 6: Any team roster without year ─────────────────────────
-    if (/\b(roster|players|lineup|squad)\b/i.test(searchQuery)) {
-      const yearMatch2 = searchQuery.match(/\b(19|20)\d{2}\b/);
-      const year2 = yearMatch2 ? parseInt(yearMatch2[0]) : null;
-      const bt = (await getBattingTable()) || "batting_stats";
-      const yearClause2 = year2
-        ? `AND bs.year = ${year2}`
-        : "AND bs.year = (SELECT MAX(year) FROM batting_stats)";
-      const result = await pool.query(
-        `SELECT DISTINCT p.first_name||' '||p.last_name AS player_name,
-           t.name AS team_name, t.id AS team_id, bs.year,
-           bs.avg, bs.hr, bs.rbi, bs.h, bs.ab, bs.gp
-         FROM ${bt} bs
-         JOIN players p ON bs.player_id = p.id
-         JOIN teams t ON bs.team_id = t.id
-         WHERE (t.name ILIKE $1
-           OR EXISTS (SELECT 1 FROM team_aliases ta WHERE ta.team_id = t.id AND ta.alias ILIKE $1))
-           ${yearClause2}
-         ORDER BY bs.avg DESC NULLS LAST LIMIT 30`,
-        [
-          `%${searchQuery.replace(/\b(roster|players|lineup|squad)\b/gi, "").trim()}%`,
-        ],
-      );
-      if (result.rows.length > 0) {
-        const teamName = result.rows[0].team_name;
-        const yr = result.rows[0].year;
-        return res.json({
-          success: true,
-          answer: `Found **${result.rows.length}** players for **${teamName}** (${yr}).`,
-          results: result.rows,
-          queryType: "batting_stat",
-          count: result.rows.length,
-        });
-      }
-    }
-
-    // ── INTERCEPT 7: Runner-up lookup ─────────────────────────────────────
+    // ── INTERCEPT 5: Runner-up lookup ─────────────────────────────────────
     if (
       /\b(beat|defeated|runner.?up|lost to|second place)\b/i.test(searchQuery)
     ) {
@@ -986,22 +775,16 @@ export const naturalLanguageSearch = async (req, res) => {
       const year3 = yearMatch3 ? parseInt(yearMatch3[0]) : null;
       if (year3) {
         const result = await pool.query(
-          `SELECT c.year, ct.name AS champion_name, rt.name AS runner_up_name,
-             c.championship_score
-           FROM championships c
-           LEFT JOIN teams ct ON ct.id = c.champion_team_id
-           LEFT JOIN teams rt ON rt.id = c.runner_up_team_id
-           WHERE c.year = $1 LIMIT 1`,
+          `SELECT c.year, ct.id AS champion_id, ct.name AS champion_name, rt.id AS runner_up_id, rt.name AS runner_up_name, c.championship_score
+           FROM championships c LEFT JOIN teams ct ON ct.id=c.champion_team_id LEFT JOIN teams rt ON rt.id=c.runner_up_team_id
+           WHERE c.year=$1 LIMIT 1`,
           [year3],
         );
         if (result.rows.length > 0) {
           const r = result.rows[0];
-          const score = r.championship_score
-            ? ` (${r.championship_score})`
-            : "";
           return res.json({
             success: true,
-            answer: `In ${year3}, the **${r.champion_name}** defeated the **${r.runner_up_name}**${score} to win the championship.`,
+            answer: `In ${year3}, the **${r.champion_name}** defeated the **${r.runner_up_name}**${r.championship_score ? ` (${r.championship_score})` : ""} to win the championship.`,
             results: result.rows,
             queryType: "championship_runnerup",
             count: 1,
@@ -1010,55 +793,16 @@ export const naturalLanguageSearch = async (req, res) => {
       }
     }
 
-    // ── INTERCEPT 8: Team history / profile ───────────────────────────────
-    if (/\b(history|about|profile|record|all time)\b/i.test(searchQuery)) {
-      const result = await pool.query(
-        `SELECT t.id AS team_id, t.name AS team_name, t.city, t.state,
-           COUNT(DISTINCT c_win.year) AS championships,
-           COUNT(DISTINCT c_fin.year) AS finals,
-           array_agg(DISTINCT c_win.year ORDER BY c_win.year DESC) 
-             FILTER (WHERE c_win.year IS NOT NULL) AS championship_years
-         FROM teams t
-         LEFT JOIN championships c_win ON c_win.champion_team_id = t.id
-         LEFT JOIN championships c_fin ON (c_fin.champion_team_id = t.id OR c_fin.runner_up_team_id = t.id)
-         WHERE t.name ILIKE $1
-           OR EXISTS (SELECT 1 FROM team_aliases ta WHERE ta.team_id = t.id AND ta.alias ILIKE $1)
-         GROUP BY t.id, t.name, t.city, t.state
-         ORDER BY championships DESC LIMIT 3`,
-        [
-          `%${searchQuery.replace(/\b(history|about|profile|record|all time|tell me|the)\b/gi, "").trim()}%`,
-        ],
-      );
-      if (result.rows.length > 0) {
-        const t = result.rows[0];
-        const loc = t.city && t.state ? ` from ${t.city}, ${t.state}` : "";
-        const yrs = t.championship_years?.length
-          ? ` Championship years: ${t.championship_years.slice(0, 10).join(", ")}.`
-          : "";
-        return res.json({
-          success: true,
-          answer: `The **${t.team_name}**${loc} have won **${t.championships}** championship${t.championships !== 1 ? "s" : ""} and appeared in **${t.finals}** finals.${yrs}`,
-          results: result.rows,
-          queryType: "team_championships",
-          count: result.rows.length,
-        });
-      }
-    }
-
-    // ── INTERCEPT 9: Recent champions list ───────────────────────────────
+    // ── INTERCEPT 6: Recent champions list ───────────────────────────────
     if (
       /\b(all champions|list.*winner|recent champion|past champion|show.*champion|champion.*list)\b/i.test(
         searchQuery,
       )
     ) {
       const result = await pool.query(
-        `SELECT c.year, t.name AS team_name, t.city, t.state, t.id AS team_id,
-           rt.name AS runner_up_name, c.championship_score
-         FROM championships c
-         JOIN teams t ON t.id = c.champion_team_id
-         LEFT JOIN teams rt ON rt.id = c.runner_up_team_id
-         WHERE c.year IS NOT NULL
-         ORDER BY c.year DESC LIMIT 20`,
+        `SELECT c.year,t.id AS team_id,t.name AS team_name,t.city,t.state,rt.name AS runner_up_name,c.championship_score
+         FROM championships c JOIN teams t ON t.id=c.champion_team_id LEFT JOIN teams rt ON rt.id=c.runner_up_team_id
+         WHERE c.year IS NOT NULL ORDER BY c.year DESC LIMIT 20`,
       );
       if (result.rows.length > 0) {
         return res.json({
@@ -1071,6 +815,60 @@ export const naturalLanguageSearch = async (req, res) => {
       }
     }
 
+    // ── INTERCEPT 7: Team name direct lookup ──────────────────────────────
+    // Catches "Liberal Bee Jays", "Santa Barbara Foresters", "Hays Larks", etc.
+    // Guard: skip if query looks like a question or stat/streak query
+    const isQuestionQuery =
+      /\b(who|what|when|where|how|which|most|best|top|streaks?|consecutive|champion|winner|mvp|era|avg|rbi|home run|batting|pitching|roster|list|show|all|recent|past|history)\b/i.test(
+        searchQuery,
+      );
+    if (!isQuestionQuery) {
+      const result = await pool.query(
+        `SELECT t.id AS team_id, t.name AS team_name, t.city, t.state,
+           COUNT(DISTINCT c_win.id) AS championships,
+           COUNT(DISTINCT c_fin.id) AS finals,
+           array_agg(DISTINCT c_win.year ORDER BY c_win.year DESC)
+             FILTER (WHERE c_win.year IS NOT NULL) AS championship_years,
+           (SELECT COUNT(*) FROM batting_stats bs WHERE bs.team_id = t.id) AS batting_rows,
+           (SELECT COUNT(*) FROM pitching_stats ps WHERE ps.team_id = t.id) AS pitching_rows
+         FROM teams t
+         LEFT JOIN championships c_win ON c_win.champion_team_id = t.id
+         LEFT JOIN championships c_fin ON (c_fin.champion_team_id = t.id OR c_fin.runner_up_team_id = t.id)
+         WHERE t.name ILIKE $1
+           OR t.city ILIKE $1
+           OR EXISTS (SELECT 1 FROM team_aliases ta WHERE ta.team_id = t.id AND ta.alias ILIKE $1)
+         GROUP BY t.id, t.name, t.city, t.state
+         ORDER BY championships DESC, batting_rows DESC LIMIT 5`,
+        [`%${searchQuery}%`],
+      );
+      if (result.rows.length > 0) {
+        const t = result.rows[0];
+        const loc =
+          t.city && t.state
+            ? ` from ${t.city}, ${t.state}`
+            : t.city
+              ? ` from ${t.city}`
+              : "";
+        let answer = `**${t.team_name}**${loc}`;
+        if (parseInt(t.championships) > 0) {
+          answer += ` have won **${t.championships}** championship${t.championships !== "1" ? "s" : ""}`;
+          if (t.championship_years?.length)
+            answer += ` (${t.championship_years.slice(0, 8).join(", ")})`;
+          answer += ".";
+        } else {
+          answer += ` — no championships recorded, but they have appeared in the NBC World Series.`;
+        }
+        return res.json({
+          success: true,
+          answer,
+          results: result.rows,
+          queryType: "team_profile",
+          intent: { type: "team_profile" },
+          count: result.rows.length,
+        });
+      }
+    } // end isQuestionQuery guard
+
     // ── PATTERN MATCHING ──────────────────────────────────────────────────
     const intent = parseQuery(searchQuery);
     console.log("Intent:", JSON.stringify(intent));
@@ -1082,54 +880,44 @@ export const naturalLanguageSearch = async (req, res) => {
     }
 
     // ── FINAL FALLBACK — search players AND teams by name ─────────────────
-    const term = `%${searchQuery.toLowerCase()}%`;
-
+    const term = `%${searchQuery}%`;
     const [playerFallback, teamFallback] = await Promise.all([
-      // Case-insensitive player name search across batting + pitching
       pool.query(
-        `SELECT DISTINCT
-           p.id AS player_id,
-           p.first_name || ' ' || p.last_name AS player_name,
-           COALESCE(t1.name, t2.name) AS team_name,
-           COALESCE(t1.id, t2.id) AS team_id,
-           COALESCE(bs.year, ps.year) AS year,
-           bs.avg, bs.hr, bs.rbi, bs.h, bs.ab, bs.gp,
-           ps.era, ps.ip, ps.w, ps.l, ps.so, ps.sv, ps.app
+        `SELECT DISTINCT p.id AS player_id, p.first_name||' '||p.last_name AS player_name,
+           COALESCE(t1.name,t2.name) AS team_name, COALESCE(t1.id,t2.id) AS team_id,
+           COALESCE(bs.year,ps.year) AS year,
+           bs.avg,bs.hr,bs.rbi,bs.h,bs.ab,bs.gp,
+           ps.era,ps.ip,ps.w,ps.l,ps.so,ps.sv,ps.app
          FROM players p
-         LEFT JOIN batting_stats bs ON bs.player_id = p.id
-         LEFT JOIN pitching_stats ps ON ps.player_id = p.id
-         LEFT JOIN teams t1 ON t1.id = bs.team_id
-         LEFT JOIN teams t2 ON t2.id = ps.team_id
-         WHERE LOWER(p.first_name || ' ' || p.last_name) ILIKE $1
+         LEFT JOIN batting_stats bs ON bs.player_id=p.id
+         LEFT JOIN pitching_stats ps ON ps.player_id=p.id
+         LEFT JOIN teams t1 ON t1.id=bs.team_id
+         LEFT JOIN teams t2 ON t2.id=ps.team_id
+         WHERE LOWER(p.first_name||' '||p.last_name) ILIKE $1
            AND (bs.player_id IS NOT NULL OR ps.player_id IS NOT NULL)
-         ORDER BY COALESCE(bs.year, ps.year) DESC NULLS LAST
-         LIMIT 10`,
+         ORDER BY COALESCE(bs.year,ps.year) DESC NULLS LAST LIMIT 10`,
         [term],
       ),
-      // Team name / city search
       pool.query(
-        `SELECT t.id AS team_id, t.name AS team_name, t.city, t.state,
-           COUNT(c.id) AS titles
+        `SELECT t.id AS team_id,t.name AS team_name,t.city,t.state,
+           COUNT(c.id) AS championships,
+           array_agg(DISTINCT c.year ORDER BY c.year DESC) FILTER (WHERE c.year IS NOT NULL) AS years
          FROM teams t
-         LEFT JOIN championships c ON c.champion_team_id = t.id
+         LEFT JOIN championships c ON c.champion_team_id=t.id
          WHERE t.name ILIKE $1 OR t.city ILIKE $1
-           OR EXISTS (
-             SELECT 1 FROM team_aliases ta
-             WHERE ta.team_id = t.id AND ta.alias ILIKE $1
-           )
-         GROUP BY t.id, t.name, t.city, t.state
-         ORDER BY titles DESC LIMIT 5`,
-        [`%${searchQuery}%`],
+           OR EXISTS (SELECT 1 FROM team_aliases ta WHERE ta.team_id=t.id AND ta.alias ILIKE $1)
+         GROUP BY t.id,t.name,t.city,t.state
+         ORDER BY championships DESC LIMIT 5`,
+        [term],
       ),
     ]);
 
-    // Player match — show their stats
     if (playerFallback.rows.length > 0) {
-      const firstName = playerFallback.rows[0].player_name;
+      const name = playerFallback.rows[0].player_name;
       const hasBatting = playerFallback.rows.some((r) => r.avg != null);
       return res.json({
         success: true,
-        answer: `Found **${playerFallback.rows.length}** result${playerFallback.rows.length !== 1 ? "s" : ""} for **${firstName}**.`,
+        answer: `Found **${playerFallback.rows.length}** result${playerFallback.rows.length !== 1 ? "s" : ""} for **${name}**.`,
         results: playerFallback.rows,
         queryType: hasBatting ? "batting_stat" : "pitching_stat",
         intent: {
@@ -1140,18 +928,23 @@ export const naturalLanguageSearch = async (req, res) => {
       });
     }
 
-    // Team match
     if (teamFallback.rows.length > 0) {
+      const t = teamFallback.rows[0];
+      const loc = t.city && t.state ? ` from ${t.city}, ${t.state}` : "";
+      const champs = parseInt(t.championships) || 0;
+      const answer =
+        champs > 0
+          ? `**${t.team_name}**${loc} have won **${champs}** championship${champs !== 1 ? "s" : ""} (${(t.years || []).slice(0, 8).join(", ")}).`
+          : `**${t.team_name}**${loc} — found in the NBC World Series database.`;
       return res.json({
         success: true,
-        answer: `Here are teams matching "${searchQuery}".`,
+        answer,
         results: teamFallback.rows,
-        queryType: "fallback",
+        queryType: "team_profile",
         count: teamFallback.rows.length,
       });
     }
 
-    // Nothing found — helpful message, no MVP suggestion
     return res.json({
       success: true,
       answer: `No results found for "${searchQuery}". Try a player name, team name, or a question like "Who won in 2024?"`,
@@ -1174,30 +967,16 @@ export const naturalLanguageSearch = async (req, res) => {
 export const getSearchSuggestions = async (req, res) => {
   try {
     const suggestions = [
-      "Jake Gutierrez stats",
-      "Max Buettenback pitching stats",
-      "Who won in 2020?",
+      "Who won the most championships?",
+      "Who won in 2024?",
       "Who was the MVP in 2024?",
-      "Who was the runner-up in 2023?",
+      "Liberal Bee Jays",
+      "Santa Barbara Foresters",
+      "Hays Larks",
       "Most home runs all time",
-      "Most RBI all time",
-      "Most walks all time",
-      "Best batting average all time",
       "Best ERA all time",
-      "Top 10 home run hitters in 2025",
-      "Who had the highest batting average in 2025?",
-      "Best ERA in 2025",
-      "Most strikeouts 2025",
-      "Top 5 RBI leaders 2024",
-      "Who had the least at-bats in 2025?",
-      "Players with over 3 home runs in 2025",
-      "Best slugging percentage 2025",
-      "Hutchinson Monarchs roster 2025",
-      "Which team has the most championships?",
-      "Most championships all time",
       "Championship streaks",
-      "Which team has the most winning streaks?",
-      "Which player has the highest home runs in 2024?",
+      "Most RBI all time",
     ];
     res.json({ success: true, suggestions });
   } catch (error) {

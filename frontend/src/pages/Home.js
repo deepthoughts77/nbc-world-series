@@ -144,7 +144,7 @@ const STYLES = `
     font-family: 'Libre Baskerville', Georgia, serif;
     font-size: 0.95rem;
     background: transparent; border: none;
-    padding: 16px 16px 16px 48px;
+    padding: 16px 40px 16px 48px;
     color: var(--ink); outline: none; width: 100%;
   }
   .hp-search-input::placeholder { color: var(--ink-soft); opacity: 0.65; }
@@ -375,7 +375,7 @@ export default function Home() {
               <span className="hp-headline-gold">Record Book</span>
             </h1>
             <p className="hp-sub" style={{ maxWidth: 520, marginBottom: 44 }}>
-              Nine decades of amateur baseball history, championships,
+              Nine decades of amateur baseball history — championships,
               statistics, and player records preserved for future generations.
             </p>
 
@@ -485,11 +485,60 @@ export default function Home() {
                   <input
                     type="text"
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Enter your questions about NBC World Series history…"
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      if (!e.target.value.trim()) {
+                        setSearchResults(null);
+                        setSearchError("");
+                      }
+                    }}
+                    placeholder="Who won the 1947 championship? Who holds the strikeout record?…"
                     className="hp-search-input"
                     disabled={searching}
                   />
+                  {/* X button to clear results */}
+                  {(searchQuery || searchResults) && !searching && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery("");
+                        setSearchResults(null);
+                        setSearchError("");
+                      }}
+                      style={{
+                        position: "absolute",
+                        right: 12,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "var(--ink-soft)",
+                        padding: 4,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        borderRadius: "50%",
+                        opacity: 0.6,
+                      }}
+                      title="Clear search"
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 14 14"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M1 1L13 13M13 1L1 13"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                    </button>
+                  )}
                 </div>
                 <button
                   type="submit"
@@ -560,7 +609,7 @@ export default function Home() {
               )}
             </div>
 
-            {/* Pill hint tags — rounded, more modern */}
+            {/* Pill hint tags — click to instantly run that search */}
             <div
               style={{
                 display: "flex",
@@ -571,16 +620,32 @@ export default function Home() {
               }}
             >
               {[
-                "Most championships",
-                "Satchel Paige",
+                "Who won the most championships?",
+                "Who won in 1947?",
                 "Liberal Bee Jays",
-                "1935 tournament",
-                "Home run record",
+                "Santa Barbara Foresters",
+                "Most home runs all time",
+                "Championship streaks",
               ].map((hint) => (
                 <button
                   key={hint}
-                  onClick={() => setSearchQuery(hint)}
                   className="hp-hint-tag"
+                  onClick={async () => {
+                    setSearchQuery(hint);
+                    setSearching(true);
+                    setSearchError("");
+                    setSearchResults(null);
+                    try {
+                      const r = await API.post("/search/ask", {
+                        question: hint,
+                      });
+                      setSearchResults(r?.data ?? {});
+                    } catch {
+                      setSearchError("Search failed. Please try again.");
+                    } finally {
+                      setSearching(false);
+                    }
+                  }}
                 >
                   {hint}
                 </button>

@@ -1,7 +1,7 @@
 // src/components/SearchResults.jsx
 import React, { useMemo } from "react";
-import { Trophy, Star } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Trophy, Star, MapPin, ExternalLink } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
 
 // ── tiny shared UI ────────────────────────────────────────────────────────
 function Card({ children, className = "", onClick, clickable = false }) {
@@ -54,7 +54,6 @@ function RowStat({ label, value, highlight = false }) {
     </div>
   );
 }
-
 function BoldText({ text }) {
   if (!text) return null;
   const parts = text.split("**");
@@ -71,20 +70,16 @@ const fmt3 = (v) => (v != null && v !== "" ? parseFloat(v).toFixed(3) : "");
 const fmt2 = (v) => (v != null && v !== "" ? parseFloat(v).toFixed(2) : "");
 
 function readBatter(p) {
-  const avg = fmt3(p.avg ?? p.batting_avg ?? p.AVG);
-  const obp = fmt3(p.obp ?? p.OBP);
-  const slg = fmt3(p.slg ?? p.SLG);
-  const fld = fmt3(p.fld ?? p.FLD);
   return {
     player_id: p.player_id ?? p.id ?? null,
     player_name: p.player_name || p.name || "",
     team_name: p.team_name || p.team || "",
     team_id: p.team_id ?? null,
     year: p.year || "",
-    avg,
-    obp,
-    slg,
-    fld,
+    avg: fmt3(p.avg ?? p.batting_avg ?? p.AVG),
+    obp: fmt3(p.obp ?? p.OBP),
+    slg: fmt3(p.slg ?? p.SLG),
+    fld: fmt3(p.fld ?? p.FLD),
     hr: p.hr ?? p.HR ?? "",
     rbi: p.rbi ?? p.RBI ?? "",
     h: p.h ?? p.H ?? "",
@@ -158,12 +153,10 @@ function AnswerCard({ answer, isTie = false }) {
 function ChampionBlock({ data }) {
   const navigate = useNavigate();
   if (!data) return null;
-  const mvpNames = data.mvp_names;
   const mvpLabel =
-    Array.isArray(mvpNames) && mvpNames.length > 0
-      ? mvpNames.join(" & ")
+    Array.isArray(data.mvp_names) && data.mvp_names.length > 0
+      ? data.mvp_names.join(" & ")
       : null;
-
   return (
     <Card
       className="mt-4"
@@ -218,7 +211,6 @@ function MvpBlock({ data }) {
   if (!data) return null;
   const names = Array.isArray(data.mvp_names) ? data.mvp_names : [];
   const label = names.length > 0 ? names.join(" & ") : "—";
-
   return (
     <Card
       className="mt-4"
@@ -248,11 +240,100 @@ function MvpBlock({ data }) {
   );
 }
 
+// ── Team profile block (NEW) ──────────────────────────────────────────────
+function TeamProfileBlock({ results }) {
+  const navigate = useNavigate();
+  if (!Array.isArray(results) || results.length === 0) return null;
+
+  return (
+    <div className="mt-4 space-y-3">
+      {results.map((t, idx) => {
+        const teamId = t.team_id;
+        const loc = [t.city, t.state].filter(Boolean).join(", ");
+        const champs = parseInt(t.championships) || 0;
+        const years = Array.isArray(t.championship_years)
+          ? t.championship_years
+          : [];
+
+        return (
+          <Card
+            key={idx}
+            clickable={!!teamId}
+            onClick={() => teamId && navigate(`/teams/${teamId}`)}
+          >
+            <CardBody>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Trophy size={16} className="text-yellow-500 shrink-0" />
+                    <span className="text-xs text-gray-500 uppercase tracking-wide font-semibold">
+                      Team Profile
+                    </span>
+                  </div>
+                  <div className="text-xl font-bold text-blue-700">
+                    {t.team_name}
+                  </div>
+                  {loc && (
+                    <div className="flex items-center gap-1 text-sm text-gray-500 mt-1">
+                      <MapPin size={12} />
+                      {loc}
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex flex-wrap gap-4">
+                    <div className="text-center">
+                      <div
+                        className="text-2xl font-black"
+                        style={{ color: champs > 0 ? "#d97706" : "#9ca3af" }}
+                      >
+                        {champs}
+                      </div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wide">
+                        Championships
+                      </div>
+                    </div>
+                    {parseInt(t.finals) > 0 && (
+                      <div className="text-center">
+                        <div className="text-2xl font-black text-gray-700">
+                          {t.finals}
+                        </div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wide">
+                          Finals
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {years.length > 0 && (
+                    <div className="mt-2 text-sm text-gray-600">
+                      <span className="font-medium">Championship years: </span>
+                      {years.slice(0, 10).join(", ")}
+                      {years.length > 10 ? "…" : ""}
+                    </div>
+                  )}
+                </div>
+
+                {teamId && (
+                  <div className="shrink-0 text-right">
+                    <div className="inline-flex items-center gap-1 text-xs text-blue-600 font-semibold border border-blue-200 rounded-lg px-3 py-2 bg-blue-50">
+                      <ExternalLink size={12} />
+                      View Team Page
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardBody>
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Batting leaderboard ───────────────────────────────────────────────────
 function BattingLeaderboard({ results, message, activeStat }) {
   const navigate = useNavigate();
   if (!Array.isArray(results) || results.length === 0) return null;
-
   return (
     <div className="mt-4 space-y-2">
       {message && (
@@ -268,7 +349,6 @@ function BattingLeaderboard({ results, message, activeStat }) {
             navigate(`/teams/${p.team_id}/${p.year}`);
         };
         const isClickable = !!p.player_id || (!!p.team_id && !!p.year);
-
         return (
           <Card
             key={`${p.player_name}-${idx}`}
@@ -371,7 +451,6 @@ function BattingLeaderboard({ results, message, activeStat }) {
 function PitchingLeaderboard({ results, message, activeStat }) {
   const navigate = useNavigate();
   if (!Array.isArray(results) || results.length === 0) return null;
-
   return (
     <div className="mt-4 space-y-2">
       {message && (
@@ -388,7 +467,6 @@ function PitchingLeaderboard({ results, message, activeStat }) {
             navigate(`/teams/${p.team_id}/${p.year}`);
         };
         const isClickable = !!p.player_id || (!!p.team_id && !!p.year);
-
         return (
           <Card
             key={`${p.player_name}-${idx}`}
@@ -516,8 +594,7 @@ function GenericLeaderboard({ results, queryType }) {
                     className="border-b last:border-0 hover:bg-blue-50 transition-colors cursor-pointer"
                     style={isTop ? { background: "#eff6ff" } : {}}
                     onClick={() =>
-                      item.start_year &&
-                      navigate(`/championships/${item.start_year}`)
+                      item.team_id && navigate(`/teams/${item.team_id}`)
                     }
                   >
                     <td
@@ -527,8 +604,8 @@ function GenericLeaderboard({ results, queryType }) {
                       {idx + 1}
                     </td>
                     <td
-                      className="px-4 py-3 font-semibold text-blue-700"
-                      style={{ color: isTop ? "#1e40af" : undefined }}
+                      className="px-4 py-3 font-semibold"
+                      style={{ color: isTop ? "#1e40af" : "#1d4ed8" }}
                     >
                       {item.team_name}
                     </td>
@@ -595,7 +672,6 @@ function GenericLeaderboard({ results, queryType }) {
                   item.player_id ||
                   (Array.isArray(item.years) && item.years[0])
                 );
-
                 return (
                   <tr
                     key={idx}
@@ -690,9 +766,7 @@ function RosterBlock({ results, message }) {
             return (
               <div
                 key={idx}
-                className={`flex items-center justify-between border rounded-lg px-3 py-2 transition-colors ${
-                  isClickable ? "hover:bg-blue-50 cursor-pointer" : ""
-                }`}
+                className={`flex items-center justify-between border rounded-lg px-3 py-2 transition-colors ${isClickable ? "hover:bg-blue-50 cursor-pointer" : ""}`}
                 onClick={() => isClickable && navigate(`/players/${playerId}`)}
               >
                 <span className="font-medium text-blue-700">
@@ -729,13 +803,10 @@ function PlayerLookup({ results, message }) {
             const hasPitching = raw.era != null || raw.ip != null;
             const playerId = raw.player_id ?? raw.id;
             const isClickable = !!playerId;
-
             return (
               <div
                 key={idx}
-                className={`border-b last:border-0 pb-4 last:pb-0 rounded-lg transition-colors ${
-                  isClickable ? "hover:bg-blue-50 cursor-pointer p-2" : ""
-                }`}
+                className={`border-b last:border-0 pb-4 last:pb-0 rounded-lg transition-colors ${isClickable ? "hover:bg-blue-50 cursor-pointer p-2" : ""}`}
                 onClick={() => isClickable && navigate(`/players/${playerId}`)}
               >
                 <div className="flex items-center justify-between mb-2">
@@ -762,34 +833,34 @@ function PlayerLookup({ results, message }) {
                 </div>
                 {hasBatting && (
                   <div className="flex flex-wrap gap-3 text-sm">
-                    <RowStat label="AVG" value={fmt3(raw.avg)} />
+                    <RowStat label="AVG" value={fmt3(raw.avg)} />{" "}
                     <RowStat label="OBP" value={fmt3(raw.obp)} />
-                    <RowStat label="SLG" value={fmt3(raw.slg)} />
+                    <RowStat label="SLG" value={fmt3(raw.slg)} />{" "}
                     <RowStat label="AB" value={raw.ab} />
-                    <RowStat label="H" value={raw.h} />
+                    <RowStat label="H" value={raw.h} />{" "}
                     <RowStat label="R" value={raw.r} />
-                    <RowStat label="HR" value={raw.hr} />
+                    <RowStat label="HR" value={raw.hr} />{" "}
                     <RowStat label="RBI" value={raw.rbi} />
-                    <RowStat label="BB" value={raw.bb} />
+                    <RowStat label="BB" value={raw.bb} />{" "}
                     <RowStat label="SO" value={raw.so} />
-                    <RowStat label="SB" value={raw.sb} />
+                    <RowStat label="SB" value={raw.sb} />{" "}
                     <RowStat label="2B" value={raw["2b"]} />
-                    <RowStat label="3B" value={raw["3b"]} />
+                    <RowStat label="3B" value={raw["3b"]} />{" "}
                     <RowStat label="TB" value={raw.tb} />
                     <RowStat label="GP" value={raw.gp} />
                   </div>
                 )}
                 {hasPitching && (
                   <div className="flex flex-wrap gap-3 text-sm mt-2">
-                    <RowStat label="ERA" value={fmt2(raw.era)} />
+                    <RowStat label="ERA" value={fmt2(raw.era)} />{" "}
                     <RowStat label="IP" value={raw.ip} />
-                    <RowStat label="W" value={raw.w} />
+                    <RowStat label="W" value={raw.w} />{" "}
                     <RowStat label="L" value={raw.l} />
-                    <RowStat label="SV" value={raw.sv} />
+                    <RowStat label="SV" value={raw.sv} />{" "}
                     <RowStat label="SO" value={raw.p_so ?? raw.so} />
-                    <RowStat label="BB" value={raw.p_bb ?? raw.bb} />
+                    <RowStat label="BB" value={raw.p_bb ?? raw.bb} />{" "}
                     <RowStat label="CG" value={raw.cg} />
-                    <RowStat label="SHO" value={raw.sho} />
+                    <RowStat label="SHO" value={raw.sho} />{" "}
                     <RowStat label="APP" value={raw.app} />
                   </div>
                 )}
@@ -824,6 +895,9 @@ export default function SearchResults({ searchResults }) {
       {qt === "championship_winner" && <ChampionBlock data={data} />}
       {qt === "championship_mvp" && <MvpBlock data={data} />}
       {qt === "championship_runnerup" && <ChampionBlock data={data} />}
+
+      {/* Team profile — clickable card linking to /teams/:id */}
+      {qt === "team_profile" && <TeamProfileBlock results={results} />}
 
       {qt === "batting_stat" && (
         <BattingLeaderboard
