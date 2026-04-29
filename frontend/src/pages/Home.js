@@ -492,7 +492,6 @@ export default function Home() {
                         setSearchError("");
                       }
                     }}
-                    placeholder="Who won the 1947 championship? Who holds the strikeout record?…"
                     className="hp-search-input"
                     disabled={searching}
                   />
