@@ -1,12 +1,20 @@
 // frontend/src/pages/PlayerComparison.js
 //
 // Route: /compare
-// Allows selecting two players and comparing their NBC career stats side by side.
-// Data: GET /api/players/:id (same endpoint used by PlayerProfile)
+// Tab 1: Player Comparison — search two players, compare career stats
+// Tab 2: Team Head-to-Head  — searchable team pickers, links to /head-to-head
 
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { Search, X, ArrowLeftRight, User, TrendingUp } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  Search,
+  X,
+  ArrowLeftRight,
+  User,
+  TrendingUp,
+  Users,
+  Trophy,
+} from "lucide-react";
 import { API } from "../api";
 import { Container } from "../components/common/Container";
 
@@ -80,6 +88,7 @@ function PlayerSearchBox({ label, player, onSelect, onClear, accentColor }) {
     [onSelect],
   );
 
+  // ── Selected state ──
   if (player) {
     const hasBatting = player.batting?.stats?.length > 0;
     const hasPitching = player.pitching?.stats?.length > 0;
@@ -97,7 +106,6 @@ function PlayerSearchBox({ label, player, onSelect, onClear, accentColor }) {
           flex: 1,
         }}
       >
-        {/* Player header */}
         <div
           style={{
             background: accentColor,
@@ -125,7 +133,6 @@ function PlayerSearchBox({ label, player, onSelect, onClear, accentColor }) {
           >
             <X size={14} />
           </button>
-
           <div
             style={{
               width: 52,
@@ -143,7 +150,6 @@ function PlayerSearchBox({ label, player, onSelect, onClear, accentColor }) {
           >
             {(player.player.firstName?.[0] || "?").toUpperCase()}
           </div>
-
           <div
             style={{
               fontSize: 9,
@@ -156,8 +162,6 @@ function PlayerSearchBox({ label, player, onSelect, onClear, accentColor }) {
           >
             {label}
           </div>
-
-          {/* Clickable player name */}
           {playerId ? (
             <Link
               to={`/players/${playerId}`}
@@ -185,7 +189,6 @@ function PlayerSearchBox({ label, player, onSelect, onClear, accentColor }) {
               {player.player.fullName}
             </div>
           )}
-
           {player.player.isHallOfFame && (
             <div
               style={{
@@ -205,8 +208,6 @@ function PlayerSearchBox({ label, player, onSelect, onClear, accentColor }) {
             </div>
           )}
         </div>
-
-        {/* Quick career stats + View Full Profile link */}
         <div style={{ padding: "14px 20px 16px", background: "#F8FAFC" }}>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {hasBatting &&
@@ -295,8 +296,6 @@ function PlayerSearchBox({ label, player, onSelect, onClear, accentColor }) {
                 </div>
               ))}
           </div>
-
-          {/* View full profile button */}
           {playerId && (
             <Link
               to={`/players/${playerId}`}
@@ -323,6 +322,7 @@ function PlayerSearchBox({ label, player, onSelect, onClear, accentColor }) {
     );
   }
 
+  // ── Empty / search state ──
   return (
     <div
       style={{
@@ -362,7 +362,6 @@ function PlayerSearchBox({ label, player, onSelect, onClear, accentColor }) {
       >
         {label}
       </div>
-
       <div style={{ position: "relative", width: "100%", maxWidth: 320 }}>
         <Search
           size={14}
@@ -455,12 +454,434 @@ function PlayerSearchBox({ label, player, onSelect, onClear, accentColor }) {
   );
 }
 
+// ── Team comparison picker ────────────────────────────────────────────────
+function TeamComparePicker() {
+  const navigate = useNavigate();
+  const [teams, setTeams] = useState([]);
+  const [team1, setTeam1] = useState("");
+  const [team2, setTeam2] = useState("");
+  const [q1, setQ1] = useState("");
+  const [q2, setQ2] = useState("");
+  const [open1, setOpen1] = useState(false);
+  const [open2, setOpen2] = useState(false);
+  const ref1 = useRef(null);
+  const ref2 = useRef(null);
+
+  useEffect(() => {
+    API.get("/head-to-head/teams")
+      .then((r) => setTeams(r.data?.data || []))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    function handleClick(e) {
+      if (ref1.current && !ref1.current.contains(e.target)) setOpen1(false);
+      if (ref2.current && !ref2.current.contains(e.target)) setOpen2(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const filtered1 = teams.filter(
+    (t) =>
+      t !== team2 &&
+      (q1.trim() === "" || t.toLowerCase().includes(q1.trim().toLowerCase())),
+  );
+  const filtered2 = teams.filter(
+    (t) =>
+      t !== team1 &&
+      (q2.trim() === "" || t.toLowerCase().includes(q2.trim().toLowerCase())),
+  );
+
+  const TeamBox = ({
+    label,
+    value,
+    onSelect,
+    onClear,
+    query,
+    setQuery,
+    open,
+    setOpen,
+    filtered,
+    refEl,
+    accent,
+  }) => (
+    <div
+      style={{
+        flex: "1 1 220px",
+        display: "flex",
+        flexDirection: "column",
+        gap: 6,
+        position: "relative",
+      }}
+      ref={refEl}
+    >
+      <label
+        style={{
+          fontSize: 10,
+          fontWeight: 700,
+          color: "#6B7280",
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+        }}
+      >
+        {label}
+      </label>
+      {/* Trigger box */}
+      <div
+        onClick={() => setOpen(true)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "0 12px",
+          border: `2px solid ${open ? accent : "#D1D5DB"}`,
+          borderRadius: 10,
+          background: "#FFFFFF",
+          cursor: "pointer",
+          minHeight: 46,
+          transition: "border-color 0.15s",
+        }}
+      >
+        <Search size={14} style={{ color: "#9CA3AF", flexShrink: 0 }} />
+        {value && !open ? (
+          <span
+            style={{
+              flex: 1,
+              fontSize: 14,
+              color: "#111827",
+              fontWeight: 600,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {value}
+          </span>
+        ) : (
+          <span style={{ flex: 1, fontSize: 14, color: "#9CA3AF" }}>
+            {value || "Click to select a team…"}
+          </span>
+        )}
+        {value && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClear();
+              setQuery("");
+              setOpen(false);
+            }}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "#9CA3AF",
+              padding: 2,
+              display: "flex",
+            }}
+          >
+            <X size={13} />
+          </button>
+        )}
+      </div>
+      {/* Dropdown with sticky search inside */}
+      {open && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 4px)",
+            left: 0,
+            right: 0,
+            zIndex: 300,
+            background: "#FFFFFF",
+            border: "1px solid #D1D5DB",
+            borderRadius: 8,
+            boxShadow: "0 12px 40px rgba(0,0,0,0.18)",
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <div
+            style={{
+              padding: "8px 10px",
+              borderBottom: "1px solid #E5E7EB",
+              background: "#F9FAFB",
+              flexShrink: 0,
+            }}
+          >
+            <div style={{ position: "relative" }}>
+              <Search
+                size={13}
+                style={{
+                  position: "absolute",
+                  left: 8,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "#9CA3AF",
+                  pointerEvents: "none",
+                }}
+              />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search teams…"
+                autoFocus
+                style={{
+                  width: "100%",
+                  boxSizing: "border-box",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: 6,
+                  fontSize: 13,
+                  padding: "7px 28px 7px 28px",
+                  outline: "none",
+                  background: "white",
+                  fontFamily: "inherit",
+                }}
+              />
+              {query && (
+                <button
+                  onClick={() => setQuery("")}
+                  style={{
+                    position: "absolute",
+                    right: 8,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "#9CA3AF",
+                    padding: 0,
+                    display: "flex",
+                  }}
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+            <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 4 }}>
+              {query
+                ? `${filtered.length} match${filtered.length !== 1 ? "es" : ""}`
+                : `${filtered.length} teams — scroll or type to filter`}
+            </div>
+          </div>
+          <div style={{ maxHeight: 300, overflowY: "auto" }}>
+            {filtered.length === 0 ? (
+              <div
+                style={{
+                  padding: "16px",
+                  fontSize: 13,
+                  color: "#9CA3AF",
+                  textAlign: "center",
+                }}
+              >
+                No teams match "{query}"
+              </div>
+            ) : (
+              filtered.map((t) => (
+                <div
+                  key={t}
+                  onClick={() => {
+                    onSelect(t);
+                    setQuery("");
+                    setOpen(false);
+                  }}
+                  style={{
+                    padding: "9px 14px",
+                    fontSize: 13,
+                    color: t === value ? accent : "#111827",
+                    fontWeight: t === value ? 700 : 400,
+                    background: t === value ? "#EFF6FF" : "transparent",
+                    cursor: "pointer",
+                    borderBottom: "1px solid #F3F4F6",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (t !== value)
+                      e.currentTarget.style.background = "#F8FAFC";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background =
+                      t === value ? "#EFF6FF" : "transparent";
+                  }}
+                >
+                  {t}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const canCompare = team1 && team2;
+
+  return (
+    <div>
+      {/* Pickers */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-end",
+          gap: 12,
+          flexWrap: "wrap",
+          padding: 24,
+          background: "#FFFFFF",
+          border: "1px solid #E5E7EB",
+          borderRadius: 12,
+          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+          marginBottom: 20,
+        }}
+      >
+        <TeamBox
+          label="Team 1"
+          value={team1}
+          onSelect={setTeam1}
+          onClear={() => setTeam1("")}
+          query={q1}
+          setQuery={setQ1}
+          open={open1}
+          setOpen={setOpen1}
+          filtered={filtered1}
+          refEl={ref1}
+          accent="#1D4ED8"
+        />
+        <div
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: "50%",
+            background: "#1F2937",
+            color: "#D97706",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontWeight: 900,
+            fontSize: 11,
+            flexShrink: 0,
+            marginBottom: 2,
+          }}
+        >
+          VS
+        </div>
+        <TeamBox
+          label="Team 2"
+          value={team2}
+          onSelect={setTeam2}
+          onClear={() => setTeam2("")}
+          query={q2}
+          setQuery={setQ2}
+          open={open2}
+          setOpen={setOpen2}
+          filtered={filtered2}
+          refEl={ref2}
+          accent="#DC2626"
+        />
+        <button
+          onClick={() => {
+            if (canCompare)
+              navigate(
+                `/head-to-head?team1=${encodeURIComponent(team1)}&team2=${encodeURIComponent(team2)}`,
+              );
+          }}
+          disabled={!canCompare}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "12px 24px",
+            background: canCompare ? "#1F2937" : "#9CA3AF",
+            color: "#FFFFFF",
+            border: "none",
+            borderRadius: 8,
+            fontSize: 13,
+            fontWeight: 700,
+            fontFamily: "inherit",
+            cursor: canCompare ? "pointer" : "not-allowed",
+            height: 46,
+            flexShrink: 0,
+            marginBottom: 2,
+          }}
+        >
+          <Trophy size={15} /> Compare
+        </button>
+      </div>
+
+      {/* Info card */}
+      <div
+        style={{
+          textAlign: "center",
+          padding: "52px 24px",
+          background: "#FFFFFF",
+          border: "1px solid #E5E7EB",
+          borderRadius: 12,
+        }}
+      >
+        <div
+          style={{
+            width: 60,
+            height: 60,
+            borderRadius: "50%",
+            background: "#EFF6FF",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 16px",
+          }}
+        >
+          <Users size={26} color="#1D4ED8" />
+        </div>
+        <h3
+          style={{
+            fontSize: 17,
+            fontWeight: 700,
+            color: "#111827",
+            margin: "0 0 8px",
+          }}
+        >
+          Head-to-Head Team Records
+        </h3>
+        <p
+          style={{
+            fontSize: 13,
+            color: "#6B7280",
+            maxWidth: 380,
+            margin: "0 auto 20px",
+            lineHeight: 1.7,
+          }}
+        >
+          Select two teams above to see their all-time record against each
+          other.
+        </p>
+        <Link
+          to="/head-to-head"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "10px 20px",
+            background: "#1F2937",
+            color: "#FFFFFF",
+            borderRadius: 8,
+            fontSize: 12,
+            fontWeight: 700,
+            textDecoration: "none",
+            letterSpacing: "0.06em",
+          }}
+        >
+          Open Full Head-to-Head Tool →
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 // ── Comparison row ────────────────────────────────────────────────────────
 function CompareRow({ label, val1, val2, higherIsBetter = true, fmt, tip }) {
   const n1 = parseFloat(val1);
   const n2 = parseFloat(val2);
   const valid = !isNaN(n1) && !isNaN(n2) && (n1 !== 0 || n2 !== 0);
-
   let p1Wins = false,
     p2Wins = false;
   if (valid) {
@@ -472,13 +893,11 @@ function CompareRow({ label, val1, val2, higherIsBetter = true, fmt, tip }) {
       p2Wins = n2 < n1;
     }
   }
-
   const display = (v) => {
     if (v === null || v === undefined || v === "") return "—";
     if (fmt) return fmt(v);
     return v;
   };
-
   const barMax = valid ? Math.max(n1, n2) : 1;
   const bar1 = valid ? (n1 / barMax) * 100 : 0;
   const bar2 = valid ? (n2 / barMax) * 100 : 0;
@@ -529,7 +948,6 @@ function CompareRow({ label, val1, val2, higherIsBetter = true, fmt, tip }) {
           </div>
         )}
       </td>
-
       <td
         style={{
           padding: "10px 8px",
@@ -545,7 +963,6 @@ function CompareRow({ label, val1, val2, higherIsBetter = true, fmt, tip }) {
       >
         {label}
       </td>
-
       <td
         style={{
           padding: "10px 16px",
@@ -611,6 +1028,7 @@ function SectionHeader({ title }) {
 
 // ── Main page ─────────────────────────────────────────────────────────────
 export default function PlayerComparison() {
+  const [mode, setMode] = useState("player"); // "player" | "team"
   const [player1, setPlayer1] = useState(null);
   const [player2, setPlayer2] = useState(null);
   const [activeTab, setActiveTab] = useState("batting");
@@ -619,9 +1037,14 @@ export default function PlayerComparison() {
   const hasBatting2 = player2?.batting?.stats?.length > 0;
   const hasPitching1 = player1?.pitching?.stats?.length > 0;
   const hasPitching2 = player2?.pitching?.stats?.length > 0;
-
   const showBatting = hasBatting1 || hasBatting2;
   const showPitching = hasPitching1 || hasPitching2;
+  const bothSelected = player1 && player2;
+
+  const cb1 = player1?.batting?.career;
+  const cb2 = player2?.batting?.career;
+  const cp1 = player1?.pitching?.career;
+  const cp2 = player2?.pitching?.career;
 
   useEffect(() => {
     if (activeTab === "batting" && !showBatting && showPitching)
@@ -630,17 +1053,10 @@ export default function PlayerComparison() {
       setActiveTab("batting");
   }, [showBatting, showPitching, activeTab]);
 
-  const cb1 = player1?.batting?.career;
-  const cb2 = player2?.batting?.career;
-  const cp1 = player1?.pitching?.career;
-  const cp2 = player2?.pitching?.career;
-
-  const bothSelected = player1 && player2;
-
   const handleSwap = () => {
-    const tmp = player1;
+    const t = player1;
     setPlayer1(player2);
-    setPlayer2(tmp);
+    setPlayer2(t);
   };
 
   return (
@@ -665,43 +1081,20 @@ export default function PlayerComparison() {
               textTransform: "uppercase",
             }}
           >
-            NBC World Series · Player Tools
+            NBC World Series · Comparison Tools
           </div>
-          <div
+          <h1
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              marginBottom: 8,
+              fontSize: "clamp(1.8rem, 4vw, 2.8rem)",
+              fontWeight: 900,
+              color: "#F8FAFC",
+              margin: "0 0 8px",
+              lineHeight: 1.1,
+              letterSpacing: "-0.02em",
             }}
           >
-            <h1
-              style={{
-                fontSize: "clamp(1.8rem, 4vw, 2.8rem)",
-                fontWeight: 900,
-                color: "#F8FAFC",
-                margin: 0,
-                lineHeight: 1.1,
-                letterSpacing: "-0.02em",
-              }}
-            >
-              Player Comparison
-            </h1>
-            <div
-              style={{
-                background: "#1D4ED8",
-                borderRadius: 20,
-                padding: "3px 10px",
-                fontSize: 10,
-                fontWeight: 700,
-                color: "#BFDBFE",
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-              }}
-            >
-              Career Stats
-            </div>
-          </div>
+            Compare
+          </h1>
           <p
             style={{
               fontSize: 14,
@@ -710,487 +1103,583 @@ export default function PlayerComparison() {
               lineHeight: 1.7,
             }}
           >
-            Select two players to compare their complete NBC World Series career
-            statistics side by side.
+            Compare players side by side, or look up all-time head-to-head
+            records between any two teams.
           </p>
         </Container>
       </div>
 
       <Container>
         <div style={{ paddingTop: 32, paddingBottom: 64 }}>
-          {/* ── Player selectors ─────────────────────────────────────── */}
+          {/* ── Mode tab switcher ────────────────────────────────────── */}
           <div
             style={{
               display: "flex",
-              gap: 16,
-              alignItems: "stretch",
               marginBottom: 28,
-              flexWrap: "wrap",
+              background: "#FFFFFF",
+              border: "1px solid #E5E7EB",
+              borderRadius: 12,
+              overflow: "hidden",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
             }}
           >
-            <PlayerSearchBox
-              label="Player 1"
-              player={player1}
-              onSelect={setPlayer1}
-              onClear={() => setPlayer1(null)}
-              accentColor="#1D4ED8"
-            />
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
+            {[
+              {
+                key: "player",
+                icon: <User size={16} />,
+                label: "Player Comparison",
+                sub: "Compare career stats side by side",
+              },
+              {
+                key: "team",
+                icon: <Users size={16} />,
+                label: "Team Head-to-Head",
+                sub: "All-time matchup records",
+              },
+            ].map(({ key, icon, label, sub }, i) => (
               <button
-                onClick={handleSwap}
-                disabled={!bothSelected}
-                title="Swap players"
+                key={key}
+                onClick={() => setMode(key)}
                 style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: "50%",
-                  background: bothSelected ? "#1D4ED8" : "#E2E8F0",
-                  border: "none",
-                  cursor: bothSelected ? "pointer" : "default",
+                  flex: 1,
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "center",
-                  color: bothSelected ? "#FFFFFF" : "#94A3B8",
-                  transition: "all 0.2s",
+                  gap: 12,
+                  padding: "18px 24px",
+                  border: "none",
+                  cursor: "pointer",
+                  background: mode === key ? "#1F2937" : "#FFFFFF",
+                  color: mode === key ? "#FFFFFF" : "#6B7280",
+                  borderRight: i === 0 ? "1px solid #E5E7EB" : "none",
+                  transition: "all 0.15s",
                 }}
               >
-                <ArrowLeftRight size={16} />
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 8,
+                    background:
+                      mode === key ? "rgba(255,255,255,0.1)" : "#F3F4F6",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: mode === key ? "#D97706" : "#9CA3AF",
+                    flexShrink: 0,
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {icon}
+                </div>
+                <div style={{ textAlign: "left" }}>
+                  <div
+                    style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.2 }}
+                  >
+                    {label}
+                  </div>
+                  <div style={{ fontSize: 11, opacity: 0.6, marginTop: 2 }}>
+                    {sub}
+                  </div>
+                </div>
               </button>
-            </div>
-            <PlayerSearchBox
-              label="Player 2"
-              player={player2}
-              onSelect={setPlayer2}
-              onClear={() => setPlayer2(null)}
-              accentColor="#DC2626"
-            />
+            ))}
           </div>
 
-          {/* ── Comparison table ─────────────────────────────────────── */}
-          {bothSelected ? (
-            <div
-              style={{
-                background: "#FFFFFF",
-                border: "1px solid #E2E8F0",
-                borderRadius: 12,
-                overflow: "hidden",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-              }}
-            >
-              {/* Tab bar */}
-              {showBatting && showPitching && (
-                <div
-                  style={{
-                    display: "flex",
-                    borderBottom: "2px solid #E2E8F0",
-                    background: "#F8FAFC",
-                  }}
-                >
-                  {showBatting && (
-                    <button
-                      onClick={() => setActiveTab("batting")}
-                      style={{
-                        flex: 1,
-                        padding: "14px 20px",
-                        background:
-                          activeTab === "batting" ? "#FFFFFF" : "transparent",
-                        border: "none",
-                        borderBottom:
-                          activeTab === "batting"
-                            ? "2px solid #1D4ED8"
-                            : "2px solid transparent",
-                        marginBottom: -2,
-                        fontSize: 13,
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        color: activeTab === "batting" ? "#1D4ED8" : "#64748B",
-                      }}
-                    >
-                      ⚾ Batting
-                    </button>
-                  )}
-                  {showPitching && (
-                    <button
-                      onClick={() => setActiveTab("pitching")}
-                      style={{
-                        flex: 1,
-                        padding: "14px 20px",
-                        background:
-                          activeTab === "pitching" ? "#FFFFFF" : "transparent",
-                        border: "none",
-                        borderBottom:
-                          activeTab === "pitching"
-                            ? "2px solid #1D4ED8"
-                            : "2px solid transparent",
-                        marginBottom: -2,
-                        fontSize: 13,
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        color: activeTab === "pitching" ? "#1D4ED8" : "#64748B",
-                      }}
-                    >
-                      🥎 Pitching
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {/* Column headers — clickable player names */}
+          {/* ══════════════════════════════════════════════════════════
+              PLAYER COMPARISON MODE
+          ══════════════════════════════════════════════════════════ */}
+          {mode === "player" && (
+            <>
+              {/* Player selectors */}
               <div
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr auto 1fr",
-                  background: "#F1F5F9",
-                  padding: "12px 16px",
-                  borderBottom: "1px solid #E2E8F0",
-                }}
-              >
-                <Link
-                  to={`/players/${player1.player.id}`}
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 800,
-                    color: "#1D4ED8",
-                    textAlign: "right",
-                    paddingRight: 8,
-                    textDecoration: "none",
-                  }}
-                >
-                  {player1.player.fullName} ↗
-                </Link>
-                <div
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 700,
-                    color: "#94A3B8",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.1em",
-                    padding: "0 8px",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  vs
-                </div>
-                <Link
-                  to={`/players/${player2.player.id}`}
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 800,
-                    color: "#DC2626",
-                    textAlign: "left",
-                    paddingLeft: 8,
-                    textDecoration: "none",
-                  }}
-                >
-                  ↗ {player2.player.fullName}
-                </Link>
-              </div>
-
-              {/* Stats table */}
-              {activeTab === "batting" && (
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <tbody>
-                    <SectionHeader title="Career Batting Summary" />
-                    <CompareRow
-                      label="Seasons"
-                      val1={cb1?.seasons}
-                      val2={cb2?.seasons}
-                      tip="Seasons played"
-                    />
-                    <CompareRow
-                      label="Games"
-                      val1={cb1?.total_gp}
-                      val2={cb2?.total_gp}
-                      tip="Games played"
-                    />
-                    <CompareRow
-                      label="AB"
-                      val1={cb1?.total_ab}
-                      val2={cb2?.total_ab}
-                      tip="At Bats"
-                    />
-                    <CompareRow
-                      label="Hits"
-                      val1={cb1?.total_h}
-                      val2={cb2?.total_h}
-                      tip="Total Hits"
-                    />
-                    <CompareRow
-                      label="AVG"
-                      val1={cb1?.career_avg}
-                      val2={cb2?.career_avg}
-                      fmt={fmtAvg}
-                      tip="Career Batting Average"
-                    />
-                    <CompareRow
-                      label="OBP"
-                      val1={cb1?.career_obp}
-                      val2={cb2?.career_obp}
-                      fmt={fmtAvg}
-                      tip="On-Base Percentage"
-                    />
-                    <CompareRow
-                      label="SLG"
-                      val1={cb1?.career_slg}
-                      val2={cb2?.career_slg}
-                      fmt={fmtAvg}
-                      tip="Slugging Percentage"
-                    />
-                    <SectionHeader title="Power & Production" />
-                    <CompareRow
-                      label="HR"
-                      val1={cb1?.total_hr}
-                      val2={cb2?.total_hr}
-                      tip="Home Runs"
-                    />
-                    <CompareRow
-                      label="RBI"
-                      val1={cb1?.total_rbi}
-                      val2={cb2?.total_rbi}
-                      tip="Runs Batted In"
-                    />
-                    <CompareRow
-                      label="Runs"
-                      val1={cb1?.total_r}
-                      val2={cb2?.total_r}
-                      tip="Runs Scored"
-                    />
-                    <CompareRow
-                      label="2B"
-                      val1={cb1?.total_2b}
-                      val2={cb2?.total_2b}
-                      tip="Doubles"
-                    />
-                    <CompareRow
-                      label="3B"
-                      val1={cb1?.total_3b}
-                      val2={cb2?.total_3b}
-                      tip="Triples"
-                    />
-                    <SectionHeader title="Plate Discipline & Speed" />
-                    <CompareRow
-                      label="BB"
-                      val1={cb1?.total_bb}
-                      val2={cb2?.total_bb}
-                      tip="Walks"
-                    />
-                    <CompareRow
-                      label="SO"
-                      val1={cb1?.total_so}
-                      val2={cb2?.total_so}
-                      higherIsBetter={false}
-                      tip="Strikeouts (lower is better)"
-                    />
-                    <CompareRow
-                      label="SB"
-                      val1={cb1?.total_sb}
-                      val2={cb2?.total_sb}
-                      tip="Stolen Bases"
-                    />
-                  </tbody>
-                </table>
-              )}
-
-              {activeTab === "pitching" && (
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <tbody>
-                    <SectionHeader title="Career Pitching Summary" />
-                    <CompareRow
-                      label="Seasons"
-                      val1={cp1?.seasons}
-                      val2={cp2?.seasons}
-                      tip="Seasons pitched"
-                    />
-                    <CompareRow
-                      label="APP"
-                      val1={cp1?.total_app}
-                      val2={cp2?.total_app}
-                      tip="Appearances"
-                    />
-                    <CompareRow
-                      label="ERA"
-                      val1={cp1?.career_era}
-                      val2={cp2?.career_era}
-                      higherIsBetter={false}
-                      fmt={fmtEra}
-                      tip="Earned Run Average (lower is better)"
-                    />
-                    <CompareRow
-                      label="W"
-                      val1={cp1?.total_w}
-                      val2={cp2?.total_w}
-                      tip="Wins"
-                    />
-                    <CompareRow
-                      label="L"
-                      val1={cp1?.total_l}
-                      val2={cp2?.total_l}
-                      higherIsBetter={false}
-                      tip="Losses (lower is better)"
-                    />
-                    <SectionHeader title="Volume & Control" />
-                    <CompareRow
-                      label="IP"
-                      val1={cp1?.total_ip}
-                      val2={cp2?.total_ip}
-                      tip="Innings Pitched"
-                    />
-                    <CompareRow
-                      label="SO"
-                      val1={cp1?.total_so}
-                      val2={cp2?.total_so}
-                      tip="Strikeouts"
-                    />
-                    <CompareRow
-                      label="BB"
-                      val1={cp1?.total_bb}
-                      val2={cp2?.total_bb}
-                      higherIsBetter={false}
-                      tip="Walks (lower is better)"
-                    />
-                    <CompareRow
-                      label="H"
-                      val1={cp1?.total_h}
-                      val2={cp2?.total_h}
-                      higherIsBetter={false}
-                      tip="Hits Allowed (lower is better)"
-                    />
-                    <CompareRow
-                      label="ER"
-                      val1={cp1?.total_er}
-                      val2={cp2?.total_er}
-                      higherIsBetter={false}
-                      tip="Earned Runs (lower is better)"
-                    />
-                    <SectionHeader title="Special" />
-                    <CompareRow
-                      label="SV"
-                      val1={cp1?.total_sv}
-                      val2={cp2?.total_sv}
-                      tip="Saves"
-                    />
-                    <CompareRow
-                      label="CG"
-                      val1={cp1?.total_cg}
-                      val2={cp2?.total_cg}
-                      tip="Complete Games"
-                    />
-                    <CompareRow
-                      label="SHO"
-                      val1={cp1?.total_sho}
-                      val2={cp2?.total_sho}
-                      tip="Shutouts"
-                    />
-                  </tbody>
-                </table>
-              )}
-
-              {/* Legend */}
-              <div
-                style={{
-                  padding: "12px 16px",
-                  background: "#F8FAFC",
-                  borderTop: "1px solid #E2E8F0",
                   display: "flex",
-                  gap: 20,
+                  gap: 16,
+                  alignItems: "stretch",
+                  marginBottom: 28,
                   flexWrap: "wrap",
-                  alignItems: "center",
                 }}
               >
+                <PlayerSearchBox
+                  label="Player 1"
+                  player={player1}
+                  onSelect={setPlayer1}
+                  onClear={() => setPlayer1(null)}
+                  accentColor="#1D4ED8"
+                />
                 <div
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: 6,
-                    fontSize: 11,
-                    color: "#64748B",
+                    justifyContent: "center",
+                    flexShrink: 0,
                   }}
                 >
-                  <TrendingUp size={12} color="#1D4ED8" />
-                  <span style={{ color: "#1D4ED8", fontWeight: 700 }}>
-                    {player1.player.firstName}
-                  </span>{" "}
-                  leads
+                  <button
+                    onClick={handleSwap}
+                    disabled={!bothSelected}
+                    title="Swap players"
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: "50%",
+                      background: bothSelected ? "#1D4ED8" : "#E2E8F0",
+                      border: "none",
+                      cursor: bothSelected ? "pointer" : "default",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: bothSelected ? "#FFFFFF" : "#94A3B8",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    <ArrowLeftRight size={16} />
+                  </button>
                 </div>
+                <PlayerSearchBox
+                  label="Player 2"
+                  player={player2}
+                  onSelect={setPlayer2}
+                  onClear={() => setPlayer2(null)}
+                  accentColor="#DC2626"
+                />
+              </div>
+
+              {/* Comparison table */}
+              {bothSelected ? (
                 <div
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    fontSize: 11,
-                    color: "#64748B",
+                    background: "#FFFFFF",
+                    border: "1px solid #E2E8F0",
+                    borderRadius: 12,
+                    overflow: "hidden",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
                   }}
                 >
-                  <TrendingUp size={12} color="#DC2626" />
-                  <span style={{ color: "#DC2626", fontWeight: 700 }}>
-                    {player2.player.firstName}
-                  </span>{" "}
-                  leads
+                  {showBatting && showPitching && (
+                    <div
+                      style={{
+                        display: "flex",
+                        borderBottom: "2px solid #E2E8F0",
+                        background: "#F8FAFC",
+                      }}
+                    >
+                      {showBatting && (
+                        <button
+                          onClick={() => setActiveTab("batting")}
+                          style={{
+                            flex: 1,
+                            padding: "14px 20px",
+                            background:
+                              activeTab === "batting"
+                                ? "#FFFFFF"
+                                : "transparent",
+                            border: "none",
+                            borderBottom:
+                              activeTab === "batting"
+                                ? "2px solid #1D4ED8"
+                                : "2px solid transparent",
+                            marginBottom: -2,
+                            fontSize: 13,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            color:
+                              activeTab === "batting" ? "#1D4ED8" : "#64748B",
+                          }}
+                        >
+                          ⚾ Batting
+                        </button>
+                      )}
+                      {showPitching && (
+                        <button
+                          onClick={() => setActiveTab("pitching")}
+                          style={{
+                            flex: 1,
+                            padding: "14px 20px",
+                            background:
+                              activeTab === "pitching"
+                                ? "#FFFFFF"
+                                : "transparent",
+                            border: "none",
+                            borderBottom:
+                              activeTab === "pitching"
+                                ? "2px solid #1D4ED8"
+                                : "2px solid transparent",
+                            marginBottom: -2,
+                            fontSize: 13,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            color:
+                              activeTab === "pitching" ? "#1D4ED8" : "#64748B",
+                          }}
+                        >
+                          🥎 Pitching
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr auto 1fr",
+                      background: "#F1F5F9",
+                      padding: "12px 16px",
+                      borderBottom: "1px solid #E2E8F0",
+                    }}
+                  >
+                    <Link
+                      to={`/players/${player1.player.id}`}
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 800,
+                        color: "#1D4ED8",
+                        textAlign: "right",
+                        paddingRight: 8,
+                        textDecoration: "none",
+                      }}
+                    >
+                      {player1.player.fullName} ↗
+                    </Link>
+                    <div
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 700,
+                        color: "#94A3B8",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.1em",
+                        padding: "0 8px",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      vs
+                    </div>
+                    <Link
+                      to={`/players/${player2.player.id}`}
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 800,
+                        color: "#DC2626",
+                        textAlign: "left",
+                        paddingLeft: 8,
+                        textDecoration: "none",
+                      }}
+                    >
+                      ↗ {player2.player.fullName}
+                    </Link>
+                  </div>
+
+                  {activeTab === "batting" && (
+                    <table
+                      style={{ width: "100%", borderCollapse: "collapse" }}
+                    >
+                      <tbody>
+                        <SectionHeader title="Career Batting Summary" />
+                        <CompareRow
+                          label="Seasons"
+                          val1={cb1?.seasons}
+                          val2={cb2?.seasons}
+                          tip="Seasons played"
+                        />
+                        <CompareRow
+                          label="Games"
+                          val1={cb1?.total_gp}
+                          val2={cb2?.total_gp}
+                          tip="Games played"
+                        />
+                        <CompareRow
+                          label="AB"
+                          val1={cb1?.total_ab}
+                          val2={cb2?.total_ab}
+                          tip="At Bats"
+                        />
+                        <CompareRow
+                          label="Hits"
+                          val1={cb1?.total_h}
+                          val2={cb2?.total_h}
+                          tip="Total Hits"
+                        />
+                        <CompareRow
+                          label="AVG"
+                          val1={cb1?.career_avg}
+                          val2={cb2?.career_avg}
+                          fmt={fmtAvg}
+                          tip="Career Batting Average"
+                        />
+                        <CompareRow
+                          label="OBP"
+                          val1={cb1?.career_obp}
+                          val2={cb2?.career_obp}
+                          fmt={fmtAvg}
+                          tip="On-Base Percentage"
+                        />
+                        <CompareRow
+                          label="SLG"
+                          val1={cb1?.career_slg}
+                          val2={cb2?.career_slg}
+                          fmt={fmtAvg}
+                          tip="Slugging Percentage"
+                        />
+                        <SectionHeader title="Power & Production" />
+                        <CompareRow
+                          label="HR"
+                          val1={cb1?.total_hr}
+                          val2={cb2?.total_hr}
+                          tip="Home Runs"
+                        />
+                        <CompareRow
+                          label="RBI"
+                          val1={cb1?.total_rbi}
+                          val2={cb2?.total_rbi}
+                          tip="Runs Batted In"
+                        />
+                        <CompareRow
+                          label="Runs"
+                          val1={cb1?.total_r}
+                          val2={cb2?.total_r}
+                          tip="Runs Scored"
+                        />
+                        <CompareRow
+                          label="2B"
+                          val1={cb1?.total_2b}
+                          val2={cb2?.total_2b}
+                          tip="Doubles"
+                        />
+                        <CompareRow
+                          label="3B"
+                          val1={cb1?.total_3b}
+                          val2={cb2?.total_3b}
+                          tip="Triples"
+                        />
+                        <SectionHeader title="Plate Discipline & Speed" />
+                        <CompareRow
+                          label="BB"
+                          val1={cb1?.total_bb}
+                          val2={cb2?.total_bb}
+                          tip="Walks"
+                        />
+                        <CompareRow
+                          label="SO"
+                          val1={cb1?.total_so}
+                          val2={cb2?.total_so}
+                          higherIsBetter={false}
+                          tip="Strikeouts (lower is better)"
+                        />
+                        <CompareRow
+                          label="SB"
+                          val1={cb1?.total_sb}
+                          val2={cb2?.total_sb}
+                          tip="Stolen Bases"
+                        />
+                      </tbody>
+                    </table>
+                  )}
+
+                  {activeTab === "pitching" && (
+                    <table
+                      style={{ width: "100%", borderCollapse: "collapse" }}
+                    >
+                      <tbody>
+                        <SectionHeader title="Career Pitching Summary" />
+                        <CompareRow
+                          label="Seasons"
+                          val1={cp1?.seasons}
+                          val2={cp2?.seasons}
+                          tip="Seasons pitched"
+                        />
+                        <CompareRow
+                          label="APP"
+                          val1={cp1?.total_app}
+                          val2={cp2?.total_app}
+                          tip="Appearances"
+                        />
+                        <CompareRow
+                          label="ERA"
+                          val1={cp1?.career_era}
+                          val2={cp2?.career_era}
+                          higherIsBetter={false}
+                          fmt={fmtEra}
+                          tip="Earned Run Average (lower is better)"
+                        />
+                        <CompareRow
+                          label="W"
+                          val1={cp1?.total_w}
+                          val2={cp2?.total_w}
+                          tip="Wins"
+                        />
+                        <CompareRow
+                          label="L"
+                          val1={cp1?.total_l}
+                          val2={cp2?.total_l}
+                          higherIsBetter={false}
+                          tip="Losses (lower is better)"
+                        />
+                        <SectionHeader title="Volume & Control" />
+                        <CompareRow
+                          label="IP"
+                          val1={cp1?.total_ip}
+                          val2={cp2?.total_ip}
+                          tip="Innings Pitched"
+                        />
+                        <CompareRow
+                          label="SO"
+                          val1={cp1?.total_so}
+                          val2={cp2?.total_so}
+                          tip="Strikeouts"
+                        />
+                        <CompareRow
+                          label="BB"
+                          val1={cp1?.total_bb}
+                          val2={cp2?.total_bb}
+                          higherIsBetter={false}
+                          tip="Walks (lower is better)"
+                        />
+                        <CompareRow
+                          label="H"
+                          val1={cp1?.total_h}
+                          val2={cp2?.total_h}
+                          higherIsBetter={false}
+                          tip="Hits Allowed (lower is better)"
+                        />
+                        <CompareRow
+                          label="ER"
+                          val1={cp1?.total_er}
+                          val2={cp2?.total_er}
+                          higherIsBetter={false}
+                          tip="Earned Runs (lower is better)"
+                        />
+                        <SectionHeader title="Special" />
+                        <CompareRow
+                          label="SV"
+                          val1={cp1?.total_sv}
+                          val2={cp2?.total_sv}
+                          tip="Saves"
+                        />
+                        <CompareRow
+                          label="CG"
+                          val1={cp1?.total_cg}
+                          val2={cp2?.total_cg}
+                          tip="Complete Games"
+                        />
+                        <CompareRow
+                          label="SHO"
+                          val1={cp1?.total_sho}
+                          val2={cp2?.total_sho}
+                          tip="Shutouts"
+                        />
+                      </tbody>
+                    </table>
+                  )}
+
+                  <div
+                    style={{
+                      padding: "12px 16px",
+                      background: "#F8FAFC",
+                      borderTop: "1px solid #E2E8F0",
+                      display: "flex",
+                      gap: 20,
+                      flexWrap: "wrap",
+                      alignItems: "center",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        fontSize: 11,
+                        color: "#64748B",
+                      }}
+                    >
+                      <TrendingUp size={12} color="#1D4ED8" />
+                      <span style={{ color: "#1D4ED8", fontWeight: 700 }}>
+                        {player1.player.firstName}
+                      </span>{" "}
+                      leads
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        fontSize: 11,
+                        color: "#64748B",
+                      }}
+                    >
+                      <TrendingUp size={12} color="#DC2626" />
+                      <span style={{ color: "#DC2626", fontWeight: 700 }}>
+                        {player2.player.firstName}
+                      </span>{" "}
+                      leads
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "#94A3B8",
+                        marginLeft: "auto",
+                      }}
+                    >
+                      Hover any stat label for its definition
+                    </div>
+                  </div>
                 </div>
+              ) : (
                 <div
-                  style={{ fontSize: 11, color: "#94A3B8", marginLeft: "auto" }}
+                  style={{
+                    textAlign: "center",
+                    padding: "60px 24px",
+                    background: "#FFFFFF",
+                    border: "1px solid #E2E8F0",
+                    borderRadius: 12,
+                  }}
                 >
-                  Hover any stat label for its definition
+                  <div
+                    style={{
+                      width: 64,
+                      height: 64,
+                      borderRadius: "50%",
+                      background: "#EFF6FF",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      margin: "0 auto 16px",
+                    }}
+                  >
+                    <ArrowLeftRight size={28} color="#1D4ED8" />
+                  </div>
+                  <h3
+                    style={{
+                      fontSize: 18,
+                      fontWeight: 700,
+                      color: "#0F172A",
+                      margin: "0 0 8px",
+                    }}
+                  >
+                    Select two players to compare
+                  </h3>
+                  <p
+                    style={{
+                      fontSize: 13,
+                      color: "#64748B",
+                      margin: 0,
+                      maxWidth: 360,
+                      marginLeft: "auto",
+                      marginRight: "auto",
+                    }}
+                  >
+                    Search for any player by name using the fields above. Their
+                    complete NBC World Series career stats will appear here side
+                    by side.
+                  </p>
                 </div>
-              </div>
-            </div>
-          ) : (
-            <div
-              style={{
-                textAlign: "center",
-                padding: "60px 24px",
-                background: "#FFFFFF",
-                border: "1px solid #E2E8F0",
-                borderRadius: 12,
-              }}
-            >
-              <div
-                style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: "50%",
-                  background: "#EFF6FF",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: "0 auto 16px",
-                }}
-              >
-                <ArrowLeftRight size={28} color="#1D4ED8" />
-              </div>
-              <h3
-                style={{
-                  fontSize: 18,
-                  fontWeight: 700,
-                  color: "#0F172A",
-                  margin: "0 0 8px",
-                }}
-              >
-                Select two players to compare
-              </h3>
-              <p
-                style={{
-                  fontSize: 13,
-                  color: "#64748B",
-                  margin: 0,
-                  maxWidth: 360,
-                  marginLeft: "auto",
-                  marginRight: "auto",
-                }}
-              >
-                Search for any player by name using the fields above. Their
-                complete NBC World Series career stats will appear here side by
-                side.
-              </p>
-            </div>
+              )}
+            </>
           )}
+
+          {/* ══════════════════════════════════════════════════════════
+              TEAM HEAD-TO-HEAD MODE
+          ══════════════════════════════════════════════════════════ */}
+          {mode === "team" && <TeamComparePicker />}
         </div>
       </Container>
     </div>

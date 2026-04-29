@@ -10,7 +10,6 @@ import {
   BarChart3,
   ArrowLeftRight,
   Search,
-  Swords,
 } from "lucide-react";
 import { Container } from "../components/common/Container";
 
@@ -326,72 +325,6 @@ export function Nav() {
                           </div>
                         )}
                       </NavLink>
-
-                      {/* Head-to-Head */}
-                      <NavLink
-                        to="/head-to-head"
-                        role="menuitem"
-                        onClick={() => setTeamsDropdown(false)}
-                        style={{ textDecoration: "none" }}
-                      >
-                        {({ isActive }) => (
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 10,
-                              padding: "12px 16px",
-                              background: isActive ? "#EFF6FF" : "#FFFFFF",
-                              cursor: "pointer",
-                              transition: "background 0.15s",
-                            }}
-                            onMouseEnter={(e) =>
-                              (e.currentTarget.style.background = "#F8FAFC")
-                            }
-                            onMouseLeave={(e) =>
-                              (e.currentTarget.style.background = isActive
-                                ? "#EFF6FF"
-                                : "#FFFFFF")
-                            }
-                          >
-                            <div
-                              style={{
-                                width: 32,
-                                height: 32,
-                                borderRadius: 8,
-                                background: "#FEF3C7",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                flexShrink: 0,
-                              }}
-                              aria-hidden="true"
-                            >
-                              <Swords size={16} color="#D97706" />
-                            </div>
-                            <div>
-                              <div
-                                style={{
-                                  fontSize: 13,
-                                  fontWeight: 700,
-                                  color: "#0F172A",
-                                }}
-                              >
-                                Head-to-Head
-                              </div>
-                              <div
-                                style={{
-                                  fontSize: 11,
-                                  color: "#64748B",
-                                  marginTop: 1,
-                                }}
-                              >
-                                All-time matchup records
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </NavLink>
                     </div>
                   )}
                 </li>
@@ -612,15 +545,6 @@ export function Nav() {
                         onClick={() => setOpen(false)}
                       >
                         <BarChart3 size={15} aria-hidden="true" /> Team Totals
-                      </NavLink>
-                      <NavLink
-                        to="/head-to-head"
-                        className={({ isActive }) =>
-                          `flex items-center gap-2 px-3 py-2 text-sm font-medium ${isActive ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50 text-gray-700"}`
-                        }
-                        onClick={() => setOpen(false)}
-                      >
-                        <Swords size={15} aria-hidden="true" /> Head-to-Head
                       </NavLink>
                     </div>
                   </li>

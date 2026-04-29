@@ -7,21 +7,28 @@ import { BannerError } from "../components/common/BannerError";
 import { Skeleton } from "../components/common/Skeleton";
 
 // ── Searchable team picker ────────────────────────────────────────────────
+// Shows all teams when open with no query, filters as you type.
+// Uses a input-driven search so the full 465-team list is always accessible.
 function TeamPicker({ label, value, onChange, teams, excludeTeam }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
-  const ref = useRef(null);
+  const wrapRef = useRef(null);
   const inputRef = useRef(null);
 
   const filtered = teams
     .filter((t) => t !== excludeTeam)
-    .filter((t) => t.toLowerCase().includes(query.toLowerCase()))
-    .slice(0, 50); // cap at 50 for performance
+    .filter(
+      (t) =>
+        query.trim() === "" ||
+        t.toLowerCase().includes(query.trim().toLowerCase()),
+    );
 
-  // Close on outside click
   useEffect(() => {
     function handleClick(e) {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) {
+        setOpen(false);
+        setQuery("");
+      }
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
@@ -40,14 +47,9 @@ function TeamPicker({ label, value, onChange, teams, excludeTeam }) {
     setOpen(false);
   }
 
-  function handleInputChange(e) {
-    setQuery(e.target.value);
+  function handleBoxClick() {
     setOpen(true);
-  }
-
-  function handleOpen() {
-    setOpen(true);
-    setTimeout(() => inputRef.current?.focus(), 30);
+    setTimeout(() => inputRef.current?.focus(), 20);
   }
 
   return (
@@ -57,13 +59,15 @@ function TeamPicker({ label, value, onChange, teams, excludeTeam }) {
         display: "flex",
         flexDirection: "column",
         gap: 6,
+        position: "relative",
       }}
-      ref={ref}
+      ref={wrapRef}
     >
       <label style={s.selectorLabel}>{label}</label>
 
-      {/* Trigger / search input */}
+      {/* Input trigger */}
       <div
+        onClick={handleBoxClick}
         style={{
           display: "flex",
           alignItems: "center",
@@ -72,13 +76,13 @@ function TeamPicker({ label, value, onChange, teams, excludeTeam }) {
           border: `2px solid ${open ? "#1D4ED8" : "#D1D5DB"}`,
           borderRadius: 8,
           background: "#FFFFFF",
-          cursor: "text",
-          minHeight: 42,
+          cursor: "pointer",
+          minHeight: 44,
           transition: "border-color 0.15s",
         }}
-        onClick={handleOpen}
       >
         <Search size={14} style={{ color: "#9CA3AF", flexShrink: 0 }} />
+
         {value && !open ? (
           <span
             style={{
@@ -96,10 +100,13 @@ function TeamPicker({ label, value, onChange, teams, excludeTeam }) {
         ) : (
           <input
             ref={inputRef}
-            value={open ? query : ""}
-            onChange={handleInputChange}
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setOpen(true);
+            }}
             onFocus={() => setOpen(true)}
-            placeholder={value || "Search or select a team…"}
+            placeholder={value || "Type to search all teams…"}
             style={{
               flex: 1,
               border: "none",
@@ -112,6 +119,7 @@ function TeamPicker({ label, value, onChange, teams, excludeTeam }) {
             }}
           />
         )}
+
         <div
           style={{
             display: "flex",
@@ -148,62 +156,131 @@ function TeamPicker({ label, value, onChange, teams, excludeTeam }) {
         </div>
       </div>
 
-      {/* Dropdown list */}
+      {/* Dropdown */}
       {open && (
         <div
           style={{
             position: "absolute",
-            zIndex: 200,
-            marginTop: 50,
-            background: "#FFFFFF",
-            border: "1px solid #E5E7EB",
-            borderRadius: 8,
-            boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-            maxHeight: 280,
-            overflowY: "auto",
-            width: "100%",
+            top: "calc(100% + 4px)",
             left: 0,
+            right: 0,
+            zIndex: 300,
+            background: "#FFFFFF",
+            border: "1px solid #D1D5DB",
+            borderRadius: 8,
+            boxShadow: "0 12px 40px rgba(0,0,0,0.18)",
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
           }}
         >
-          {filtered.length === 0 ? (
-            <div
-              style={{
-                padding: "12px 16px",
-                fontSize: 13,
-                color: "#9CA3AF",
-                textAlign: "center",
-              }}
-            >
-              No teams match "{query}"
-            </div>
-          ) : (
-            filtered.map((team) => (
-              <div
-                key={team}
-                onClick={() => select(team)}
+          {/* Sticky search bar inside dropdown */}
+          <div
+            style={{
+              padding: "8px 10px",
+              borderBottom: "1px solid #E5E7EB",
+              background: "#F9FAFB",
+              flexShrink: 0,
+            }}
+          >
+            <div style={{ position: "relative" }}>
+              <Search
+                size={13}
                 style={{
-                  padding: "10px 16px",
+                  position: "absolute",
+                  left: 8,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "#9CA3AF",
+                  pointerEvents: "none",
+                }}
+              />
+              <input
+                ref={inputRef}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={`Search ${teams.length - (excludeTeam ? 1 : 0)} teams…`}
+                style={{
+                  width: "100%",
+                  boxSizing: "border-box",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: 6,
                   fontSize: 13,
-                  color: team === value ? "#1D4ED8" : "#111827",
-                  fontWeight: team === value ? 700 : 400,
-                  background: team === value ? "#EFF6FF" : "#FFFFFF",
-                  cursor: "pointer",
-                  borderBottom: "1px solid #F9FAFB",
-                  transition: "background 0.1s",
+                  padding: "7px 8px 7px 28px",
+                  outline: "none",
+                  background: "white",
+                  fontFamily: "inherit",
                 }}
-                onMouseEnter={(e) => {
-                  if (team !== value)
-                    e.currentTarget.style.background = "#F9FAFB";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background =
-                    team === value ? "#EFF6FF" : "#FFFFFF";
+                autoFocus
+              />
+              {query && (
+                <button
+                  onClick={() => setQuery("")}
+                  style={{
+                    position: "absolute",
+                    right: 8,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "#9CA3AF",
+                    padding: 0,
+                    display: "flex",
+                  }}
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+            <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 5 }}>
+              {query
+                ? `${filtered.length} match${filtered.length !== 1 ? "es" : ""}`
+                : `${filtered.length} teams — scroll or type to filter`}
+            </div>
+          </div>
+
+          {/* Scrollable team list */}
+          <div style={{ maxHeight: 300, overflowY: "auto" }}>
+            {filtered.length === 0 ? (
+              <div
+                style={{
+                  padding: "16px",
+                  fontSize: 13,
+                  color: "#9CA3AF",
+                  textAlign: "center",
                 }}
               >
-                {team}
+                No teams match "{query}"
               </div>
-            ))
-          )}
+            ) : (
+              filtered.map((team) => (
+                <div
+                  key={team}
+                  onClick={() => select(team)}
+                  style={{
+                    padding: "9px 14px",
+                    fontSize: 13,
+                    cursor: "pointer",
+                    color: team === value ? "#1D4ED8" : "#111827",
+                    fontWeight: team === value ? 700 : 400,
+                    background: team === value ? "#EFF6FF" : "transparent",
+                    borderBottom: "1px solid #F3F4F6",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (team !== value)
+                      e.currentTarget.style.background = "#F8FAFC";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background =
+                      team === value ? "#EFF6FF" : "transparent";
+                  }}
+                >
+                  {team}
+                </div>
+              ))
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -520,7 +597,7 @@ export default function HeadToHead() {
               <h3 style={s.infoTitle}>All-Time Head-to-Head Records</h3>
               <p style={s.infoText}>
                 Select any two teams to see their complete head-to-head record
-                in the NBC World Series. Type to search across all 456 teams,
+                in the NBC World Series. Type to search across all 456 teams —
                 includes every game result from 2000 through 2024.
               </p>
               <div style={s.infoStats}>
