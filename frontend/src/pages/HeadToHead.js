@@ -597,7 +597,7 @@ export default function HeadToHead() {
               <h3 style={s.infoTitle}>All-Time Head-to-Head Records</h3>
               <p style={s.infoText}>
                 Select any two teams to see their complete head-to-head record
-                in the NBC World Series. Type to search across all 456 teams —
+                in the NBC World Series. Type to search across all 456 teams,
                 includes every game result from 2000 through 2024.
               </p>
               <div style={s.infoStats}>

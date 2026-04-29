@@ -375,7 +375,7 @@ export default function Home() {
               <span className="hp-headline-gold">Record Book</span>
             </h1>
             <p className="hp-sub" style={{ maxWidth: 520, marginBottom: 44 }}>
-              Nine decades of amateur baseball history — championships,
+              Nine decades of amateur baseball history, championships,
               statistics, and player records preserved for future generations.
             </p>
 
